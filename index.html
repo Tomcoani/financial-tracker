@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מעקב פיננסי</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+         signOut, onAuthStateChanged, updateProfile }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── Firebase config ──────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBnOXqkwvlm68LR9RooSljYwkcTLYYEemc",
+  authDomain: "clientworth-91908.firebaseapp.com",
+  projectId: "clientworth-91908",
+  storageBucket: "clientworth-91908.firebasestorage.app",
+  messagingSenderId: "545565599965",
+  appId: "1:545565599965:web:ef6d77db89af07530c9334"
+};
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── Expose to window so inline handlers can call ─
+const HZ=['12 חודשים','1-5 שנים','5-10 שנים','10+ שנים'];
+const HC=['h0','h1','h2','h3'];
+const COLS=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899'];
+let CU=null, D={};
+
+function nw6(){return['','','','','',''];}
+function defData(){
+  return {
+    monthly:'',future:'',penNotes:'',gnotes:'',
+    goals:[{name:'קרן חירום',where:'עובר ושב',saved:'',needed:'',h:0}],
+    locations:[{name:'עובר ושב',amount:''},{name:'תיק השקעות',amount:''}],
+    pension:[
+      {name:'פנסיה משלימה',amount:'',date:'',house:'',track:'',fees:''},
+      {name:'פנסיה מקיפה',amount:'',date:'',house:'',track:'',fees:''},
+      {name:'קרן השתלמות',amount:'',date:'',house:'',track:'',fees:''}
+    ],
+    nwPeriods:['','','','','',''],
+    nwData:{
+      assets:{'שווי בית':nw6(),'עובר ושב ומזומן':nw6(),'השקעות טווח קצר':nw6()},
+      investments:{'תיק השקעות':nw6(),'פנסיה':nw6(),'קרן השתלמות':nw6()},
+      savings:{'קרן חירום':nw6()},
+      debts:{'משכנתא':nw6(),'הלוואה 1':nw6()}
+    },
+    snapshots:[]
+  };
+}
+
+// ── Firestore helpers ────────────────────────────
+async function loadData(uid){
+  try {
+    const snap = await getDoc(doc(db,'users',uid,'data','main'));
+    return snap.exists() ? snap.data() : null;
+  } catch(e){ console.error('loadData',e); return null; }
+}
+async function saveData(uid,d){
+  try {
+    await setDoc(doc(db,'users',uid,'data','main'), d);
+  } catch(e){ console.error('saveData',e); }
+}
+
+// ── Auth state ───────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if(user){
+    CU = user.uid;
+    const loaded = await loadData(CU);
+    D = loaded || defData();
+    if(!D.snapshots) D.snapshots=[];
+    document.getElementById('auth').style.display='none';
+    document.getElementById('app').style.display='flex';
+    document.getElementById('uname').textContent = user.displayName||user.email;
+    renderAll();
+    goTo('dash', document.querySelector('.nbtn'));
+  } else {
+    CU=null; D={};
+    document.getElementById('app').style.display='none';
+    document.getElementById('auth').style.display='flex';
+  }
+});
+
+// ── Auth actions ─────────────────────────────────
+window.doLogin = async function(){
+  const e=v('lu'), p=v('lp');
+  if(!e||!p) return showErr('נא למלא את כל השדות');
+  setLoading(true);
+  try {
+    await signInWithEmailAndPassword(auth,e,p);
+  } catch(err){
+    showErr(firebaseErrHe(err.code));
+    setLoading(false);
+  }
+};
+window.doReg = async function(){
+  const name=v('rn'), e=v('ru'), p=v('rp');
+  if(!name||!e||!p) return showErr('נא למלא את כל השדות');
+  if(p.length<6) return showErr('סיסמה חייבת להיות לפחות 6 תווים');
+  setLoading(true);
+  try {
+    const cred = await createUserWithEmailAndPassword(auth,e,p);
+    await updateProfile(cred.user,{displayName:name});
+    await saveData(cred.user.uid, defData());
+  } catch(err){
+    showErr(firebaseErrHe(err.code));
+    setLoading(false);
+  }
+};
+window.doLogout = async function(){
+  await signOut(auth);
+  ['lu','lp'].forEach(id=>document.getElementById(id).value='');
+};
+
+function firebaseErrHe(code){
+  const map={
+    'auth/user-not-found':'משתמש לא קיים',
+    'auth/wrong-password':'סיסמה שגויה',
+    'auth/email-already-in-use':'אימייל זה כבר קיים',
+    'auth/invalid-email':'אימייל לא תקין',
+    'auth/invalid-credential':'אימייל או סיסמה שגויים',
+    'auth/too-many-requests':'יותר מדי ניסיונות — נסה שוב מאוחר יותר'
+  };
+  return map[code]||'שגיאה: '+code;
+}
+
+// ── Auto save (debounced) ────────────────────────
+let saveTimer, toastTimer;
+window.autoSave = function(){
+  if(!CU) return;
+  D.monthly   = document.getElementById('monthly').value;
+  D.future    = document.getElementById('future').value;
+  D.penNotes  = document.getElementById('pen-notes').value;
+  D.gnotes    = document.getElementById('gnotes').value;
+  document.querySelectorAll('[data-s][data-r][data-i]').forEach(el=>{
+    if(D.nwData[el.dataset.s]&&D.nwData[el.dataset.s][el.dataset.r])
+      D.nwData[el.dataset.s][el.dataset.r][+el.dataset.i]=el.value;
+  });
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    await saveData(CU, D);
+    showToast('נשמר בענן ☁️');
+  }, 800);
+};
+
+// ── Nav ──────────────────────────────────────────
+window.goTo = function(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+id).classList.add('on');
+  btn.classList.add('on');
+  if(id==='dash') renderDash();
+  if(id==='history') renderHistory();
+};
+
+// ── Auth UI helpers ──────────────────────────────
+window.aTab = function(t){
+  document.getElementById('tl').classList.toggle('on',t==='l');
+  document.getElementById('tr').classList.toggle('on',t==='r');
+  document.getElementById('lf').style.display=t==='l'?'block':'none';
+  document.getElementById('rf').style.display=t==='r'?'block':'none';
+  document.getElementById('aerr').style.display='none';
+};
+function showErr(m){
+  const e=document.getElementById('aerr');
+  e.textContent=m; e.style.display='block';
+}
+function setLoading(on){
+  document.querySelectorAll('.btnmain').forEach(b=>{ b.disabled=on; b.textContent=on?'...':b.dataset.label; });
+}
+
+// ── Render all ───────────────────────────────────
+function renderAll(){
+  document.getElementById('monthly').value = D.monthly||'';
+  document.getElementById('future').value  = D.future||'';
+  document.getElementById('pen-notes').value = D.penNotes||'';
+  document.getElementById('gnotes').value  = D.gnotes||'';
+  renderGoals(); renderLocs(); renderPension(); renderNW(); renderDash();
+}
+
+// ── Goals ────────────────────────────────────────
+function renderGoals(){
+  const el=document.getElementById('goals-list'); el.innerHTML='';
+  (D.goals||[]).forEach((g,i)=>el.appendChild(mkGoal(g,i)));
+}
+function mkGoal(g,i){
+  const sv=parseFloat(g.saved)||0, nd=parseFloat(g.needed)||0;
+  const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
+  const hi=g.h||0;
+  const d=document.createElement('div'); d.className='goal-card';
+  d.innerHTML=`
+    <div class="goal-top">
+      <input class="nin" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)"/>
+      <button class="htag ${HC[hi]}" onclick="cycH(${i})">${HZ[hi]}</button>
+      <button class="bdel" onclick="delGoal(${i})">×</button>
+    </div>
+    <div class="gnums">
+      <div class="mf"><label>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)"/></div>
+      <div class="mf"><label>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)"/></div>
+    </div>
+    <div class="mf" style="margin-bottom:9px"><label>איפה הכסף</label>
+      <input value="${esc(g.where)}" placeholder="עובר ושב / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
+        style="width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'Heebo',sans-serif;font-size:13px;"/>
+    </div>
+    <div class="pbar"><div class="pfill" style="width:${pct}%"></div></div>
+    <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${nd>0&&sv>=nd?' ✓ הגעת למטרה!':''}</div>`;
+  return d;
+}
+window.gu = function(el){
+  const i=+el.dataset.i, f=el.dataset.f;
+  D.goals[i][f]=el.value;
+  const card=el.closest('.goal-card');
+  const sv=parseFloat(D.goals[i].saved)||0, nd=parseFloat(D.goals[i].needed)||0;
+  const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
+  card.querySelector('.pfill').style.width=pct+'%';
+  card.querySelector('.plbl').textContent=pct+'% הושג'+(nd>0?' · נשאר '+fmt(nd-sv):'')+(nd>0&&sv>=nd?' ✓ הגעת למטרה!':'');
+  autoSave();
+};
+window.cycH   = i=>{D.goals[i].h=((D.goals[i].h||0)+1)%4; renderGoals(); autoSave();};
+window.addGoal= ()=>{D.goals.push({name:'',where:'',saved:'',needed:'',h:0}); renderGoals(); autoSave();};
+window.delGoal= i=>{D.goals.splice(i,1); renderGoals(); autoSave();};
+
+// ── Locations ────────────────────────────────────
+function renderLocs(){
+  const el=document.getElementById('locs-list'); el.innerHTML='';
+  (D.locations||[]).forEach((l,i)=>{
+    const row=document.createElement('div'); row.className='il';
+    row.innerHTML=`
+      <input style="background:transparent;border:none;outline:none;color:var(--text);font-family:'Heebo',sans-serif;font-size:14px;flex:1;"
+        value="${esc(l.name)}" placeholder="שם המיקום" data-i="${i}" data-f="name" oninput="lu(this)"/>
+      <input type="number" value="${l.amount||''}" placeholder="₪ 0" data-i="${i}" data-f="amount" oninput="lu(this)"
+        style="background:transparent;border:none;outline:none;color:var(--green);font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;width:120px;text-align:left;direction:ltr;"/>
+      <button class="bdel" onclick="delLoc(${i})" style="font-size:16px">×</button>`;
+    el.appendChild(row);
+  });
+}
+window.lu    = el=>{const i=+el.dataset.i,f=el.dataset.f; D.locations[i][f]=el.value; autoSave();};
+window.addLoc= ()=>{D.locations.push({name:'',amount:''}); renderLocs(); autoSave();};
+window.delLoc= i=>{D.locations.splice(i,1); renderLocs(); autoSave();};
+
+// ── Pension ──────────────────────────────────────
+function renderPension(){
+  const el=document.getElementById('pension-list'); el.innerHTML='';
+  (D.pension||[]).forEach((p,i)=>el.appendChild(mkPen(p,i)));
+  renderPenSum();
+}
+function mkPen(p,i){
+  const d=document.createElement('div'); d.className='pen-card';
+  d.innerHTML=`
+    <div class="pen-head">
+      <input class="pnin" value="${esc(p.name)}" placeholder="שם המוצר" data-i="${i}" data-f="name" oninput="pu(this)"/>
+      <div class="pbadge">${p.amount?fmt(parseFloat(p.amount)):''}</div>
+      <button class="bdel" onclick="delPen(${i})">×</button>
+    </div>
+    <div class="pr2">
+      <div class="pf"><label>סה"כ כסף</label><input type="number" value="${p.amount||''}" placeholder="₪ 0" data-i="${i}" data-f="amount" oninput="pu(this)"/></div>
+      <div class="pf"><label>בית השקעות</label><input value="${esc(p.house)}" placeholder="הפניקס / הראל..." data-i="${i}" data-f="house" oninput="pu(this)"/></div>
+    </div>
+    <div class="pr3">
+      <div class="pf"><label>מסלול</label><input value="${esc(p.track)}" placeholder="פנסיה 2060..." data-i="${i}" data-f="track" oninput="pu(this)"/></div>
+      <div class="pf"><label>דמי ניהול</label><input value="${esc(p.fees)}" placeholder="0.1%" data-i="${i}" data-f="fees" oninput="pu(this)"/></div>
+      <div class="pf"><label>תאריך עדכון</label><input type="date" value="${p.date||''}" data-i="${i}" data-f="date" oninput="pu(this)"/></div>
+    </div>`;
+  return d;
+}
+window.pu = function(el){
+  const i=+el.dataset.i, f=el.dataset.f;
+  D.pension[i][f]=el.value;
+  el.closest('.pen-card').querySelector('.pbadge').textContent=(parseFloat(D.pension[i].amount)||0)?fmt(parseFloat(D.pension[i].amount)):'';
+  renderPenSum(); autoSave();
+};
+function renderPenSum(){
+  let pen=0,keren=0,other=0;
+  (D.pension||[]).forEach(p=>{
+    const v=parseFloat(p.amount)||0, n=(p.name||'').toLowerCase();
+    if(n.includes('פנסי')) pen+=v;
+    else if(n.includes('השתלמות')) keren+=v;
+    else other+=v;
+  });
+  document.getElementById('pen-summary').innerHTML=`
+    <div class="stat"><label>פנסיה</label><div class="val vb">${fmt(pen)}</div></div>
+    <div class="stat"><label>קרן השתלמות</label><div class="val vg">${fmt(keren)}</div></div>
+    <div class="stat"><label>סה"כ</label><div class="val va">${fmt(pen+keren+other)}</div></div>`;
+}
+window.addPension= ()=>{D.pension.push({name:'',amount:'',date:'',house:'',track:'',fees:''}); renderPension(); autoSave();};
+window.delPen    = i=>{D.pension.splice(i,1); renderPension(); autoSave();};
+
+// ── Net Worth ────────────────────────────────────
+function renderNW(){
+  const ph=document.getElementById('period-heads'); ph.innerHTML='';
+  for(let i=0;i<6;i++){
+    const d=document.createElement('div'); d.className='nwpc';
+    d.innerHTML=`<label>תקופה ${i+1}</label><input value="${D.nwPeriods[i]||''}" placeholder="מ/ש" data-i="${i}" oninput="nwP(this)"/>`;
+    ph.appendChild(d);
+  }
+  ['nw-assets','nw-investments','nw-savings','nw-debts'].forEach((id,k)=>{
+    renderNWSection(id,['assets','investments','savings','debts'][k]);
+  });
+}
+function renderNWSection(elId,sec){
+  const el=document.getElementById(elId); el.innerHTML='';
+  const hr=document.createElement('div'); hr.className='nwrow';
+  hr.innerHTML=`<div class="nwlbl" style="color:var(--t3);font-size:10px;font-weight:700">סעיף</div>
+    <div class="nwcells">${D.nwPeriods.map((p,i)=>`<div style="text-align:center;font-size:10px;color:var(--t3);font-weight:700;padding:4px">${p||'ת'+(i+1)}</div>`).join('')}</div>`;
+  el.appendChild(hr);
+  Object.keys(D.nwData[sec]).forEach(row=>{
+    const r=document.createElement('div'); r.className='nwrow';
+    r.innerHTML=`<div class="nwlbl">${row}</div>
+      <div class="nwcells">${D.nwData[sec][row].map((v,i)=>`<input type="number" value="${v||''}" placeholder="₪" data-s="${sec}" data-r="${row}" data-i="${i}" oninput="nwU(this)"/>`).join('')}</div>`;
+    el.appendChild(r);
+  });
+}
+window.nwP = el=>{D.nwPeriods[+el.dataset.i]=el.value; renderNW(); autoSave();};
+window.nwU = el=>{D.nwData[el.dataset.s][el.dataset.r][+el.dataset.i]=el.value; autoSave();};
+
+// ── Snapshot system ──────────────────────────────
+function calcCurrent(){
+  const monthly=parseFloat(D.monthly)||0;
+  const penTotal=(D.pension||[]).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+  const goalsSaved=(D.goals||[]).reduce((s,g)=>s+(parseFloat(g.saved)||0),0);
+  const goalsNeeded=(D.goals||[]).reduce((s,g)=>s+(parseFloat(g.needed)||0),0);
+  let latestNW=0;
+  for(let c=5;c>=0;c--){
+    const v=ss('assets',c)+ss('investments',c)+ss('savings',c)-ss('debts',c);
+    if(v!==0||D.nwPeriods[c]){latestNW=v;break;}
+  }
+  return {monthly,penTotal,goalsSaved,goalsNeeded,netWorth:latestNW,
+    locations:JSON.parse(JSON.stringify(D.locations||[])),
+    goals:JSON.parse(JSON.stringify(D.goals||[]))};
+}
+
+window.openSnapModal = function(){
+  const cur=calcCurrent();
+  const prev=D.snapshots?.length?D.snapshots[D.snapshots.length-1]:null;
+  const rows=[
+    {label:'שווי נטו',val:cur.netWorth,prev:prev?.netWorth},
+    {label:'חיסכון חודשי',val:cur.monthly,prev:prev?.monthly},
+    {label:'פנסיה וחסכונות',val:cur.penTotal,prev:prev?.penTotal},
+    {label:'חסכון למטרות',val:cur.goalsSaved,prev:prev?.goalsSaved},
+  ];
+  document.getElementById('snap-preview').innerHTML=rows.map(r=>{
+    const d=prev!=null?r.val-(r.prev||0):null;
+    return `<div class="snap-row">
+      <span class="sr-label">${r.label}</span>
+      <span class="sr-val">${fmt(r.val)}</span>
+      ${d!=null?deltaBadge(d):'<span style="font-size:11px;color:var(--t3)">ראשון</span>'}
+    </div>`;
+  }).join('');
+  document.getElementById('snap-modal').style.display='flex';
+};
+window.closeModal = ()=>document.getElementById('snap-modal').style.display='none';
+window.confirmSnap = async function(){
+  const cur=calcCurrent();
+  const now=new Date();
+  const label=`${now.getMonth()+1}/${now.getFullYear()}`;
+  D.snapshots.push({date:now.toISOString(),label,...cur});
+  await saveData(CU,D);
+  closeModal(); renderDash();
+  showToast('תמונת מצב נשמרה בענן ☁️ ✓');
+};
+
+let delSnapIdx=null;
+window.openHistModal = function(i){
+  delSnapIdx=i;
+  const s=D.snapshots[i], prev=i>0?D.snapshots[i-1]:null;
+  document.getElementById('hm-title').textContent='📸 '+s.label+' — '+fmtDate(s.date);
+  const rows=[
+    {label:'שווי נטו',val:s.netWorth,prev:prev?.netWorth},
+    {label:'חיסכון חודשי',val:s.monthly,prev:prev?.monthly},
+    {label:'פנסיה וחסכונות',val:s.penTotal,prev:prev?.penTotal},
+    {label:'חסכון למטרות',val:s.goalsSaved,prev:prev?.goalsSaved},
+  ];
+  let html=rows.map(r=>{
+    const d=prev!=null?r.val-(r.prev||0):null;
+    return `<div class="snap-row"><span class="sr-label">${r.label}</span><span class="sr-val">${fmt(r.val)}</span>${d!=null?deltaBadge(d):'<span style="font-size:11px;color:var(--t3)">ראשון</span>'}</div>`;
+  }).join('');
+  if(s.goals?.length){
+    html+='<div style="font-size:11px;color:var(--t3);font-weight:700;text-transform:uppercase;margin:16px 0 8px">מטרות</div>';
+    s.goals.forEach(g=>{
+      const sv=parseFloat(g.saved)||0,nd=parseFloat(g.needed)||0,pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
+      html+=`<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+          <span style="font-weight:600">${esc(g.name)}</span><span style="color:var(--t2)">${fmt(sv)} / ${fmt(nd)}</span>
+        </div>
+        <div class="pbar"><div class="pfill" style="width:${pct}%"></div></div>
+      </div>`;
+    });
+  }
+  document.getElementById('hm-body').innerHTML=html;
+  document.getElementById('hist-modal').style.display='flex';
+};
+window.closeHistModal = ()=>{document.getElementById('hist-modal').style.display='none'; delSnapIdx=null;};
+window.deleteSnap = async function(){
+  if(delSnapIdx==null) return;
+  D.snapshots.splice(delSnapIdx,1);
+  await saveData(CU,D);
+  closeHistModal(); renderHistory(); renderDash();
+};
+
+// ── History page ─────────────────────────────────
+function renderHistory(){
+  const snaps=D.snapshots||[];
+  const el=document.getElementById('history-list');
+  const empty=document.getElementById('history-empty');
+  if(!snaps.length){el.innerHTML=''; empty.style.display='block'; return;}
+  empty.style.display='none'; el.innerHTML='';
+  [...snaps].reverse().forEach((s,ri)=>{
+    const i=snaps.length-1-ri, prev=i>0?snaps[i-1]:null;
+    const nwD=prev!=null?s.netWorth-(prev.netWorth||0):null;
+    const savD=prev!=null?s.goalsSaved-(prev.goalsSaved||0):null;
+    const row=document.createElement('div'); row.className='hist-item';
+    row.innerHTML=`
+      <div>
+        <div class="hi-date">${s.label} · ${fmtDate(s.date)}</div>
+        <div class="hi-nw ${s.netWorth>=0?'vb':'vr'}">${fmt(s.netWorth)}</div>
+      </div>
+      <div class="hi-deltas">
+        ${nwD!=null?`<div><div style="font-size:10px;color:var(--t3);margin-bottom:3px">שווי נטו</div>${deltaBadge(nwD)}</div>`:'<span style="font-size:11px;color:var(--t3)">תמונת מצב ראשונה</span>'}
+        ${savD!=null?`<div><div style="font-size:10px;color:var(--t3);margin-bottom:3px">חסכון מטרות</div>${deltaBadge(savD)}</div>`:''}
+      </div>
+      <button class="btnhist" onclick="openHistModal(${i})">פירוט →</button>`;
+    el.appendChild(row);
+  });
+}
+
+// ── Dashboard ────────────────────────────────────
+let chAlloc=null, chNW=null, chNW2=null;
+function renderDash(){
+  const cur=calcCurrent();
+  const snaps=D.snapshots||[];
+  const prev=snaps.length?snaps[snaps.length-1]:null;
+
+  // Snap trigger
+  document.getElementById('snap-trigger-area').innerHTML=`
+    <div class="snap-trigger">
+      <div>
+        <p><b>תמונת מצב חודשית</b><br>לחץ כדי לתעד את המצב הפיננסי שלך ולראות שינויים לאורך זמן.</p>
+        ${prev?`<div style="font-size:11px;color:var(--t3);margin-top:4px">תמונת מצב אחרונה: ${fmtDate(prev.date)}</div>`:''}
+      </div>
+      <button class="btnsnaptrig" onclick="openSnapModal()">📸 שמור תמונת מצב</button>
+    </div>`;
+
+  // Comparison banner
+  const cmpArea=document.getElementById('cmp-area');
+  if(prev){
+    const nwD=cur.netWorth-prev.netWorth;
+    const savD=cur.goalsSaved-(prev.goalsSaved||0);
+    const penD=cur.penTotal-(prev.penTotal||0);
+    const monD=cur.monthly-(prev.monthly||0);
+    cmpArea.innerHTML=`<div class="cmp-banner">
+      <div><div class="cmp-title">📊 השוואה לתמונת מצב קודמת</div>
+        <div class="cmp-date">${fmtDate(prev.date)}</div></div>
+      <div class="cmp-items">
+        <div class="cmp-item"><div class="ci-label">שווי נטו</div>${deltaBadge(nwD)}</div>
+        <div class="cmp-item"><div class="ci-label">חיסכון</div>${deltaBadge(monD)}</div>
+        <div class="cmp-item"><div class="ci-label">מטרות</div>${deltaBadge(savD)}</div>
+        <div class="cmp-item"><div class="ci-label">פנסיה</div>${deltaBadge(penD)}</div>
+      </div>
+    </div>`;
+  } else { cmpArea.innerHTML=''; }
+
+  // Stats
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat"><label>חיסכון חודשי</label><div class="val vg">${cur.monthly?fmt(cur.monthly):'—'}</div>
+      <div class="sub">${prev&&(cur.monthly-(prev.monthly||0))!==0?deltaBadge(cur.monthly-(prev.monthly||0)):''}</div></div>
+    <div class="stat"><label>שווי נטו</label><div class="val ${cur.netWorth>=0?'vb':'vr'}">${fmt(cur.netWorth)}</div>
+      <div class="sub">${prev?(cur.netWorth-prev.netWorth)!==0?deltaBadge(cur.netWorth-prev.netWorth):'':''}</div></div>
+    <div class="stat"><label>פנסיה וחסכונות</label><div class="val vp">${fmt(cur.penTotal)}</div>
+      <div class="sub">${prev?(cur.penTotal-(prev.penTotal||0))!==0?deltaBadge(cur.penTotal-(prev.penTotal||0)):'':''}</div></div>
+    <div class="stat"><label>התקדמות מטרות</label><div class="val va">${cur.goalsNeeded>0?Math.round(cur.goalsSaved/cur.goalsNeeded*100)+'%':'—'}</div>
+      <div class="sub">${fmt(cur.goalsSaved)} / ${fmt(cur.goalsNeeded)}</div></div>`;
+
+  // Donut
+  const locs=(D.locations||[]).filter(l=>l.name&&parseFloat(l.amount));
+  if(chAlloc) chAlloc.destroy();
+  chAlloc=new Chart(document.getElementById('ch-alloc').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:locs.length?locs.map(l=>l.name):['אין נתונים'],
+      datasets:[{data:locs.length?locs.map(l=>parseFloat(l.amount)):[1],
+        backgroundColor:locs.length?COLS:['#1e2d48'],borderWidth:0,hoverOffset:8}]},
+    options:{plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{family:'Heebo',size:12},boxWidth:12,padding:12}}},
+      cutout:'66%',maintainAspectRatio:false}
+  });
+
+  // NW line — prefer snapshots over manual periods
+  const labels = snaps.length>=2 ? snaps.map(s=>s.label) : D.nwPeriods.map((p,i)=>p||'ת'+(i+1));
+  const nwVals = snaps.length>=2 ? snaps.map(s=>s.netWorth)
+    : D.nwPeriods.map((_,c)=>ss('assets',c)+ss('investments',c)+ss('savings',c)-ss('debts',c));
+  const mkLine=(id,old)=>{
+    if(old) old.destroy();
+    const ctx=document.getElementById(id); if(!ctx) return null;
+    const c=ctx.getContext('2d');
+    const g=c.createLinearGradient(0,0,0,200);
+    g.addColorStop(0,'rgba(59,130,246,.35)'); g.addColorStop(1,'rgba(59,130,246,0)');
+    return new Chart(c,{type:'line',
+      data:{labels,datasets:[{label:'שווי נטו',data:nwVals,borderColor:'#3b82f6',backgroundColor:g,
+        pointBackgroundColor:'#3b82f6',tension:.4,fill:true,pointRadius:5,pointHoverRadius:7}]},
+      options:{plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:'#64748b',font:{family:'Heebo',size:11}},grid:{color:'#1a2540'}},
+          y:{ticks:{color:'#64748b',font:{family:'Heebo',size:11},callback:v=>'₪'+Math.round(v/1000)+'k'},grid:{color:'#1a2540'}}},
+        maintainAspectRatio:false}});
+  };
+  chNW=mkLine('ch-nw',chNW); chNW2=mkLine('ch-nw2',chNW2);
+
+  // Goals summary
+  document.getElementById('dash-goals').innerHTML=(D.goals||[]).map(g=>{
+    const sv=parseFloat(g.saved)||0, nd=parseFloat(g.needed)||0;
+    const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+        <span style="font-size:14px;font-weight:600">${esc(g.name)||'מטרה'}</span>
+        <span style="font-size:12px;color:var(--t2);direction:ltr">${fmt(sv)} / ${fmt(nd)}</span>
+      </div>
+      <div class="pbar" style="height:10px"><div class="pfill" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px">
+        <span style="font-size:11px;color:var(--t3)">${HZ[g.h||0]}</span>
+        <span style="font-size:11px;color:var(--t2)">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('')||'<p style="color:var(--t3);font-size:13px;text-align:center;padding:20px 0">לחץ על "מטרות" להוספת מטרות</p>';
+}
+
+// ── Utils ────────────────────────────────────────
+function ss(sec,col){return Object.values(D.nwData[sec]).reduce((s,r)=>s+(parseFloat(r[col])||0),0);}
+function fmt(n){const a=Math.abs(Math.round(n));return(n<0?'(':'')+'₪'+a.toLocaleString('he-IL')+(n<0?')':'');}
+function esc(s){return(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}
+function deltaBadge(d){
+  if(!d) return '<span class="delta eq">ללא שינוי</span>';
+  return `<span class="delta ${d>0?'up':'dn'}">${d>0?'↑':'↓'} ${d>0?'+':''}${fmt(d)}</span>`;
+}
+function v(id){return document.getElementById(id).value.trim();}
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// Enter key for login/register
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||CU) return;
+  if(document.getElementById('lf').style.display!=='none') doLogin(); else doReg();
+});
+</script>
+<style>
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#141c2e;--border:#1e2d48;
+  --blue:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;
+  --text:#f1f5f9;--t2:#94a3b8;--t3:#475569;--r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;overflow-x:hidden;}
+
+/* AUTH */
+#auth{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse 80% 60% at 40% 30%,#0d1f3c,var(--bg));padding:20px;}
+.abox{width:100%;max-width:420px;background:var(--s1);border:1px solid var(--border);border-radius:24px;padding:44px 36px;}
+.abrand{text-align:center;margin-bottom:32px;}
+.abrand h1{font-size:30px;font-weight:900;letter-spacing:-1px;
+  background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.abrand p{color:var(--t2);font-size:13px;margin-top:4px;}
+.atabs{display:flex;background:var(--s2);border-radius:10px;padding:4px;margin-bottom:26px;}
+.atab{flex:1;padding:9px;border:none;background:transparent;color:var(--t2);
+  font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;border-radius:8px;cursor:pointer;transition:all .2s;}
+.atab.on{background:var(--blue);color:#fff;}
+.aerr{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;
+  padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none;}
+.fg{margin-bottom:16px;}
+.fg label{display:block;font-size:12px;color:var(--t2);font-weight:600;margin-bottom:6px;}
+.fg input{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;
+  padding:12px 14px;color:var(--text);font-family:'Heebo',sans-serif;font-size:15px;outline:none;
+  transition:border-color .2s;direction:ltr;text-align:right;}
+.fg input:focus{border-color:var(--blue);}
+.btnmain{width:100%;background:linear-gradient(135deg,#2563eb,#3b82f6);border:none;border-radius:12px;
+  padding:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:16px;font-weight:700;cursor:pointer;
+  margin-top:4px;transition:opacity .2s;}
+.btnmain:hover{opacity:.9;}
+.btnmain:disabled{opacity:.5;cursor:not-allowed;}
+.auth-note{font-size:12px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.6;}
+
+/* APP */
+#app{display:none;height:100vh;flex-direction:column;}
+.topbar{background:var(--s1);border-bottom:1px solid var(--border);padding:0 24px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.brand{font-size:17px;font-weight:900;letter-spacing:-.5px;
+  background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.upill{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:13px;color:var(--t2);}
+.upill b{color:var(--text);}
+.btnout{background:transparent;border:1px solid var(--border);color:var(--t2);border-radius:8px;
+  padding:5px 12px;font-family:'Heebo',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+.btnout:hover{border-color:var(--red);color:var(--red);}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);display:flex;padding:0 24px;flex-shrink:0;overflow-x:auto;}
+.nav::-webkit-scrollbar{display:none;}
+.nbtn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--t2);
+  font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;padding:13px 16px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;}
+.nbtn.on{color:var(--blue);border-bottom-color:var(--blue);}
+.content{flex:1;overflow-y:auto;padding:24px;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.panel{display:none;max-width:1040px;margin:0 auto;}
+.panel.on{display:block;}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;}
+.ch{font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:16px;display:flex;align-items:center;gap:7px;}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+.db{background:var(--blue)}.dg{background:var(--green)}.da{background:var(--amber)}.dr{background:var(--red)}.dp{background:var(--purple)}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+
+/* STATS */
+.stat{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:18px;}
+.stat label{font-size:11px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:8px;}
+.stat .val{font-size:22px;font-weight:800;letter-spacing:-1px;}
+.stat .sub{font-size:12px;color:var(--t2);margin-top:5px;min-height:20px;}
+.vg{color:var(--green)}.vb{color:var(--blue)}.vr{color:var(--red)}.va{color:var(--amber)}.vp{color:var(--purple)}
+
+/* DELTA */
+.delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:100px;}
+.delta.up{background:rgba(16,185,129,.15);color:#6ee7b7;}
+.delta.dn{background:rgba(239,68,68,.15);color:#fca5a5;}
+.delta.eq{background:rgba(71,85,105,.2);color:var(--t2);}
+
+/* COMPARISON BANNER */
+.cmp-banner{background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(16,185,129,.08));
+  border:1px solid rgba(59,130,246,.25);border-radius:14px;padding:16px 20px;margin-bottom:16px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.cmp-title{font-size:13px;font-weight:700;color:var(--t2);}
+.cmp-date{font-size:11px;color:var(--t3);margin-top:2px;}
+.cmp-items{display:flex;gap:20px;flex-wrap:wrap;}
+.cmp-item{text-align:center;}
+.ci-label{font-size:10px;color:var(--t3);font-weight:600;text-transform:uppercase;margin-bottom:3px;}
+
+/* SNAP TRIGGER */
+.snap-trigger{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);
+  border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.snap-trigger p{font-size:13px;color:var(--t2);line-height:1.5;}
+.snap-trigger p b{color:var(--text);}
+.btnsnaptrig{background:var(--blue);border:none;border-radius:9px;padding:9px 20px;
+  color:#fff;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btnsnaptrig:hover{opacity:.85;}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;
+  align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:20px;
+  padding:28px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;}
+.modal h2{font-size:18px;font-weight:800;margin-bottom:6px;}
+.modal p{font-size:13px;color:var(--t2);margin-bottom:20px;line-height:1.6;}
+.snap-row{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.snap-row:last-child{border-bottom:none;}
+.sr-label{color:var(--t2);}
+.sr-val{font-weight:700;}
+.modal-btns{display:flex;gap:10px;margin-top:20px;}
+.btnsnap{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Heebo',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;}
+.btnsnap.primary{background:linear-gradient(135deg,#059669,#10b981);color:#fff;}
+.btnsnap.secondary{background:var(--s2);border:1px solid var(--border);color:var(--t2);}
+
+/* HISTORY */
+.hist-item{background:var(--s2);border:1px solid var(--border);border-radius:12px;
+  padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.hi-date{font-size:13px;font-weight:700;color:var(--t2);}
+.hi-nw{font-size:16px;font-weight:800;}
+.hi-deltas{display:flex;gap:8px;flex-wrap:wrap;}
+.btnhist{background:transparent;border:1px solid var(--border);color:var(--t2);border-radius:8px;
+  padding:5px 12px;font-family:'Heebo',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;}
+.btnhist:hover{border-color:var(--blue);color:var(--blue);}
+
+/* GOAL CARDS */
+.goal-card{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;}
+.goal-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.nin{background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;flex:1;min-width:0;}
+.nin::placeholder{color:var(--t3);}
+.htag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;cursor:pointer;
+  border:none;font-family:'Heebo',sans-serif;white-space:nowrap;}
+.h0{background:rgba(59,130,246,.15);color:#93c5fd}.h1{background:rgba(16,185,129,.15);color:#6ee7b7}
+.h2{background:rgba(245,158,11,.15);color:#fcd34d}.h3{background:rgba(139,92,246,.15);color:#c4b5fd}
+.gnums{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.mf{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:9px 11px;}
+.mf label{font-size:10px;color:var(--t3);display:block;margin-bottom:3px;font-weight:700;text-transform:uppercase;}
+.mf input{background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;width:100%;direction:ltr;}
+.pbar{height:8px;background:var(--s1);border-radius:100px;overflow:hidden;margin-bottom:4px;}
+.pfill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .5s;}
+.plbl{font-size:11px;color:var(--t2);}
+.bdel{background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 4px;transition:color .2s;}
+.bdel:hover{color:var(--red);}
+
+/* PENSION */
+.pen-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+.pen-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.pnin{background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;flex:1;}
+.pbadge{font-size:14px;font-weight:700;color:var(--green);direction:ltr;white-space:nowrap;padding-left:8px;}
+.pr2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.pr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.pf label{font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;}
+.pf input{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:8px 10px;
+  color:var(--text);font-family:'Heebo',sans-serif;font-size:13px;width:100%;outline:none;transition:border-color .2s;}
+.pf input:focus{border-color:var(--blue);}
+
+/* NET WORTH */
+.nwpc{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.nwpc label{font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;display:block;margin-bottom:5px;}
+.nwpc input{background:transparent;border:none;outline:none;color:var(--blue);
+  font-family:'Heebo',sans-serif;font-size:13px;font-weight:600;width:100%;direction:ltr;}
+.nwrow{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.nwlbl{font-size:12px;color:var(--t2);flex:0 0 120px;}
+.nwcells{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;flex:1;}
+.nwcells input{background:var(--s2);border:1px solid var(--border);border-radius:7px;
+  padding:7px 4px;color:var(--text);font-family:'Heebo',sans-serif;font-size:12px;
+  width:100%;outline:none;text-align:center;direction:ltr;transition:border-color .2s;}
+.nwcells input:focus{border-color:var(--blue);}
+
+/* INLINE */
+.il{display:flex;align-items:center;gap:12px;background:var(--s2);border:1.5px solid var(--border);
+  border-radius:12px;padding:12px 16px;margin-bottom:10px;transition:border-color .2s;}
+.il:focus-within{border-color:var(--blue);}
+.il .lbl{font-size:14px;color:var(--t2);flex:1;}
+.il input{background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;width:130px;text-align:left;direction:ltr;}
+
+/* CHART */
+.chwrap{position:relative;height:220px;}
+
+/* BUTTONS */
+.btnadd{background:transparent;border:1.5px dashed var(--border);color:var(--blue);border-radius:10px;
+  padding:11px 16px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+  width:100%;transition:all .2s;margin-top:4px;}
+.btnadd:hover{border-color:var(--blue);background:rgba(59,130,246,.07);}
+.btnsave{background:linear-gradient(135deg,#059669,#10b981);border:none;border-radius:12px;
+  padding:12px 36px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(70px);
+  background:var(--green);color:#fff;padding:11px 24px;border-radius:100px;
+  font-weight:700;font-size:13px;transition:transform .3s;z-index:999;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* CLOUD BADGE */
+.cloud-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);
+  background:var(--s2);border:1px solid var(--border);border-radius:100px;padding:3px 10px;}
+
+@media(max-width:720px){
+  .g4{grid-template-columns:1fr 1fr;}.g3{grid-template-columns:1fr 1fr;}
+  .nwlbl{flex:0 0 80px;font-size:11px;}.content{padding:14px;}
+  .topbar{padding:0 14px;}.upill{display:none;}
+  .nwcells{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:480px){
+  .g2,.g3,.g4{grid-template-columns:1fr;}.gnums{grid-template-columns:1fr;}
+  .pr3{grid-template-columns:1fr 1fr;}.abox{padding:28px 20px;}.cmp-items{gap:12px;}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="abox">
+    <div class="abrand">
+      <h1>מעקב פיננסי 💰</h1>
+      <p>הכלי האישי שלך למעקב וצמיחה פיננסית</p>
+      <div style="margin-top:10px"><span class="cloud-badge">☁️ מונע על ידי Firebase — גישה מכל מקום</span></div>
+    </div>
+    <div class="atabs">
+      <button class="atab on" id="tl" onclick="aTab('l')">כניסה</button>
+      <button class="atab" id="tr" onclick="aTab('r')">הרשמה</button>
+    </div>
+    <div class="aerr" id="aerr"></div>
+    <div id="lf">
+      <div class="fg"><label>אימייל</label><input id="lu" type="email" placeholder="your@email.com"/></div>
+      <div class="fg"><label>סיסמה</label><input id="lp" type="password" placeholder="הכנס סיסמה"/></div>
+      <button class="btnmain" data-label="כניסה →" onclick="doLogin()">כניסה →</button>
+    </div>
+    <div id="rf" style="display:none">
+      <div class="fg"><label>שם מלא</label><input id="rn" placeholder="ישראל ישראלי"/></div>
+      <div class="fg"><label>אימייל</label><input id="ru" type="email" placeholder="your@email.com"/></div>
+      <div class="fg"><label>סיסמה</label><input id="rp" type="password" placeholder="לפחות 6 תווים"/></div>
+      <button class="btnmain" data-label="יצירת חשבון →" onclick="doReg()">יצירת חשבון →</button>
+    </div>
+    <div class="auth-note">הנתונים שלך מוצפנים ומאובטחים על שרתי Google</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="brand">מעקב פיננסי 💰</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="upill">שלום, <b id="uname"></b></div>
+      <button class="btnout" onclick="doLogout()">יציאה</button>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="nbtn on" onclick="goTo('dash',this)">📊 דשבורד</button>
+    <button class="nbtn" onclick="goTo('goals',this)">🎯 מטרות</button>
+    <button class="nbtn" onclick="goTo('pension',this)">🏦 פנסיה</button>
+    <button class="nbtn" onclick="goTo('nw',this)">📈 שווי נטו</button>
+    <button class="nbtn" onclick="goTo('history',this)">🕒 היסטוריה</button>
+    <button class="nbtn" onclick="goTo('notes',this)">📝 הערות</button>
+  </div>
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel on" id="p-dash">
+      <div id="snap-trigger-area"></div>
+      <div id="cmp-area"></div>
+      <div class="g4" style="margin-bottom:16px" id="dash-stats"></div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card"><div class="ch"><span class="dot db"></span>התפלגות כספים</div>
+          <div class="chwrap"><canvas id="ch-alloc"></canvas></div></div>
+        <div class="card"><div class="ch"><span class="dot dg"></span>שווי נטו לאורך זמן</div>
+          <div class="chwrap"><canvas id="ch-nw"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ch"><span class="dot da"></span>סטטוס מטרות</div>
+        <div id="dash-goals"></div></div>
+    </div>
+
+    <!-- GOALS -->
+    <div class="panel" id="p-goals">
+      <div class="card"><div class="ch"><span class="dot da"></span>חיסכון החודש</div>
+        <div class="il"><span class="lbl">כמה חסכת/ם החודש?</span>
+          <input id="monthly" type="number" placeholder="₪ 0" oninput="autoSave()"/></div></div>
+      <div class="card"><div class="ch"><span class="dot db"></span>המטרות שלי</div>
+        <div id="goals-list"></div>
+        <button class="btnadd" onclick="addGoal()">+ הוספת מטרה חדשה</button></div>
+      <div class="card"><div class="ch"><span class="dot dp"></span>כמה כסף יש לי ואיפה</div>
+        <div id="locs-list"></div>
+        <button class="btnadd" onclick="addLoc()">+ הוספת מיקום</button></div>
+      <div class="card"><div class="ch"><span class="dot dg"></span>מחשבות לעתיד</div>
+        <textarea id="future" rows="4" style="width:100%;background:var(--s2);border:1.5px solid var(--border);
+          border-radius:10px;padding:14px;color:var(--text);font-family:'Heebo',sans-serif;font-size:14px;
+          resize:vertical;outline:none;direction:rtl;line-height:1.8"
+          placeholder="איפה אתם רואים את עצמכם עוד X שנים?" oninput="autoSave()"></textarea></div>
+    </div>
+
+    <!-- PENSION -->
+    <div class="panel" id="p-pension">
+      <div class="card"><div class="ch"><span class="dot dp"></span>סיכום</div>
+        <div class="g3" id="pen-summary"></div></div>
+      <div class="card"><div class="ch"><span class="dot db"></span>המוצרים שלי</div>
+        <div id="pension-list"></div>
+        <button class="btnadd" onclick="addPension()">+ הוספת מוצר</button></div>
+      <div class="card"><div class="ch"><span class="dot da"></span>הערות</div>
+        <textarea id="pen-notes" rows="3" style="width:100%;background:var(--s2);border:1.5px solid var(--border);
+          border-radius:10px;padding:14px;color:var(--text);font-family:'Heebo',sans-serif;font-size:14px;
+          resize:vertical;outline:none;direction:rtl" placeholder="הערות, תזכורות..." oninput="autoSave()"></textarea></div>
+    </div>
+
+    <!-- NET WORTH -->
+    <div class="panel" id="p-nw">
+      <div class="card"><div class="ch"><span class="dot dg"></span>תקופות (עדכן כל חצי שנה)</div>
+        <div class="g3" id="period-heads"></div></div>
+      <div class="card"><div class="ch"><span class="dot db"></span>נכסים 🏠</div><div id="nw-assets"></div></div>
+      <div class="card"><div class="ch"><span class="dot dg"></span>השקעות 📈</div><div id="nw-investments"></div></div>
+      <div class="card"><div class="ch"><span class="dot da"></span>חסכונות 🏦</div><div id="nw-savings"></div></div>
+      <div class="card"><div class="ch"><span class="dot dr"></span>חובות 💳</div><div id="nw-debts"></div></div>
+      <div class="card"><div class="ch"><span class="dot dp"></span>גרף שווי נטו</div>
+        <div class="chwrap"><canvas id="ch-nw2"></canvas></div></div>
+      <div style="text-align:center;padding:8px 0 16px">
+        <button class="btnsave" onclick="autoSave()">שמור הכל ✓</button></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="panel" id="p-history">
+      <div class="card">
+        <div class="ch"><span class="dot dp"></span>היסטוריית תמונות מצב</div>
+        <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.7">
+          כל חודש לחץ על "שמור תמונת מצב" בדשבורד.<br>כאן תראה את כל ההיסטוריה שלך עם השוואה בין תקופות.
+        </p>
+        <div id="history-list"></div>
+        <div id="history-empty" style="text-align:center;padding:30px;color:var(--t3);font-size:13px;display:none">
+          עדיין אין תמונות מצב — לחץ על "📸 שמור תמונת מצב" בדשבורד
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="panel" id="p-notes">
+      <div class="card"><div class="ch"><span class="dot da"></span>הערות חופשיות</div>
+        <textarea id="gnotes" rows="20" style="width:100%;background:var(--s2);border:1.5px solid var(--border);
+          border-radius:12px;padding:18px;color:var(--text);font-family:'Heebo',sans-serif;font-size:15px;
+          resize:vertical;outline:none;direction:rtl;line-height:1.9"
+          placeholder="כל מה שעל הלב..." oninput="autoSave()"></textarea></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SNAPSHOT MODAL -->
+<div class="overlay" id="snap-modal" style="display:none">
+  <div class="modal">
+    <h2>📸 שמירת תמונת מצב</h2>
+    <p>זה יתעד את כל הנתונים שלך נכון להיום וישמר בענן.</p>
+    <div id="snap-preview"></div>
+    <div class="modal-btns">
+      <button class="btnsnap secondary" onclick="closeModal()">ביטול</button>
+      <button class="btnsnap primary" onclick="confirmSnap()">שמור ☁️ ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY DETAIL MODAL -->
+<div class="overlay" id="hist-modal" style="display:none">
+  <div class="modal">
+    <h2 id="hm-title"></h2>
+    <div id="hm-body"></div>
+    <div class="modal-btns">
+      <button class="btnsnap secondary" onclick="closeHistModal()">סגור</button>
+      <button class="btnsnap" style="flex:1;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fca5a5;" onclick="deleteSnap()">מחק</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">נשמר ☁️</div>
+
+</body>
+</html>
