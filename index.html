@@ -210,15 +210,15 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .track-pct{font-size:12px;color:var(--t2);text-align:center;}
 
 /* ── NET WORTH ── */
-.nwrow{display:grid;grid-template-columns:150px repeat(6,1fr) 28px;gap:4px;margin-bottom:6px;align-items:center;}
-.nwlbl{font-size:12px;color:var(--t2);text-align:right;overflow:hidden;}
+.nwrow{display:grid;grid-template-columns:160px repeat(6,minmax(0,1fr)) 24px;gap:3px;margin-bottom:6px;align-items:center;}
+.nwlbl{font-size:12px;color:var(--t2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .nwlbl input{background:transparent;border:none;outline:none;color:var(--t2);
   font-family:var(--font);font-size:12px;width:100%;text-align:right;
   border-bottom:1px dashed var(--border);padding-bottom:1px;}
 .nwlbl input:focus{color:var(--white);border-bottom-color:var(--teal);}
 .nwcell{background:var(--s2);border:1px solid var(--border);border-radius:7px;
-  padding:7px 4px;font-family:var(--font);font-size:12px;width:100%;outline:none;
-  text-align:right;direction:rtl;transition:border-color .2s;min-width:0;}
+  padding:6px 4px;font-family:var(--font);font-size:11px;width:100%;outline:none;
+  text-align:center;direction:ltr;transition:border-color .2s;min-width:0;overflow:hidden;}
 .nwcell:focus{border-color:var(--teal);}
 .nwcell.auto{background:rgba(66,235,214,.06);border-color:var(--teal-border);}
 .period-date-input{background:var(--s2);border:1px solid var(--border);border-radius:8px;
@@ -2401,12 +2401,18 @@ document.addEventListener('focusout', e=>{
       if(!overlay){
         overlay=document.createElement('div');
         overlay.className='num-overlay';
-        overlay.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;padding:0 10px;pointer-events:none;font-family:var(--font);font-size:inherit;font-weight:700;color:var(--teal);direction:ltr;justify-content:flex-end;z-index:1;';
+        overlay.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;padding:0 4px;pointer-events:none;font-family:var(--font);font-size:11px;font-weight:700;color:var(--teal);direction:ltr;justify-content:center;z-index:1;overflow:hidden;white-space:nowrap;';
         const parent=el.parentNode;
         if(getComputedStyle(parent).position==='static')parent.style.position='relative';
         parent.appendChild(overlay);
       }
-      overlay.textContent=n.toLocaleString('he-IL');
+      // For NW cells use compact format, otherwise full format
+      const isNWCell=el.classList.contains('nwcell');
+      if(isNWCell){
+        overlay.textContent=n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?Math.round(n/1000)+'K':String(Math.round(n));
+      } else {
+        overlay.textContent=n.toLocaleString('he-IL');
+      }
       overlay.style.display='flex';
       el.style.opacity='0';
     }
