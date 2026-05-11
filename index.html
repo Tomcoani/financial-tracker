@@ -210,7 +210,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .track-pct{font-size:12px;color:var(--t2);text-align:center;}
 
 /* ── NET WORTH ── */
-.nwrow{display:grid;grid-template-columns:160px repeat(6,minmax(0,1fr)) 24px;gap:3px;margin-bottom:6px;align-items:center;overflow:hidden;}
+.nwrow{display:grid;grid-template-columns:160px var(--nw-cols,repeat(6,minmax(0,1fr))) 24px;gap:3px;margin-bottom:6px;align-items:center;overflow:hidden;}
 .nwlbl{font-size:12px;color:var(--t2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .nwlbl input{background:transparent;border:none;outline:none;color:var(--t2);
   font-family:var(--font);font-size:12px;width:100%;text-align:right;
@@ -872,7 +872,7 @@ const COLS=['#42ebd6','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#38bdf8
 const PORT_CATS=['מניות ישראל','מניות חו"ל','אג"ח','נדל"ן','סחורות','מזומן','אחר'];
 let CU=null, D={}, dirty=false, autoSaveTimer=null, toastTimer=null;
 
-function nw6(){return['','','','','',''];}
+function nw6(n){return Array(n||D?.nwPeriodsCount||6).fill('');}
 function defData(){
   return {
     monthly:'',future:'',penNotes:'',gnotes:'',
@@ -886,6 +886,7 @@ function defData(){
       {name:'קרן השתלמות',amount:'',date:'',house:'',feesDeposit:'0',feesAccum:'',tracks:[{name:'',pct:''}]}
     ],
     nwPeriods:['','','','','',''],
+    nwPeriodsCount:6,
     nwData:{
       assets:{rows:[{name:'שווי בית',vals:nw6()},{name:'עו"ש ומזומן',vals:nw6()},{name:'רכב',vals:nw6()}]},
       investments:{rows:[{name:'תיק השקעות',vals:nw6()},{name:'פנסיה',vals:nw6()},{name:'קרן השתלמות',vals:nw6()}]},
@@ -937,7 +938,8 @@ auth.onAuthStateChanged(async user=>{
       return p;
     });
     // pad to 6
-    while(D.nwPeriods.length<6)D.nwPeriods.push('');
+    if(!D.nwPeriodsCount)D.nwPeriodsCount=Math.max(6,D.nwPeriods.length);
+    while(D.nwPeriods.length<D.nwPeriodsCount)D.nwPeriods.push('');
     // migrate nwData
     ['assets','investments','savings','debts'].forEach(sec=>{
       if(D.nwData[sec]&&!D.nwData[sec].rows){
@@ -1137,8 +1139,8 @@ function mkGoal(g,i){
       <button class="bdel" onclick="delGoal(${i})">×</button>
     </div>
     <div class="gnums">
-      <div class="mf"><label>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
-      <div class="mf"><label>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
+      <div class="mf"><label>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" data-num-format="1" data-raw-val="${g.saved||''}" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
+      <div class="mf"><label>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" data-num-format="1" data-raw-val="${g.needed||''}" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
     </div>
     <div class="mf" style="margin-bottom:9px"><label>איפה הכסף</label>
       <input value="${esc(g.where)}" placeholder="עו\"ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
@@ -1149,7 +1151,9 @@ function mkGoal(g,i){
   return d;
 }
 function gu(el){
-  const i=+el.dataset.i,f=el.dataset.f;D.goals[i][f]=el.value;
+  const i=+el.dataset.i,f=el.dataset.f;
+  const val=el.dataset.rawVal||el.value;
+  D.goals[i][f]=val;
   const card=el.closest('.goal-card');
   const sv=parseFloat(D.goals[i].saved)||0,nd=parseFloat(D.goals[i].needed)||0;
   const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
@@ -1387,14 +1391,24 @@ function isFuturePeriod(periodLabel){
 }
 function renderNW(){
   const ph=document.getElementById('period-heads');ph.innerHTML='';
-  for(let i=0;i<6;i++){
+  const count=D.nwPeriodsCount||6;
+  for(let i=0;i<count;i++){
     const d=document.createElement('div');
+    d.style.cssText='display:flex;flex-direction:column;gap:3px;';
     d.innerHTML=`<input class="period-date-input" value="${D.nwPeriods[i]||''}" 
       placeholder="${i===0?'1/2025':'מ/שנה'}" 
       data-i="${i}" oninput="nwPeriodChange(this)" onblur="nwPeriodBlur(this)"
-      title="הכנס תאריך בפורמט מ/שנה (לדוגמא 5/2025). לאחר הכנסת התאריך הראשון, שאר התאריכים יחושבו אוטומטית — אך ניתן לערוך אותם ידנית"/>`;
+      title="הכנס תאריך בפורמט מ/שנה"/>`;
     ph.appendChild(d);
   }
+  // Add/remove period buttons
+  const btnWrap=document.createElement('div');
+  btnWrap.style.cssText='display:flex;gap:8px;margin-top:12px;';
+  btnWrap.innerHTML=`
+    <button onclick="addNWPeriod()" class="btnadd" style="flex:1;margin-top:0">+ הוסף תקופה</button>
+    ${count>1?`<button onclick="removeNWPeriod()" style="background:transparent;border:1.5px dashed rgba(239,68,68,.4);color:var(--red);border-radius:10px;padding:10px 16px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">− הסר תקופה</button>`:''}
+  `;
+  ph.appendChild(btnWrap);
   renderNWSection('nw-assets','assets');
   renderNWSection('nw-investments','investments');
   renderNWSection('nw-savings','savings');
@@ -1403,6 +1417,8 @@ function renderNW(){
 }
 function renderNWSection(elId,sec){
   const el=document.getElementById(elId);el.innerHTML='';
+  const cnt=D.nwPeriodsCount||6;
+  document.querySelectorAll('.nwrow').forEach(r=>r.style.gridTemplateColumns=`160px repeat(${cnt},minmax(0,1fr)) 24px`);
   const hr=document.createElement('div');hr.className='nwrow';
   hr.innerHTML=`<div style="font-size:10px;color:var(--t3);font-weight:700;text-align:right;overflow:hidden;min-width:0;max-width:160px">סעיף</div>
     ${D.nwPeriods.map((p,i)=>{
@@ -1424,7 +1440,7 @@ function renderNWSection(elId,sec){
         if(isFuture){
           return `<div class="nwcell" style="background:rgba(30,45,80,0.5);border-color:rgba(66,100,150,0.4);display:flex;align-items:center;justify-content:center;color:rgba(148,163,184,0.5);font-size:11px;font-style:italic">עתיד</div>`;
         }
-        return `<input type="number" class="nwcell" value="${val||''}" placeholder="₪" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" oninput="nwCellUpdate(this)" title="${val?fmt(parseFloat(val)):''}" />`;
+        return `<input type="number" class="nwcell" value="${val||''}" placeholder="₪" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-num-format="1" data-raw-val="${val||''}" oninput="nwCellUpdate(this)" title="${val?fmt(parseFloat(val)):''}" />`;
       }).join('')}
       <button class="bdel" style="font-size:14px" onclick="delNWRow('${sec}',${ri})">×</button>`;
     el.appendChild(r);
@@ -1444,6 +1460,25 @@ function renderNWSummary(){
     <div class="stat"><label>נכסים</label><div class="val vg">${fmt(latest.a)}</div></div>
     <div class="stat"><label>השקעות + חסכונות</label><div class="val vb">${fmt(latest.iv+latest.sv)}</div></div>
     <div class="stat"><label>חובות</label><div class="val vr">${fmt(latest.d)}</div></div>`;
+}
+function addNWPeriod(){
+  if(!D.nwPeriodsCount)D.nwPeriodsCount=6;
+  D.nwPeriodsCount++;
+  D.nwPeriods.push('');
+  // extend all rows
+  ['assets','investments','savings','debts'].forEach(sec=>{
+    (D.nwData[sec].rows||[]).forEach(row=>{row.vals.push('');});
+  });
+  renderNW();markDirty();
+}
+function removeNWPeriod(){
+  if(!D.nwPeriodsCount||D.nwPeriodsCount<=1)return;
+  D.nwPeriodsCount--;
+  D.nwPeriods.pop();
+  ['assets','investments','savings','debts'].forEach(sec=>{
+    (D.nwData[sec].rows||[]).forEach(row=>{row.vals.pop();});
+  });
+  renderNW();markDirty();
 }
 function nwPeriodChange(el){
   const i=+el.dataset.i;
@@ -1503,7 +1538,8 @@ function nwPeriodBlur(el){
 function nwRowName(el){const sec=el.dataset.sec,ri=+el.dataset.ri;D.nwData[sec].rows[ri].name=el.value;markDirty();}
 function nwCellUpdate(el){
   const sec=el.dataset.sec,ri=+el.dataset.ri,ci=+el.dataset.ci;
-  D.nwData[sec].rows[ri].vals[ci]=el.value;
+  const val=el.dataset.rawVal||el.value;
+  D.nwData[sec].rows[ri].vals[ci]=val;
   touchSection('nw');
   renderNWSummary();markDirty();
 }
@@ -2489,58 +2525,30 @@ document.addEventListener('keydown',e=>{
   if(document.getElementById('lf').style.display!=='none')doLogin();else doReg();
 });
 
-// ── Global number formatting with commas ──
-// We use a wrapper approach: number input stays for validation/input
-// but we show a formatted overlay when not focused
-function fmtInput(val){
-  const n=parseFloat(val);
-  if(isNaN(n)||val==='')return '';
-  return Math.abs(n).toLocaleString('he-IL')+(n<0?' (מינוס)':'');
+// ── Global number formatting: type=text when not focused, type=number when editing ──
+function formatNumDisplay(el){
+  const raw=el.dataset.rawVal||el.value;
+  const n=parseFloat(raw);
+  if(raw===''||isNaN(n)){el.type='number';el.value=raw;return;}
+  el.dataset.rawVal=raw;
+  el.type='text';
+  el.value=n.toLocaleString('he-IL');
+}
+function unformatNum(el){
+  el.type='number';
+  el.value=el.dataset.rawVal||'';
 }
 document.addEventListener('focusin', e=>{
   const el=e.target;
-  if(el.type==='number'){
-    // Remove formatted display, show raw input
-    el.style.color='';
-    const overlay=el.parentNode.querySelector('.num-overlay');
-    if(overlay)overlay.style.display='none';
-    el.style.opacity='1';
-  }
-});
+  if(el.dataset.numFormat){unformatNum(el);}
+}, true);
 document.addEventListener('focusout', e=>{
   const el=e.target;
-  if(el.type==='number'&&el.value!==''){
-    const n=parseFloat(el.value);
-    if(!isNaN(n)){
-      // Show formatted overlay
-      let overlay=el.parentNode.querySelector('.num-overlay');
-      if(!overlay){
-        overlay=document.createElement('div');
-        overlay.className='num-overlay';
-        overlay.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;padding:0 4px;pointer-events:none;font-family:var(--font);font-size:11px;font-weight:700;color:var(--teal);direction:ltr;justify-content:center;z-index:1;overflow:hidden;white-space:nowrap;';
-        const parent=el.parentNode;
-        if(getComputedStyle(parent).position==='static')parent.style.position='relative';
-        parent.appendChild(overlay);
-      }
-      // For NW cells use compact format, otherwise full format
-      const isNWCell=el.classList.contains('nwcell');
-      if(isNWCell){
-        overlay.textContent=n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?Math.round(n/1000)+'K':String(Math.round(n));
-      } else {
-        overlay.textContent=n.toLocaleString('he-IL');
-      }
-      overlay.style.display='flex';
-      el.style.opacity='0';
-    }
+  if(el.dataset.numFormat){
+    el.dataset.rawVal=el.value;
+    formatNumDisplay(el);
   }
 });
-document.addEventListener('focusin', e=>{
-  const el=e.target;
-  if(el.type==='number'){
-    const overlay=el.parentNode.querySelector('.num-overlay');
-    if(overlay){overlay.style.display='none';el.style.opacity='1';}
-  }
-},true);
 // Warn before leaving if dirty
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 </script>
