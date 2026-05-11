@@ -310,16 +310,71 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 @media(min-width:1800px){
   .content{padding:36px 80px;}
 }
+/* ── TABLET (768px) ── */
 @media(max-width:768px){
-  .g4{grid-template-columns:1fr 1fr;} .g3{grid-template-columns:1fr 1fr;}
-  .content{padding:14px 16px;} .topbar{padding:0 14px;} .upill{display:none;}
-  .port-header,.port-row-grid{grid-template-columns:1fr 1fr 1fr;}
-  .nwlbl{flex:0 0 90px;font-size:11px;} .cashflow-row{grid-template-columns:1fr;}
+  .g4{grid-template-columns:1fr 1fr;}
+  .g3{grid-template-columns:1fr 1fr;}
+  .g2{grid-template-columns:1fr 1fr;}
+  .content{padding:14px 12px;}
+  .topbar{padding:0 12px;}
+  .upill{display:none;}
+  .port-header,.port-row-grid{grid-template-columns:1fr 1fr;}
+  .cashflow-row{grid-template-columns:1fr;}
+  .nwrow{grid-template-columns:100px repeat(6,minmax(0,1fr)) 22px;}
+  .nwcell{font-size:10px;padding:5px 2px;}
+  .stat .val{font-size:20px;}
+  .update-alert{flex-direction:column;align-items:flex-end;}
+  .al-count{font-size:18px !important;}
+  .cmp-items{gap:10px;}
+  .hist-item{flex-direction:column;align-items:flex-start;}
+  .modal{padding:20px 16px;}
+  .pen-card .pr3{grid-template-columns:1fr 1fr;}
 }
+
+/* ── MOBILE (480px) ── */
 @media(max-width:480px){
-  .g2,.g3,.g4{grid-template-columns:1fr;} .gnums{grid-template-columns:1fr;}
-  .pr3{grid-template-columns:1fr 1fr;} .abox{padding:28px 20px;}
-  .content{padding:12px;}
+  .g2,.g3,.g4{grid-template-columns:1fr;}
+  .gnums{grid-template-columns:1fr;}
+  .pr2,.pr3,.pr4{grid-template-columns:1fr;}
+  .abox{padding:24px 16px;}
+  .content{padding:10px 8px;}
+  .topbar{padding:0 10px;height:52px;}
+  .nav{padding:0 8px;}
+  .nbtn{padding:10px 10px;font-size:12px;}
+  .card{padding:14px 12px;}
+  .stat .val{font-size:18px;}
+  .stat{padding:14px;}
+  /* NW table - scrollable on mobile */
+  .nw-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .nwrow{grid-template-columns:90px repeat(6,minmax(70px,1fr)) 22px;min-width:550px;}
+  .nwcell{font-size:10px;padding:5px 2px;}
+  /* Portfolio on mobile */
+  .port-header{display:none;}
+  .port-row-grid{grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;
+    padding-bottom:12px;border-bottom:1px solid var(--border);}
+  /* Goals */
+  .goal-top{flex-wrap:wrap;}
+  .htag{font-size:10px;padding:2px 8px;}
+  /* Update alerts */
+  .update-alert{flex-direction:column;align-items:flex-start;gap:8px;}
+  .al-left{width:100%;}
+  /* Cashflow */
+  .cashflow-row{grid-template-columns:1fr;}
+  /* Auth */
+  .abrand h1{font-size:24px;}
+  /* History */
+  .hist-item{flex-direction:column;gap:8px;}
+  .modal{padding:18px 14px;margin:10px;}
+  .modal-btns{flex-direction:column;}
+  /* Comparison banner */
+  .cmp-banner{flex-direction:column;align-items:flex-start;}
+  .cmp-items{gap:8px;}
+  /* Snap trigger */
+  .snap-trigger{flex-direction:column;align-items:flex-start;}
+  /* Admin */
+  .admin-user-card{flex-direction:column;align-items:flex-start;}
+  /* Settings */
+  .settings-row{grid-template-columns:1fr;}
 }
 
 /* ── LAST UPDATED BADGE ── */
@@ -429,7 +484,10 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
   <div class="abox">
     <div class="abrand">
       <img id="auth-logo" src="" alt="Tom Ani"/>
-      <p>הכלי האישי שלך למעקב וצמיחה פיננסית</p>
+      <div style="margin-top:18px;margin-bottom:6px">
+        <div style="font-size:22px;font-weight:800;color:var(--white);letter-spacing:-0.5px">המערכת הפיננסית האישית שלך</div>
+        <div style="font-size:13px;color:var(--t2);margin-top:6px;line-height:1.6">עקוב אחרי המטרות, הפנסיה והשווי הנטו שלך —<br>במקום אחד, מאובטח ונגיש מכל מכשיר</div>
+      </div>
     </div>
     <div class="atabs">
       <button class="atab on" id="tl" onclick="aTab('l')">כניסה</button>
@@ -440,6 +498,9 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
       <div class="fg"><label>אימייל</label><input id="lu" type="email" placeholder="your@email.com"/></div>
       <div class="fg"><label>סיסמה</label><input id="lp" type="password" placeholder="הכנס סיסמה"/></div>
       <button class="btnmain" onclick="doLogin()">כניסה →</button>
+      <button type="button" onclick="doForgotPassword()" style="width:100%;background:transparent;border:none;
+        color:var(--t2);font-family:var(--font);font-size:13px;cursor:pointer;margin-top:10px;
+        text-decoration:underline;text-underline-offset:3px;">שכחתי סיסמה</button>
     </div>
     <div id="rf" style="display:none">
       <div class="fg"><label>שם מלא</label><input id="rn" placeholder="ישראל ישראלי"/></div>
@@ -586,19 +647,19 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
       </div>
       <div class="card"><div class="ch-title">נכסים 🏠</div>
         <div class="ch-hint">שווי נכסים פיזיים — דירה, רכב, מזומן</div>
-        <div id="nw-assets"></div>
+        <div class="nw-table-wrap"><div id="nw-assets"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('assets')">+ הוסף שורה</button></div>
       <div class="card"><div class="ch-title">השקעות 📈</div>
         <div class="ch-hint">מתמלא אוטומטית מנתוני הפנסיה — ניתן לערוך ידנית</div>
-        <div id="nw-investments"></div>
+        <div class="nw-table-wrap"><div id="nw-investments"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('investments')">+ הוסף שורה</button></div>
       <div class="card"><div class="ch-title">חסכונות 🏦</div>
         <div class="ch-hint">קרן חירום וחסכונות — נכלל בחישוב שווי נטו</div>
-        <div id="nw-savings"></div>
+        <div class="nw-table-wrap"><div id="nw-savings"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('savings')">+ הוסף שורה</button></div>
       <div class="card"><div class="ch-title">חובות 💳</div>
         <div class="ch-hint">משכנתא, הלוואות — מנוכה מסך הנכסים</div>
-        <div id="nw-debts"></div>
+        <div class="nw-table-wrap"><div id="nw-debts"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('debts')">+ הוסף שורה</button></div>
     </div>
 
@@ -692,6 +753,18 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
     <!-- ADMIN (only for info@tomani.co) -->
     <div class="panel" id="p-admin">
       <div class="admin-banner">👑 לוח ניהול — גישה מוגבלת לתום אני בלבד</div>
+      <div class="card" style="border-color:rgba(66,235,214,.25)">
+        <div class="ch-title">➕ יצירת משתמש חדש</div>
+        <div class="ch-hint">צור חשבון ללקוח חדש — הם יקבלו מייל עם סיסמה זמנית וישנו אותה בכניסה הראשונה</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="sf"><label>שם מלא</label><input id="new-user-name" placeholder="ישראל ישראלי"/></div>
+          <div class="sf"><label>אימייל</label><input id="new-user-email" type="email" placeholder="client@email.com"/></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button onclick="adminCreateUser()" class="btnsave" style="padding:10px 24px">צור חשבון ושלח מייל →</button>
+          <span id="create-user-status" style="font-size:13px;color:var(--t2)"></span>
+        </div>
+      </div>
       <div class="card">
         <div class="ch-title">לקוחות שצריכים עדכון</div>
         <div class="ch-hint">רשימת כל המשתמשים הרשומים ומצב העדכון שלהם</div>
@@ -918,6 +991,22 @@ async function doReg(){
   }catch(err){showErr(fbErr(err.code));}
 }
 async function doLogout(){await auth.signOut();}
+async function doForgotPassword(){
+  const email=document.getElementById('lu').value.trim();
+  if(!email){
+    showErr('הכנס את האימייל שלך קודם, ואז לחץ "שכחתי סיסמה"');
+    return;
+  }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    document.getElementById('aerr').style.background='rgba(66,235,214,.1)';
+    document.getElementById('aerr').style.borderColor='rgba(66,235,214,.3)';
+    document.getElementById('aerr').style.color='var(--teal)';
+    showErr('✓ מייל איפוס נשלח ל-'+email+'. בדוק את תיבת הדואר שלך.');
+  }catch(e){
+    showErr(fbErr(e.code)||'שגיאה בשליחת מייל איפוס');
+  }
+}
 function fbErr(c){
   const m={'auth/user-not-found':'משתמש לא קיים','auth/wrong-password':'סיסמה שגויה',
     'auth/email-already-in-use':'אימייל זה כבר קיים','auth/invalid-email':'אימייל לא תקין',
@@ -2205,7 +2294,34 @@ async function adminSendPasswordReset(email){
   }
 }
 
-// ══ SECURITY MODEL (enforced by Firestore Rules) ══
+async function adminCreateUser(){
+  const name=document.getElementById('new-user-name').value.trim();
+  const email=document.getElementById('new-user-email').value.trim();
+  const status=document.getElementById('create-user-status');
+  if(!name||!email){status.textContent='נא למלא שם ואימייל';status.style.color='var(--red)';return;}
+  status.textContent='יוצר חשבון...';status.style.color='var(--t2)';
+  try{
+    // Create user with temporary password
+    const tempPass='TomAni'+Math.floor(Math.random()*9000+1000)+'!';
+    const cred=await auth.createUserWithEmailAndPassword(email,tempPass);
+    await cred.user.updateProfile({displayName:name});
+    await saveDataFS(cred.user.uid,defData());
+    // Send password reset so they set their own password
+    await auth.sendPasswordResetEmail(email);
+    // Sign back in as admin
+    status.textContent='✓ חשבון נוצר! מייל הגדרת סיסמה נשלח ל-'+email;
+    status.style.color='var(--teal)';
+    document.getElementById('new-user-name').value='';
+    document.getElementById('new-user-email').value='';
+    // Reload admin panel
+    setTimeout(()=>renderAdmin(),1500);
+  }catch(e){
+    status.textContent='שגיאה: '+fbErr(e.code);
+    status.style.color='var(--red)';
+  }
+}
+
+
 // Each user can ONLY read/write their own data at:
 //   /users/{their-uid}/data/main
 // Admin (info@tomani.co) can read ALL users data
