@@ -593,7 +593,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
         <div id="cf-result" class="cf-result" style="display:none"></div>
       </div>
       <!-- hidden monthly sync -->
-      <input id="monthly" type="number" style="display:none" oninput="markDirty()"/>
+      <input id="monthly" type="number" data-num-format="1" style="display:none" oninput="markDirty()"/>
       <!-- GOALS LIST -->
       <div class="card">
         <div class="ch-title">המטרות שלי</div>
@@ -1164,7 +1164,8 @@ function gu(el){
   markDirty();
 }
 function cycH(i){D.goals[i].h=((D.goals[i].h||0)+1)%4;renderGoals();touchSection('goals');markDirty();}
-function toggleDone(i){
+function toggleDone(i){// also refresh locations
+
   const g=D.goals[i];
   // Validate all fields before marking as done
   if(!g.done){
@@ -1183,7 +1184,7 @@ function toggleDone(i){
     }
   }
   D.goals[i].done=!D.goals[i].done;
-  renderGoals();markDirty();
+  renderGoals();renderLocsAutoSummary();markDirty();
 }
 function showGoalError(i,msg){
   // Show error inline inside the goal card
@@ -1198,7 +1199,7 @@ function showGoalError(i,msg){
   }
 }
 function addGoal(){D.goals.push({name:'',where:'',saved:'',needed:'',h:0,done:false});renderGoals();touchSection('goals');markDirty();}
-function delGoal(i){D.goals.splice(i,1);renderGoals();markDirty();}
+function delGoal(i){D.goals.splice(i,1);renderGoals();renderLocsAutoSummary();markDirty();}
 
 // ══ LOCATIONS ══
 function renderLocs(){
@@ -1211,13 +1212,13 @@ function renderLocs(){
     row.innerHTML=`
       <input style="background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:14px;flex:1;text-align:right"
         value="${esc(l.name)}" placeholder="שם המיקום" data-i="${realIdx}" data-f="name" oninput="lu(this)"/>
-      <input type="number" value="${l.amount||''}" placeholder="₪ 0" data-i="${realIdx}" data-f="amount" oninput="lu(this)"
-        style="background:transparent;border:none;outline:none;font-family:var(--font);font-size:15px;font-weight:700;width:120px;text-align:left;direction:ltr"/>
+      <input type="number" value="${l.amount||''}" placeholder="₪ 0" data-i="${realIdx}" data-f="amount" data-num-format="1" data-raw-val="${l.amount||''}" oninput="lu(this)"
+        style="background:transparent;border:none;outline:none;font-family:var(--font);font-size:15px;font-weight:700;width:120px;text-align:right;direction:rtl"/>
       <button class="bdel" onclick="delLoc(${realIdx})">×</button>`;
     el.appendChild(row);
   });
 }
-function lu(el){const i=+el.dataset.i,f=el.dataset.f;D.locations[i][f]=el.value;if(f==='amount')D.locations[i]._manual=true;markDirty();}
+function lu(el){const i=+el.dataset.i,f=el.dataset.f;const val=el.dataset.rawVal||el.value;D.locations[i][f]=val;if(f==='amount')D.locations[i]._manual=true;markDirty();}
 function addLoc(){D.locations.push({name:'',amount:'',_manual:true});renderLocs();markDirty();}
 function delLoc(i){D.locations.splice(i,1);renderLocs();markDirty();}
 
@@ -1253,7 +1254,7 @@ function mkPen(p,i){
       <button class="bdel" onclick="delPen(${i})">×</button>
     </div>
     <div class="pr2">
-      <div class="pf"><label>סה"כ כסף (₪)</label><input type="number" value="${p.amount||''}" placeholder="0" data-i="${i}" data-f="amount" oninput="pu(this)" onblur="validateNum(this.value,'penAmount',this)"/></div>
+      <div class="pf"><label>סה"כ כסף (₪)</label><input type="number" value="${p.amount||''}" placeholder="0" data-i="${i}" data-f="amount" data-num-format="1" data-raw-val="${p.amount||''}" oninput="pu(this)" onblur="validateNum(this.value,'penAmount',this)"/></div>
       <div class="pf"><label>בית השקעות</label><input value="${esc(p.house)}" placeholder="הפניקס / הראל..." data-i="${i}" data-f="house" oninput="pu(this)"/></div>
     </div>
     <div class="pr2">
@@ -1281,7 +1282,8 @@ function mkPen(p,i){
 }
 function pu(el){
   const i=+el.dataset.i,f=el.dataset.f;
-  D.pension[i][f]=el.value;
+  const val=el.dataset.rawVal||el.value;
+  D.pension[i][f]=val;
   const badge=el.closest('.pen-card').querySelector('.pbadge');
   if(badge)badge.textContent=(parseFloat(D.pension[i].amount)||0)?fmt(parseFloat(D.pension[i].amount)):'';
   renderPenSum();autoSyncLocations();touchSection('pension');markDirty();
@@ -1379,7 +1381,7 @@ function autoSyncLocations(){
   // Pension shows separately in the illiquid donut chart
   renderLocs();
 }
-function getLatestNWCol(){for(let c=5;c>=0;c--)if(D.nwPeriods[c])return c;return 0;}
+function getLatestNWCol(){const cnt=(D.nwPeriodsCount||D.nwPeriods.length||6);for(let c=cnt-1;c>=0;c--)if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c]))return c;return 0;}
 function isFuturePeriod(periodLabel){
   if(!periodLabel)return false;
   const parsed=parsePeriodDate(periodLabel);
@@ -1708,11 +1710,10 @@ function renderRebalance(total){
 
 // ══ SNAPSHOTS ══
 function calcCurrent(){
-  // Always read latest DOM values first
+  // Collect all DOM values first
+  collectAll();
   const monthlyEl=document.getElementById('monthly');
   if(monthlyEl)D.monthly=monthlyEl.value;
-  const futureEl=document.getElementById('future');
-  if(futureEl)D.future=futureEl.value;
   const monthly=parseFloat(D.monthly)||0;
   const penTotal=(D.pension||[]).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
   const goalsSaved=(D.goals||[]).filter(g=>!g.done).reduce((s,g)=>s+(parseFloat(g.saved)||0),0);
