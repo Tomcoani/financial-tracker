@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מעקב פיננסי | Tom Ani</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -506,6 +507,19 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .nwcell-wrap{min-width:0;overflow:hidden;}
 .nwcell-curr option{background:var(--s2);color:var(--white);}
 
+
+/* ── LUCIDE ICONS ── */
+.nav-icon, .tile-icon {
+  width: 14px; height: 14px;
+  vertical-align: middle;
+  margin-left: 4px;
+  display: inline-block;
+}
+.nav-icon svg, .tile-icon svg {
+  width: 100%; height: 100%;
+  stroke: currentColor;
+}
+
 </style>
 </head>
 <body>
@@ -549,21 +563,21 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
     <img id="app-logo" src="" alt="Tom Ani"/>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="upill">שלום, <b id="uname"></b></div>
-      <button class="btn-pdf" onclick="exportPDF()">📄 ייצוא PDF</button>
-      <button class="btnout" style="border-color:rgba(239,68,68,.3);color:var(--red)" onclick="confirmReset()">🗑 איפוס</button>
+      <button class="btn-pdf" onclick="exportPDF()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> ייצוא PDF</button>
+      <button class="btnout" style="border-color:rgba(239,68,68,.3);color:var(--red)" onclick="confirmReset()"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> איפוס</button>
       <button class="btnout" onclick="doLogout()">יציאה</button>
     </div>
   </div>
   <div class="nav">
-    <button class="nbtn on" onclick="goTo('dash',this)">📊 דשבורד</button>
-    <button class="nbtn" onclick="goTo('goals',this)">🎯 מטרות</button>
-    <button class="nbtn" onclick="goTo('pension',this)">🏦 פנסיה</button>
-    <button class="nbtn" onclick="goTo('nw',this)">📈 שווי נטו</button>
-    <button class="nbtn" onclick="goTo('portfolio',this)">💼 תיק השקעות</button>
-    <button class="nbtn" onclick="goTo('history',this)">🕒 היסטוריה</button>
-    <button class="nbtn" onclick="goTo('notes',this)">📝 הערות</button>
-    <button class="nbtn" onclick="goTo('settings',this)">⚙️ הגדרות</button>
-    <button class="nbtn" id="admin-nav-btn" style="display:none;color:var(--purple)" onclick="goTo('admin',this)">👑 ניהול</button>
+    <button class="nbtn on" onclick="goTo('dash',this)"><i data-lucide="layout-dashboard" class="nav-icon"></i> דשבורד</button>
+    <button class="nbtn" onclick="goTo('goals',this)"><i data-lucide="target" class="nav-icon"></i> מטרות</button>
+    <button class="nbtn" onclick="goTo('pension',this)"><i data-lucide="landmark" class="nav-icon"></i> פנסיה</button>
+    <button class="nbtn" onclick="goTo('nw',this)"><i data-lucide="trending-up" class="nav-icon"></i> שווי נטו</button>
+    <button class="nbtn" onclick="goTo('portfolio',this)"><i data-lucide="briefcase" class="nav-icon"></i> תיק השקעות</button>
+    <button class="nbtn" onclick="goTo('history',this)"><i data-lucide="clock" class="nav-icon"></i> היסטוריה</button>
+    <button class="nbtn" onclick="goTo('notes',this)"><i data-lucide="notebook-pen" class="nav-icon"></i> הערות</button>
+    <button class="nbtn" onclick="goTo('settings',this)"><i data-lucide="settings" class="nav-icon"></i> הגדרות</button>
+    <button class="nbtn" id="admin-nav-btn" style="display:none;color:var(--purple)" onclick="goTo('admin',this)"><i data-lucide="shield" class="nav-icon"></i> ניהול</button>
   </div>
   <div class="content">
 
@@ -605,7 +619,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
       <div class="last-updated-bar" id="lup-p-goals"><span class="lup-dot"></span><span>טוען...</span></div>
       <!-- CASH FLOW CALCULATOR -->
       <div class="cashflow-box">
-        <h3>💰 כמה יש לי להשקיע החודש?</h3>
+        <h3><i data-lucide="coins" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> כמה יש לי להשקיע החודש?</h3>
         <div class="hint">ענה על 3 שאלות פשוטות וקבל תשובה מיידית</div>
         <div class="cashflow-row">
           <div class="cf-field">
@@ -676,19 +690,19 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
         <div class="ch-hint">הכנס תאריך לתקופה הראשונה (פורמט: מ/שנה, לדוגמא 1/2025) — שאר התקופות מחושבות אוטומטית</div>
         <div class="g3" id="period-heads"></div>
       </div>
-      <div class="card"><div class="ch-title">נכסים 🏠</div>
+      <div class="card"><div class="ch-title"><i data-lucide="home" class="tile-icon"></i> נכסים</div>
         <div class="ch-hint">שווי נכסים פיזיים — דירה, רכב, מזומן</div>
         <div class="nw-table-wrap"><div id="nw-assets"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('assets')">+ הוסף שורה</button></div>
-      <div class="card"><div class="ch-title">השקעות 📈</div>
+      <div class="card"><div class="ch-title"><i data-lucide="trending-up" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> השקעות</div>
         <div class="ch-hint">מתמלא אוטומטית מנתוני הפנסיה — ניתן לערוך ידנית</div>
         <div class="nw-table-wrap"><div id="nw-investments"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('investments')">+ הוסף שורה</button></div>
-      <div class="card"><div class="ch-title">חסכונות 🏦</div>
+      <div class="card"><div class="ch-title"><i data-lucide="piggy-bank" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> חסכונות</div>
         <div class="ch-hint">קרן חירום וחסכונות — נכלל בחישוב שווי נטו</div>
         <div class="nw-table-wrap"><div id="nw-savings"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('savings')">+ הוסף שורה</button></div>
-      <div class="card"><div class="ch-title">חובות 💳</div>
+      <div class="card"><div class="ch-title"><i data-lucide="credit-card" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> חובות</div>
         <div class="ch-hint">משכנתא, הלוואות — מנוכה מסך הנכסים</div>
         <div class="nw-table-wrap"><div id="nw-debts"></div></div>
         <button class="btnadd" style="margin-top:8px" onclick="addNWRow('debts')">+ הוסף שורה</button></div>
@@ -753,7 +767,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
       <!-- Retirement calculator link -->
       <div class="retirement-banner">
         <div class="rb-text">
-          <h3>🧮 מחשבון פרישה מוקדמת</h3>
+          <h3><i data-lucide="calculator" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> מחשבון פרישה מוקדמת</h3>
           <p>חשב מתי תוכל לפרוש בהתבסס על הנתונים הפיננסיים שלך</p>
         </div>
         <a href="https://www.tomani.co.il/early-retirement" target="_blank" class="btn-retirement">פתח מחשבון →</a>
@@ -783,9 +797,9 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 
     <!-- ADMIN (only for info@tomani.co) -->
     <div class="panel" id="p-admin">
-      <div class="admin-banner">👑 לוח ניהול — גישה מוגבלת לתום אני בלבד</div>
+      <div class="admin-banner"><i data-lucide="shield-check" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> לוח ניהול — גישה מוגבלת לתום אני בלבד</div>
       <div class="card" style="border-color:rgba(66,235,214,.25)">
-        <div class="ch-title">➕ יצירת משתמש חדש</div>
+        <div class="ch-title"><i data-lucide="user-plus" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> יצירת משתמש חדש</div>
         <div class="ch-hint">צור חשבון ללקוח חדש — הם יקבלו מייל עם סיסמה זמנית וישנו אותה בכניסה הראשונה</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div class="sf"><label>שם מלא</label><input id="new-user-name" placeholder="ישראל ישראלי"/></div>
@@ -806,12 +820,12 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
         <div class="g3" id="admin-stats"></div>
       </div>
       <div class="card" style="border-color:rgba(139,92,246,.3)">
-        <div class="ch-title">🔒 מודל אבטחה</div>
+        <div class="ch-title"><i data-lucide="lock" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> מודל אבטחה</div>
         <div style="font-size:13px;color:var(--t2);line-height:1.8;text-align:right">
           <div style="margin-bottom:8px">✅ <strong>כל משתמש</strong> — גישה לנתונים שלו בלבד, מאובטח ע"י Firebase מצד השרת</div>
           <div style="margin-bottom:8px">✅ <strong>תום אני</strong> (info@tomani.co) — גישת קריאה לכל המשתמשים</div>
           <div style="margin-bottom:8px">✅ <strong>איפוס סיסמה</strong> — לחץ "שלח איפוס סיסמה" ליד כל לקוח</div>
-          <div style="margin-bottom:8px">⚠️ <strong>כדי שהאבטחה תעבוד</strong> — ודא שה-Firestore Rules מוגדרים נכון:</div>
+          <div style="margin-bottom:8px"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>כדי שהאבטחה תעבוד</strong> — ודא שה-Firestore Rules מוגדרים נכון:</div>
           <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;direction:ltr;text-align:left;line-height:1.6;color:#a78bfa">
             match /users/{userId}/{document=**} {<br>
             &nbsp;&nbsp;allow read, write: if request.auth != null &&<br>
@@ -836,7 +850,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 <!-- MODALS -->
 <div class="overlay" id="snap-modal" style="display:none">
   <div class="modal">
-    <h2>📸 שמירת תמונת מצב</h2>
+    <h2><i data-lucide="camera" style="width:16px;height:16px;vertical-align:middle;margin-left:6px"></i> שמירת תמונת מצב</h2>
     <p>זה יתעד את כל הנתונים שלך נכון להיום וישמר בענן.</p>
     <div id="snap-preview"></div>
     <div class="modal-btns">
@@ -859,7 +873,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 <!-- RESET MODAL -->
 <div class="overlay" id="reset-modal" style="display:none">
   <div class="modal">
-    <h2 style="color:var(--red)">⚠️ איפוס כל הנתונים</h2>
+    <h2 style="color:var(--red)"><i data-lucide="alert-triangle" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;color:var(--red)"></i> איפוס כל הנתונים</h2>
     <p>פעולה זו תמחק לצמיתות את <strong>כל המידע שהכנסת</strong> — מטרות, פנסיה, שווי נטו, תיק השקעות, היסטוריה והכל.<br><br>לא ניתן לבטל פעולה זו.</p>
     <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:14px;margin-bottom:4px;font-size:13px;color:#fca5a5;text-align:right">
       האם אתה בטוח שברצונך למחוק את כל הנתונים?
@@ -923,7 +937,7 @@ function defData(){
     nwData:{
       assets:{rows:[{name:'שווי בית',vals:nw6()},{name:'עו"ש ומזומן',vals:nw6()},{name:'רכב',vals:nw6()}]},
       investments:{rows:[{name:'תיק השקעות',vals:nw6()},{name:'פנסיה',vals:nw6()},{name:'קרן השתלמות',vals:nw6()}]},
-      savings:{rows:[{name:'קרן חירום',vals:nw6()}]},
+      savings:{rows:[{name:'קרן חירום',vals:nw6()},{name:'קרן כספית',vals:nw6()}]},
       debts:{rows:[{name:'משכנתא',vals:nw6()},{name:'הלוואה',vals:nw6()}]}
     },
     portfolios:[
@@ -1144,6 +1158,7 @@ function switchGoalTab(tab){
   document.getElementById('goals-by-horizon').style.display=tab==='active'?'block':'none';
   document.getElementById('goals-done-list').style.display=tab==='done'?'block':'none';
 }
+function _afterRender(){setTimeout(()=>lucide&&lucide.createIcons&&lucide.createIcons(),50);}
 function renderGoals(){
   const byH=[[],[],[],[]];
   (D.goals||[]).filter(g=>!g.done).forEach(g=>{byH[g.h||0].push({g,idx:(D.goals||[]).indexOf(g)});});
@@ -1991,12 +2006,12 @@ function renderDash(){
 
   document.getElementById('snap-trigger-area').innerHTML=`
     ${staleProducts.length?`<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:11px;padding:13px 18px;margin-bottom:12px;font-size:13px;color:#fcd34d;text-align:right">
-      ⚠️ <strong>תאריך עדכון ישן:</strong> ${staleProducts.join('، ')} — לא עודכן כבר חצי שנה ומעלה
+      <i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>תאריך עדכון ישן:</strong> ${staleProducts.join('، ')} — לא עודכן כבר חצי שנה ומעלה
     </div>`:''}
     <div class="snap-trigger">
       <div><p><b>תמונת מצב חודשית</b><br>לחץ כדי לתעד את המצב הפיננסי שלך ולראות שינויים לאורך זמן.</p>
         ${prev?`<div style="font-size:11px;color:var(--t3);margin-top:4px">תמונת מצב אחרונה: ${fmtDate(prev.date)}</div>`:''}</div>
-      <button class="btnsnaptrig" onclick="openSnapModal()">📸 שמור תמונת מצב</button>
+      <button class="btnsnaptrig" onclick="openSnapModal()"><i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> שמור תמונת מצב</button>
     </div>`;
   const cmpArea=document.getElementById('cmp-area');
   if(prev){
@@ -2011,6 +2026,7 @@ function renderDash(){
     </div>`;
   }else{cmpArea.innerHTML='';}
   // Dashboard reads directly from NW data (same source as NW tab)
+  // Exact breakdown from NW tab
   const latestCol=getLatestNWCol();
   const nwAssets=sumSec('assets',latestCol);
   const nwInvest=sumSec('investments',latestCol);
@@ -2019,36 +2035,86 @@ function renderDash(){
   const nwTotal=nwAssets+nwInvest+nwSavings-nwDebts;
   cur.netWorth=nwTotal;
 
-  // Pension total from pension tab
-  const penTotal=(D.pension||[]).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-  // Liquid investments = investments excluding pension rows
-  const liquidInvest=(D.nwData.investments.rows||[]).reduce((s,r)=>{
-    const isPension=r.name&&(r.name.includes('פנסיה')||r.name.includes('השתלמות'));
-    if(isPension)return s;
-    return s+(parseFloat(r.vals[latestCol])||0);
+  // Pension = investment rows that are פנסיה/השתלמות
+  const penFromNW=(D.nwData.investments.rows||[]).reduce((s,r)=>{
+    const isPen=r.name&&(r.name.includes('פנסיה')||r.name.includes('השתלמות'));
+    return s+(isPen?toILS(parseFloat(r.vals[latestCol])||0,getCellCurrency(r,latestCol)):0);
   },0);
+  // Liquid = ONLY non-pension investment rows (תיק השקעות) + savings (קרן חירום, קרן כספית)
+  // Pension rows = פנסיה / השתלמות
+  const liquidInvest=(D.nwData.investments.rows||[]).reduce((s,r)=>{
+    const isPen=r.name&&(r.name.includes('פנסיה')||r.name.includes('השתלמות'));
+    return s+(!isPen?toILS(parseFloat(r.vals[latestCol])||0,getCellCurrency(r,latestCol)):0);
+  },0);
+  // Savings sub-text (קרן חירום, קרן כספית etc.)
+  const savingsRows=(D.nwData.savings.rows||[])
+    .map(r=>({name:r.name,val:toILS(parseFloat(r.vals[latestCol])||0,getCellCurrency(r,latestCol))}))
+    .filter(r=>r.val>0);
+  const savingsTotal=savingsRows.reduce((s,r)=>s+r.val,0);
+  const savingsSubText=savingsRows.map(r=>`${r.name} ${fmt(r.val)}`).join(' · ');
+  // Total liquid = non-pension investments + savings
+  const liquidTotal=liquidInvest+savingsTotal;
 
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat teal">
       <label>שווי נטו</label>
       <div class="val vt">${fmt(nwTotal)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">נכסים ${fmt(nwAssets)} + השקעות ${fmt(nwInvest+nwSavings)} − חובות ${fmt(nwDebts)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        נכסים ${fmt(nwAssets)} + השקעות ${fmt(nwInvest+nwSavings)} − חובות ${fmt(nwDebts)}
+      </div>
       <div class="sub">${prev&&(nwTotal-prev.netWorth)!==0?deltaBadge(nwTotal-prev.netWorth):''}</div>
     </div>
     <div class="stat">
-      <label>נכסים 🏠</label>
+      <label><i data-lucide="home" class="tile-icon"></i> נכסים</label>
       <div class="val vg">${fmt(nwAssets)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">דירה, רכב, מזומן</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        ${(D.nwData.assets.rows||[]).filter(r=>parseFloat(r.vals[latestCol])).map(r=>r.name).slice(0,2).join(' · ')||'דירה, רכב, מזומן'}
+      </div>
     </div>
     <div class="stat">
-      <label>פנסיה וחסכונות 🏦</label>
-      <div class="val vp">${fmt(penTotal)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">${(D.pension||[]).map(p=>p.name).filter(Boolean).join(' · ')||'הוסף בטאב פנסיה'}</div>
+      <label><i data-lucide="landmark" class="tile-icon"></i> פנסיה והשתלמות</label>
+      <div class="val vp">${fmt(penFromNW||nwInvest)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        ${(D.nwData.investments.rows||[]).filter(r=>{const n=r.name||'';return(n.includes('פנסיה')||n.includes('השתלמות'))&&parseFloat(r.vals[latestCol])}).map(r=>r.name).join(' · ')||'פנסיה + קרן השתלמות'}
+      </div>
+    </div>
+    <div class="stat">
+      <label><i data-lucide="wallet" class="tile-icon"></i> השקעות נזילות + חסכונות</label>
+      <div class="val vb">${fmt(liquidTotal)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        ${liquidInvest>0?'תיק '+fmt(liquidInvest):''}${liquidInvest>0&&savingsTotal>0?' · ':''}${savingsSubText||'קרן חירום, קרן כספית'}
+      </div>
+    </div>`;
+
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat teal">
+      <label>שווי נטו</label>
+      <div class="val vt">${fmt(nwTotal)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        נכסים ${fmt(nwAssets)} + השקעות ${fmt(nwInvest+nwSavings)} − חובות ${fmt(nwDebts)}
+      </div>
+      <div class="sub">${prev&&(nwTotal-prev.netWorth)!==0?deltaBadge(nwTotal-prev.netWorth):''}</div>
+    </div>
+    <div class="stat">
+      <label><i data-lucide="home" class="tile-icon"></i> נכסים</label>
+      <div class="val vg">${fmt(nwAssets)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        ${(D.nwData.assets.rows||[]).filter(r=>parseFloat(r.vals[latestCol])).map(r=>r.name).slice(0,2).join(' · ')||'דירה, רכב, מזומן'}
+      </div>
+    </div>
+        <div class="stat">
+      <label>פנסיה ו<i data-lucide="piggy-bank" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> חסכונות</label>
+      <div class="val vp">${fmt(penFromNW||penTotal)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        ${(D.pension||[]).map(p=>p.name).filter(Boolean).slice(0,2).join(' · ')||'הוסף בטאב פנסיה'}
+      </div>
     </div>
     <div class="stat">
       <label>השקעות נזילות 📈</label>
-      <div class="val vb">${fmt(liquidInvest+nwSavings)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">תיק השקעות + קרן חירום</div>
+      <div class="val vb">${fmt(portFromNW+nwSavings)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">
+        ${portFromNW>0?'תיק ₪'+Math.round(portFromNW/1000)+'K':''}${portFromNW>0&&nwSavings>0?' · ':''}${savingsSubText||'קרן חירום + קרן כספית'}
+      </div>
     </div>`;
 
   // ── Two donuts: liquid vs illiquid ──
@@ -2599,7 +2665,7 @@ async function renderAdmin(){
           </div>
           <div class="admin-alerts">
             ${u.alerts.length===0
-              ? '<span class="admin-alert-tag tag-ok">✅ מעודכן</span>'
+              ? '<span class="admin-alert-tag tag-ok"><i data-lucide="check-circle" style="width:12px;height:12px;vertical-align:middle"></i> מעודכן</span>'
               : u.alerts.map(a=>`<span class="admin-alert-tag ${a.cls}">⚠️ ${a.label}</span>`).join('')}
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
@@ -2609,13 +2675,13 @@ async function renderAdmin(){
             ${u.email?`<button onclick="adminSendPasswordReset('${u.email}')" 
               style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d;
               border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-              🔑 שלח איפוס סיסמה
+              <i data-lucide="key-round" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> שלח איפוס סיסמה
             </button>`:''}
           </div>
         </div>
         ${u.snapshots&&u.snapshots.length>1?`
         <div style="width:100%;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <div style="font-size:10px;color:var(--t3);font-weight:700;margin-bottom:8px;text-align:right">📈 שווי נטו לאורך זמן</div>
+          <div style="font-size:10px;color:var(--t3);font-weight:700;margin-bottom:8px;text-align:right"><i data-lucide="trending-up" class="nav-icon"></i> שווי נטו לאורך זמן</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
             ${[...u.snapshots].reverse().slice(0,6).map(s=>`
               <div style="text-align:center;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;min-width:70px">
@@ -2889,6 +2955,13 @@ const _numObserver = new MutationObserver(()=>{
   });
 });
 _numObserver.observe(document.body,{childList:true,subtree:true});
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{if(typeof lucide!=='undefined')lucide.createIcons();},200);
+  // Re-run after any DOM mutations
+  new MutationObserver(()=>{
+    if(typeof lucide!=='undefined')lucide.createIcons();
+  }).observe(document.body,{childList:true,subtree:true});
+});
 window.addEventListener('load',()=>setTimeout(()=>{
   document.querySelectorAll('input[type="number"]').forEach(attachNumFormat);
 },300));
