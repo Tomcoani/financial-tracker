@@ -503,8 +503,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 
 
 
-.nwcell-wrap{position:relative;min-width:0;overflow:visible;}
-.nwcell-wrap:hover .nwcell-curr{color:var(--t2) !important;}
+.nwcell-wrap{min-width:0;overflow:hidden;}
 .nwcell-curr option{background:var(--s2);color:var(--white);}
 
 </style>
@@ -1280,7 +1279,9 @@ function mkPen(p,i){
   const tracksHtml=(p.tracks||[{name:'',pct:''}]).map((t,ti)=>`
     <div class="track-row">
       <input value="${esc(t.name)}" placeholder="שם המסלול (לדוגמא: פנסיה 2060)" data-i="${i}" data-ti="${ti}" data-f="name" oninput="trackUpdate(this)"/>
-      <input type="number" value="${t.pct||''}" placeholder="% הקצאה" data-i="${i}" data-ti="${ti}" data-f="pct" oninput="trackUpdate(this)"/>
+      <div style="position:relative;min-width:0;overflow:hidden;">
+        <input type="number" value="${t.pct||''}" placeholder="%" data-i="${i}" data-ti="${ti}" data-f="pct" oninput="trackUpdate(this)" style="width:100%;"/>
+      </div>
       <button class="bdel" onclick="delTrack(${i},${ti})">×</button>
     </div>`).join('');
   const d=document.createElement('div');d.className='pen-card';
@@ -1724,7 +1725,7 @@ function nwCellBlur(el){
 
 function nwCellFocus(el){
   el.type='number';
-  el.value=el.dataset.raw||'';
+  el.value=el.dataset.raw||el.dataset.numRaw||'';
   el.style.color='';
   el.style.fontWeight='';
 }
@@ -2121,7 +2122,8 @@ function renderDash(){
       ? items.map(i=>{
           const pct=total>0?Math.round(i.val/total*100):0;
           const display=i.val>=1000000?(i.val/1000000).toFixed(1)+'M':i.val>=1000?Math.round(i.val/1000)+'K':String(Math.round(i.val));
-          return i.name+' ₪'+display+' ('+pct+'%)';
+          // Use LTR mark to keep numbers readable in RTL context
+          return '\u200F'+i.name+' \u2012 \u200E₪'+display+' ('+pct+'%)';
         })
       : ['אין נתונים'];
     const data=items.length?items.map(i=>i.val):[1];
@@ -2133,7 +2135,14 @@ function renderDash(){
         plugins:{
           legend:{
             position:isMobile?'bottom':'right',
-            labels:{color:'#94a3b8',font:{family:'Heebo',size:isMobile?10:11},boxWidth:10,padding:isMobile?6:8}
+            rtl:true,
+            labels:{
+              color:'#94a3b8',
+              font:{family:'Heebo',size:isMobile?10:11},
+              boxWidth:10,
+              padding:isMobile?6:8,
+              textAlign:'right'
+            }
           },
           tooltip:{callbacks:{label:ctx=>` ${ctx.label}`}}
         },
@@ -2833,83 +2842,56 @@ document.addEventListener('keydown',e=>{
 // ── Number formatting: show formatted value in a sibling span ──
 // Pure approach: input stays type=number, we show a <span> overlay when not focused
 function attachNumFormat(el){
-  if(el._numFormatAttached) return;
-  el._numFormatAttached = true;
-  // Wrap input in a relative-position container
-  const parent = el.parentNode;
-  if(!parent) return;
-  // Only set relative if parent is a dedicated wrapper, not a grid container
-  const tag = parent.tagName.toLowerCase();
-  const cls = parent.className || '';
-  const isGrid = cls.includes('nwrow') || cls.includes('port-row') || cls.includes('il') || tag === 'form';
-  if(!isGrid) {
-    if(getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
-  } else {
-    // Wrap the input in a relative div
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:relative;min-width:0;overflow:hidden;display:contents;';
-    parent.insertBefore(wrapper, el);
-    wrapper.appendChild(el);
-    return attachNumFormat(el); // re-run with new parent
-  }
-  // Create display span (shows formatted value when not focused)
-  const span = document.createElement('span');
-  span.className = 'num-display';
-  span.style.cssText = [
-    'position:absolute','inset:0','display:none',
-    'align-items:center','justify-content:flex-end',
-    'padding:0 8px','pointer-events:none',
-    'font-family:var(--font)','font-weight:700',
-    'color:var(--teal)','font-size:inherit',
-    'direction:ltr','white-space:nowrap','overflow:hidden'
-  ].join(';');
-  parent.appendChild(span);
-  function showFormatted(){
-    const raw = el.value;
-    const n = parseFloat(raw);
-    if(raw !== '' && !isNaN(n) && n !== 0){
-      span.textContent = n.toLocaleString('he-IL');
-      span.style.display = 'flex';
-      el.style.opacity = '0';
-    } else {
-      span.style.display = 'none';
-      el.style.opacity = '1';
+  if(el._numFormatAttached)return;
+  el._numFormatAttached=true;
+  // On blur: show formatted text
+  el.addEventListener('blur',()=>{
+    const raw=el.dataset.numRaw||el.value;
+    const n=parseFloat(raw);
+    if(raw!==''&&!isNaN(n)&&n!==0){
+      el.dataset.numRaw=String(n);
+      el.type='text';
+      el.value=Math.round(n).toLocaleString('he-IL');
+      el.style.color='var(--teal)';
+      el.style.fontWeight='700';
+    }
+  });
+  // On focus: show raw number for editing
+  el.addEventListener('focus',()=>{
+    const raw=el.dataset.numRaw||el.value.replace(/,/g,'');
+    el.type='number';
+    el.value=raw;
+    el.style.color='';
+    el.style.fontWeight='';
+  });
+  // On input: update raw storage
+  el.addEventListener('input',()=>{
+    el.dataset.numRaw=el.value;
+  });
+  // Initial display if has value
+  if(el.value!==''&&el.value!=='0'){
+    const n=parseFloat(el.value);
+    if(!isNaN(n)&&n!==0&&document.activeElement!==el){
+      el.dataset.numRaw=String(n);
+      el.type='text';
+      el.value=Math.round(n).toLocaleString('he-IL');
+      el.style.color='var(--teal)';
+      el.style.fontWeight='700';
     }
   }
-  function showRaw(){
-    span.style.display = 'none';
-    el.style.opacity = '1';
-    el.style.color = '';
-  }
-  el.addEventListener('focus', showRaw);
-  el.addEventListener('blur', ()=>{ setTimeout(showFormatted, 50); });
-  // IMPORTANT: on input, always show raw (user is typing)
-  el.addEventListener('input', showRaw);
-  // Initial display
-  if(el.value !== '' && el.value !== '0') showFormatted();
 }
-// Attach to all number inputs on page load and after renders
-function attachAllNumFormats(){
-  document.querySelectorAll('input[type="number"]').forEach(el=>{
-    if(!el._numFormatAttached) attachNumFormat(el);
-  });
-}
-// Run after every render
-const _origRenderAll = typeof renderAll === 'function' ? renderAll : null;
 
-// Auto-attach number formatting to new inputs via MutationObserver
+// Auto-attach number formatting to all number inputs
 const _numObserver = new MutationObserver(()=>{
   document.querySelectorAll('input[type="number"]:not([data-nf-attached])').forEach(el=>{
     el.setAttribute('data-nf-attached','1');
     attachNumFormat(el);
   });
 });
-_numObserver.observe(document.body, {childList:true, subtree:true});
-window.addEventListener('load', ()=>setTimeout(()=>{
-  document.querySelectorAll('input[type="number"]').forEach(el=>{
-    if(!el._numFormatAttached) attachNumFormat(el);
-  });
-}, 500));
+_numObserver.observe(document.body,{childList:true,subtree:true});
+window.addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('input[type="number"]').forEach(attachNumFormat);
+},300));
 
 // Warn before leaving if dirty
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
