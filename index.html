@@ -2113,6 +2113,7 @@ function renderDash(){
     .filter(p=>p.name&&parseFloat(p.amount))
     .map(p=>({name:p.name, val:parseFloat(p.amount)||0}));
 
+  const isMobile=window.innerWidth<=600;
   function buildDonut(ctxId, items, colorSet){
     const ctx=document.getElementById(ctxId);if(!ctx)return null;
     const total=items.reduce((s,i)=>s+i.val,0);
@@ -2130,7 +2131,10 @@ function renderDash(){
       data:{labels,datasets:[{data,backgroundColor:bg,borderWidth:2,borderColor:'#080c14',hoverOffset:8}]},
       options:{
         plugins:{
-          legend:{position:'right',labels:{color:'#94a3b8',font:{family:'Heebo',size:11},boxWidth:10,padding:8}},
+          legend:{
+            position:isMobile?'bottom':'right',
+            labels:{color:'#94a3b8',font:{family:'Heebo',size:isMobile?10:11},boxWidth:10,padding:isMobile?6:8}
+          },
           tooltip:{callbacks:{label:ctx=>` ${ctx.label}`}}
         },
         cutout:'60%',maintainAspectRatio:false
@@ -2142,6 +2146,11 @@ function renderDash(){
   const ILLIQ_COLS=['#7c3aed','#a78bfa','#4f46e5','#c084fc','#818cf8','#6d28d9'];
   chAlloc=buildDonut('ch-alloc', liquidItems, LIQUID_COLS);
   chAlloc2=buildDonut('ch-alloc2', illiquidItems, ILLIQ_COLS);
+  // Adjust chart height on mobile for bottom legend
+  if(isMobile){
+    const wh=document.querySelectorAll('.chwrap');
+    wh.forEach(w=>w.style.height='320px');
+  }
 
   // NW line — only show past/present periods with actual data
   let labels, nwVals;
