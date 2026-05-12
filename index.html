@@ -475,6 +475,12 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
   text-decoration:none;display:inline-block;white-space:nowrap;}
 .btn-retirement:hover{opacity:.88;}
 
+
+
+.nwcell-wrap{position:relative;min-width:0;overflow:visible;}
+.nwcell-wrap:hover .nwcell-curr{color:var(--t2) !important;}
+.nwcell-curr option{background:var(--s2);color:var(--white);}
+
 </style>
 </head>
 <body>
@@ -593,7 +599,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
         <div id="cf-result" class="cf-result" style="display:none"></div>
       </div>
       <!-- hidden monthly sync -->
-      <input id="monthly" type="number" data-num-format="1" style="display:none" oninput="markDirty()"/>
+      <input id="monthly" type="number" style="display:none" oninput="markDirty()"/>
       <!-- GOALS LIST -->
       <div class="card">
         <div class="ch-title">המטרות שלי</div>
@@ -886,6 +892,8 @@ function defData(){
       {name:'קרן השתלמות',amount:'',date:'',house:'',feesDeposit:'0',feesAccum:'',tracks:[{name:'',pct:''}]}
     ],
     nwPeriods:['','','','','',''],
+    exchangeRates:{ILS:1,USD:3.7,EUR:4.0,GBP:4.7},
+    ratesUpdated:null,
     nwPeriodsCount:6,
     nwData:{
       assets:{rows:[{name:'שווי בית',vals:nw6()},{name:'עו"ש ומזומן',vals:nw6()},{name:'רכב',vals:nw6()}]},
@@ -927,6 +935,10 @@ auth.onAuthStateChanged(async user=>{
       D.portfolios=[{id:1,brokerName:'',items:existingItems}];
     }
     // Ensure all portfolio items are preserved
+    // Ensure all NW rows have currency field
+    ['assets','investments','savings','debts'].forEach(sec=>{
+      (D.nwData[sec].rows||[]).forEach(row=>{if(!row.currency)row.currency='ILS';});
+    });
     D.portfolios.forEach(port=>{
       if(!port.items||!port.items.length)port.items=[{name:'',category:'מניות חו"ל',value:'',targetPct:''}];
     });
@@ -1139,8 +1151,8 @@ function mkGoal(g,i){
       <button class="bdel" onclick="delGoal(${i})">×</button>
     </div>
     <div class="gnums">
-      <div class="mf"><label>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" data-num-format="1" data-raw-val="${g.saved||''}" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
-      <div class="mf"><label>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" data-num-format="1" data-raw-val="${g.needed||''}" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
+      <div class="mf"><label>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
+      <div class="mf"><label>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
     </div>
     <div class="mf" style="margin-bottom:9px"><label>איפה הכסף</label>
       <input value="${esc(g.where)}" placeholder="עו\"ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
@@ -1152,8 +1164,7 @@ function mkGoal(g,i){
 }
 function gu(el){
   const i=+el.dataset.i,f=el.dataset.f;
-  const val=el.dataset.rawVal||el.value;
-  D.goals[i][f]=val;
+  D.goals[i][f]=el.value;
   const card=el.closest('.goal-card');
   const sv=parseFloat(D.goals[i].saved)||0,nd=parseFloat(D.goals[i].needed)||0;
   const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
@@ -1212,13 +1223,13 @@ function renderLocs(){
     row.innerHTML=`
       <input style="background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:14px;flex:1;text-align:right"
         value="${esc(l.name)}" placeholder="שם המיקום" data-i="${realIdx}" data-f="name" oninput="lu(this)"/>
-      <input type="number" value="${l.amount||''}" placeholder="₪ 0" data-i="${realIdx}" data-f="amount" data-num-format="1" data-raw-val="${l.amount||''}" oninput="lu(this)"
+      <input type="number" value="${l.amount||''}" placeholder="₪ 0" data-i="${realIdx}" data-f="amount" oninput="lu(this)"
         style="background:transparent;border:none;outline:none;font-family:var(--font);font-size:15px;font-weight:700;width:120px;text-align:right;direction:rtl"/>
       <button class="bdel" onclick="delLoc(${realIdx})">×</button>`;
     el.appendChild(row);
   });
 }
-function lu(el){const i=+el.dataset.i,f=el.dataset.f;const val=el.dataset.rawVal||el.value;D.locations[i][f]=val;if(f==='amount')D.locations[i]._manual=true;markDirty();}
+function lu(el){const i=+el.dataset.i,f=el.dataset.f;D.locations[i][f]=el.value;if(f==='amount')D.locations[i]._manual=true;markDirty();}
 function addLoc(){D.locations.push({name:'',amount:'',_manual:true});renderLocs();markDirty();}
 function delLoc(i){D.locations.splice(i,1);renderLocs();markDirty();}
 
@@ -1254,7 +1265,7 @@ function mkPen(p,i){
       <button class="bdel" onclick="delPen(${i})">×</button>
     </div>
     <div class="pr2">
-      <div class="pf"><label>סה"כ כסף (₪)</label><input type="number" value="${p.amount||''}" placeholder="0" data-i="${i}" data-f="amount" data-num-format="1" data-raw-val="${p.amount||''}" oninput="pu(this)" onblur="validateNum(this.value,'penAmount',this)"/></div>
+      <div class="pf"><label>סה"כ כסף (₪)</label><input type="number" value="${p.amount||''}" placeholder="0" data-i="${i}" data-f="amount" oninput="pu(this)" onblur="validateNum(this.value,'penAmount',this)"/></div>
       <div class="pf"><label>בית השקעות</label><input value="${esc(p.house)}" placeholder="הפניקס / הראל..." data-i="${i}" data-f="house" oninput="pu(this)"/></div>
     </div>
     <div class="pr2">
@@ -1282,8 +1293,7 @@ function mkPen(p,i){
 }
 function pu(el){
   const i=+el.dataset.i,f=el.dataset.f;
-  const val=el.dataset.rawVal||el.value;
-  D.pension[i][f]=val;
+  D.pension[i][f]=el.value;
   const badge=el.closest('.pen-card').querySelector('.pbadge');
   if(badge)badge.textContent=(parseFloat(D.pension[i].amount)||0)?fmt(parseFloat(D.pension[i].amount)):'';
   renderPenSum();autoSyncLocations();touchSection('pension');markDirty();
@@ -1434,26 +1444,65 @@ function renderNWSection(elId,sec){
   el.appendChild(hr);
   (D.nwData[sec].rows||[]).forEach((row,ri)=>{
     const r=document.createElement('div');r.className='nwrow';
+    const rowCurr=(row.currency||'ILS');
+    const rowSymbol=getCurrSymbol(rowCurr);
     r.innerHTML=`
-      <div style="overflow:hidden;min-width:0;max-width:160px"><input value="${esc(row.name)}" placeholder="שם" data-sec="${sec}" data-ri="${ri}" oninput="nwRowName(this)" style="text-align:right;direction:rtl;width:100%;background:transparent;border:none;outline:none;color:var(--t2);font-family:var(--font);font-size:12px;border-bottom:1px dashed var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"/></div>
+      <div style="overflow:hidden;min-width:0;max-width:160px;">
+        <input value="${esc(row.name)}" placeholder="שם" data-sec="${sec}" data-ri="${ri}" oninput="nwRowName(this)" style="text-align:right;direction:rtl;width:100%;background:transparent;border:none;outline:none;color:var(--t2);font-family:var(--font);font-size:12px;border-bottom:1px dashed var(--border);"/>
+
+      </div></div>
       ${row.vals.map((val,ci)=>{
         const periodLabel=D.nwPeriods[ci]||'';
         const isFuture=isFuturePeriod(periodLabel);
         if(isFuture){
           return `<div class="nwcell" style="background:rgba(30,45,80,0.5);border-color:rgba(66,100,150,0.4);display:flex;align-items:center;justify-content:center;color:rgba(148,163,184,0.5);font-size:11px;font-style:italic">עתיד</div>`;
         }
-        return `<input type="number" class="nwcell" value="${val||''}" placeholder="₪" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-num-format="1" data-raw-val="${val||''}" oninput="nwCellUpdate(this)" title="${val?fmt(parseFloat(val)):''}" />`;
+        const cellCur=getCellCurrency(row,ci);
+        const isForex=cellCur!=='ILS';
+        const n=parseFloat(val)||0;
+        let dispVal='';
+        if(val&&!isNaN(n)&&n!==0){
+          if(isForex){
+            const ilsVal=toILS(n,cellCur);
+            dispVal=n.toLocaleString('he-IL')+' '+getCurrSymbol(cellCur)+' (₪'+Math.round(ilsVal).toLocaleString('he-IL')+')';
+          } else {
+            dispVal=n.toLocaleString('he-IL');
+          }
+        }
+        const inputType=dispVal?'text':'number';
+        const cellColor=isForex?'var(--amber)':'var(--teal)';
+        return `<div class="nwcell-wrap" style="position:relative;min-width:0;">
+          <input class="nwcell" type="${inputType}" value="${dispVal||''}" placeholder="${getCurrSymbol(cellCur)||'₪'}" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-raw="${val||''}" oninput="nwCellUpdate(this)" onfocus="nwCellFocus(this)" onblur="nwCellBlur(this)" style="color:${cellColor};font-weight:700;width:100%;font-size:10px;" />
+          <select class="nwcell-curr" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" onchange="nwCellCurrency(this)"
+            style="position:absolute;bottom:1px;left:1px;background:transparent;border:none;outline:none;font-family:var(--font);font-size:9px;color:${isForex?'var(--amber)':'rgba(66,235,214,0.4)'};cursor:pointer;padding:0;appearance:none;-webkit-appearance:none;width:auto;z-index:2;">
+            ${buildCurrOptions(cellCur)}
+          </select>
+        </div>`;
       }).join('')}
       <button class="bdel" style="font-size:14px" onclick="delNWRow('${sec}',${ri})">×</button>`;
     el.appendChild(r);
   });
 }
 function renderNWSummary(){
-  const totals=D.nwPeriods.map((_,c)=>{
+  const cnt=D.nwPeriodsCount||D.nwPeriods.length||6;
+  const totals=D.nwPeriods.slice(0,cnt).map((_,c)=>{
     const a=sumSec('assets',c),iv=sumSec('investments',c),sv=sumSec('savings',c),d=sumSec('debts',c);
     return {a,iv,sv,d,nw:a+iv+sv-d};
   });
-  const latestIdx=D.nwPeriods.reduceRight((acc,p,i)=>acc===-1&&p?i:acc,-1);
+  // Latest = most recent non-future period with actual data
+  let latestIdx=-1;
+  for(let i=cnt-1;i>=0;i--){
+    const p=D.nwPeriods[i];
+    if(p&&!isFuturePeriod(p)&&(totals[i].a||totals[i].iv||totals[i].sv||totals[i].d)){
+      latestIdx=i;break;
+    }
+  }
+  // If no period with data found, use latest non-future period
+  if(latestIdx===-1){
+    for(let i=cnt-1;i>=0;i--){
+      if(D.nwPeriods[i]&&!isFuturePeriod(D.nwPeriods[i])){latestIdx=i;break;}
+    }
+  }
   const latest=latestIdx>=0?totals[latestIdx]:{a:0,iv:0,sv:0,d:0,nw:0};
   const prev=latestIdx>0?totals[latestIdx-1]:null;
   document.getElementById('nw-summary-stats').innerHTML=`
@@ -1537,17 +1586,124 @@ function nwPeriodBlur(el){
   }
   renderNW();markDirty();
 }
-function nwRowName(el){const sec=el.dataset.sec,ri=+el.dataset.ri;D.nwData[sec].rows[ri].name=el.value;markDirty();}
+
 function nwCellUpdate(el){
   const sec=el.dataset.sec,ri=+el.dataset.ri,ci=+el.dataset.ci;
-  const val=el.dataset.rawVal||el.value;
-  D.nwData[sec].rows[ri].vals[ci]=val;
+  // Strip commas in case user pasted formatted number
+  const v=el.value.replace(/,/g,'').trim();
+  el.dataset.raw=v;
+  D.nwData[sec].rows[ri].vals[ci]=v;
   touchSection('nw');
   renderNWSummary();markDirty();
 }
+function nwCellCurrency(el){
+  const sec=el.dataset.sec,ri=+el.dataset.ri,ci=+el.dataset.ci;
+  if(el.value==='__add__'){
+    const code=prompt('הכנס קוד מטבע (לדוגמא: CHF, JPY):','');
+    if(!code){el.value=getCellCurrency(D.nwData[sec].rows[ri],+ci);return;}
+    const upper=code.trim().toUpperCase();
+    if(!D.exchangeRates[upper]){
+      const rate=parseFloat(prompt('כמה ₪ שווה 1 '+upper+'?',''));
+      if(isNaN(rate)||rate<=0){el.value=getCellCurrency(D.nwData[sec].rows[ri],+ci);return;}
+      D.exchangeRates[upper]=rate;
+      CURR_SYMBOLS[upper]=upper;
+    }
+    if(!D.nwData[sec].rows[ri].cellCurrencies)D.nwData[sec].rows[ri].cellCurrencies={};
+    D.nwData[sec].rows[ri].cellCurrencies[ci]=upper;
+    refreshCellDisplay(sec,ri,ci);
+    renderNWSummary();markDirty();
+    return;
+  }
+  if(!D.nwData[sec].rows[ri].cellCurrencies)D.nwData[sec].rows[ri].cellCurrencies={};
+  if(el.value==='ILS'){
+    delete D.nwData[sec].rows[ri].cellCurrencies[ci];
+  } else {
+    D.nwData[sec].rows[ri].cellCurrencies[ci]=el.value;
+  }
+  // Immediately update the cell display with converted value
+  refreshCellDisplay(sec,ri,ci);
+  renderNWSummary();markDirty();
+}
+
+// Re-display a single cell after currency change without full re-render
+function refreshCellDisplay(sec,ri,ci){
+  const row=D.nwData[sec].rows[ri];
+  const val=row.vals[ci]||'';
+  const cur=getCellCurrency(row,ci);
+  const isForex=cur!=='ILS';
+  const n=parseFloat(val)||0;
+  // Find the input for this cell
+  const input=document.querySelector(
+    `input.nwcell[data-sec="${sec}"][data-ri="${ri}"][data-ci="${ci}"]`
+  );
+  const currSelect=document.querySelector(
+    `select.nwcell-curr[data-sec="${sec}"][data-ri="${ri}"][data-ci="${ci}"]`
+  );
+  if(input&&val!==''&&!isNaN(n)&&n!==0){
+    input.type='text';
+    if(isForex){
+      const ilsVal=toILS(n,cur);
+      input.value=n.toLocaleString('he-IL')+' '+getCurrSymbol(cur)+' (₪'+Math.round(ilsVal).toLocaleString('he-IL')+')';
+      input.style.color='var(--amber)';
+    } else {
+      input.value=n.toLocaleString('he-IL');
+      input.style.color='var(--teal)';
+    }
+    input.style.fontWeight='700';
+    input.dataset.raw=val;
+  }
+  if(currSelect){
+    currSelect.style.color=isForex?'var(--amber)':'rgba(66,235,214,0.4)';
+    // Update select value to reflect new currency
+    currSelect.value=cur;
+  }
+}
+// NW cell blur: show formatted
+function nwCellBlur(el){
+  const sec=el.dataset.sec,ri=el.dataset.ri!=null?+el.dataset.ri:null;
+  const ci=el.dataset.ci!=null?+el.dataset.ci:null;
+  // Get the stored raw value (set by nwCellUpdate)
+  let rawNum=el.dataset.raw||'';
+  if(rawNum===''){
+    // Fallback: strip formatting from display value
+    rawNum=el.value.replace(/[,\s₪$€£]/g,'').replace(/\(.*\)/,'').trim();
+  }
+  const n=parseFloat(rawNum);
+  if(rawNum!==''&&!isNaN(n)&&n!==0){
+    el.dataset.raw=String(n);
+    const row=sec!=null&&ri!=null?D.nwData[sec]?.rows[ri]:null;
+    const cur=row&&ci!=null?getCellCurrency(row,ci):'ILS';
+    const isForex=cur!=='ILS';
+    el.type='text';
+    if(isForex){
+      // Ensure rates exist
+        const rate=D.exchangeRates[cur]||1;
+      const ilsVal=n*rate;
+      el.value=n.toLocaleString('he-IL')+' '+getCurrSymbol(cur)+' = ₪'+Math.round(ilsVal).toLocaleString('he-IL');
+      el.style.color='var(--amber)';
+    } else {
+      el.value=n.toLocaleString('he-IL');
+      el.style.color='var(--teal)';
+    }
+    el.style.fontWeight='700';
+  } else {
+    el.dataset.raw='';
+    el.type='number';
+    el.value='';
+    el.style.color='';
+    el.style.fontWeight='';
+  }
+}
+
+function nwCellFocus(el){
+  el.type='number';
+  el.value=el.dataset.raw||'';
+  el.style.color='';
+  el.style.fontWeight='';
+}
 function addNWRow(sec){D.nwData[sec].rows.push({name:'',vals:nw6()});renderNW();touchSection('nw');markDirty();}
 function delNWRow(sec,ri){D.nwData[sec].rows.splice(ri,1);renderNW();markDirty();}
-function sumSec(sec,col){return(D.nwData[sec].rows||[]).reduce((s,r)=>s+(parseFloat(r.vals[col])||0),0);}
+// sumSec replaced by currency-aware version above
 
 // ══ PORTFOLIO ══
 // ══ PORTFOLIO RENDER (multi-portfolio) ══
@@ -1720,7 +1876,8 @@ function calcCurrent(){
   const goalsNeeded=(D.goals||[]).filter(g=>!g.done).reduce((s,g)=>s+(parseFloat(g.needed)||0),0);
   const latestCol=getLatestNWCol();
   const nw=sumSec('assets',latestCol)+sumSec('investments',latestCol)+sumSec('savings',latestCol)-sumSec('debts',latestCol);
-  return {monthly,penTotal,goalsSaved,goalsNeeded,netWorth:nw,
+  const debts=sumSec('debts',latestCol);
+  return {monthly,penTotal,goalsSaved,goalsNeeded,netWorth:nw,debts,
     locations:JSON.parse(JSON.stringify(D.locations||[])),
     goals:JSON.parse(JSON.stringify(D.goals||[]))};
 }
@@ -1825,52 +1982,104 @@ function renderDash(){
       </div>
     </div>`;
   }else{cmpArea.innerHTML='';}
+  // Dashboard reads directly from NW data (same source as NW tab)
+  const latestCol=getLatestNWCol();
+  const nwAssets=sumSec('assets',latestCol);
+  const nwInvest=sumSec('investments',latestCol);
+  const nwSavings=sumSec('savings',latestCol);
+  const nwDebts=sumSec('debts',latestCol);
+  const nwTotal=nwAssets+nwInvest+nwSavings-nwDebts;
+  cur.netWorth=nwTotal;
+
+  // Pension total from pension tab
+  const penTotal=(D.pension||[]).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+  // Liquid investments = investments excluding pension rows
+  const liquidInvest=(D.nwData.investments.rows||[]).reduce((s,r)=>{
+    const isPension=r.name&&(r.name.includes('פנסיה')||r.name.includes('השתלמות'));
+    if(isPension)return s;
+    return s+(parseFloat(r.vals[latestCol])||0);
+  },0);
+
   document.getElementById('dash-stats').innerHTML=`
-    <div class="stat teal"><label>שווי נטו</label><div class="val vt">${fmt(cur.netWorth)}</div>
-      <div class="sub">${prev&&(cur.netWorth-prev.netWorth)!==0?deltaBadge(cur.netWorth-prev.netWorth):''}</div></div>
-    <div class="stat"><label>חיסכון חודשי</label><div class="val vg">${cur.monthly?fmt(cur.monthly):'—'}</div>
-      <div class="sub">${prev&&(cur.monthly-(prev.monthly||0))!==0?deltaBadge(cur.monthly-(prev.monthly||0)):''}</div></div>
-    <div class="stat"><label>פנסיה וחסכונות</label><div class="val vp">${fmt(cur.penTotal)}</div>
-      <div class="sub">${prev&&(cur.penTotal-(prev.penTotal||0))!==0?deltaBadge(cur.penTotal-(prev.penTotal||0)):''}</div></div>
-    <div class="stat"><label>התקדמות מטרות</label><div class="val va">${cur.goalsNeeded>0?Math.round(cur.goalsSaved/cur.goalsNeeded*100)+'%':'—'}</div>
-      <div class="sub">${fmt(cur.goalsSaved)} / ${fmt(cur.goalsNeeded)}</div></div>`;
+    <div class="stat teal">
+      <label>שווי נטו</label>
+      <div class="val vt">${fmt(nwTotal)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">נכסים ${fmt(nwAssets)} + השקעות ${fmt(nwInvest+nwSavings)} − חובות ${fmt(nwDebts)}</div>
+      <div class="sub">${prev&&(nwTotal-prev.netWorth)!==0?deltaBadge(nwTotal-prev.netWorth):''}</div>
+    </div>
+    <div class="stat">
+      <label>נכסים 🏠</label>
+      <div class="val vg">${fmt(nwAssets)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">דירה, רכב, מזומן</div>
+    </div>
+    <div class="stat">
+      <label>פנסיה וחסכונות 🏦</label>
+      <div class="val vp">${fmt(penTotal)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">${(D.pension||[]).map(p=>p.name).filter(Boolean).join(' · ')||'הוסף בטאב פנסיה'}</div>
+    </div>
+    <div class="stat">
+      <label>השקעות נזילות 📈</label>
+      <div class="val vb">${fmt(liquidInvest+nwSavings)}</div>
+      <div class="sub" style="font-size:10px;color:var(--t3)">תיק השקעות + קרן חירום</div>
+    </div>`;
+
   // ── Two donuts: liquid vs illiquid ──
   if(chAlloc)chAlloc.destroy();
   if(chAlloc2)chAlloc2.destroy();
 
   // LIQUID: from locations, excluding pension/השתלמות
   // Also factor in NW debt to get "net" home value
-  const latestCol=getLatestNWCol();
-  const homeBruto=sumSec('assets',latestCol); // total assets
-  const debt=sumSec('debts',latestCol);
+  const latestColDonut=getLatestNWCol();
+  const homeBruto=sumSec('assets',latestColDonut); // total assets
+  const debt=sumSec('debts',latestColDonut);
   const homeNet=Math.max(0,homeBruto-debt); // net home value
 
   // Build liquid assets from locations, replacing home value with net
   const liquidItems=[];
-  // Build liquid items from manual locations + goals "where" aggregation
+  // Build liquid items directly from NW data sections
+  const latestColLiq=getLatestNWCol();
   const portGrandTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-  // Aggregate from goals "where" field
-  const whereMap={};
-  (D.goals||[]).forEach(g=>{
-    if(!g.where||!g.saved)return;
-    const key=g.where.trim();
-    if(key)whereMap[key]=(whereMap[key]||0)+(parseFloat(g.saved)||0);
-  });
-  // Manual locations (not pension)
   const seenNames=new Set();
-  (D.locations||[]).filter(l=>!l._auto&&l.name&&parseFloat(l.amount)).forEach(l=>{
-    const isPension=l.name.includes('פנסיה')||l.name.includes('השתלמות');
+
+  // 1. Assets from NW tab (נכסים section) - use net home value
+  (D.nwData.assets.rows||[]).forEach(row=>{
+    if(!row.name)return;
+    const raw=parseFloat(row.vals[latestColLiq])||0;
+    if(!raw)return;
+    const isHome=row.name.includes('בית')||row.name.includes('דירה')||row.name.includes('נדל');
+    const val=isHome?Math.max(0,raw-(sumSec('debts',latestColLiq))):raw;
+    if(val>0&&!seenNames.has(row.name)){
+      seenNames.add(row.name);
+      liquidItems.push({name:isHome?row.name+' (נטו)':row.name, val});
+    }
+  });
+
+  // 2. Savings (חסכונות) - קרן חירום etc
+  (D.nwData.savings.rows||[]).forEach(row=>{
+    if(!row.name)return;
+    const val=parseFloat(row.vals[latestColLiq])||0;
+    if(val>0&&!seenNames.has(row.name)){
+      seenNames.add(row.name);
+      liquidItems.push({name:row.name, val});
+    }
+  });
+
+  // 3. Investments (השקעות) - excluding pension/השתלמות
+  (D.nwData.investments.rows||[]).forEach(row=>{
+    if(!row.name)return;
+    const isPension=row.name.includes('פנסיה')||row.name.includes('השתלמות');
     if(isPension)return;
-    const isHome=l.name.includes('בית')||l.name.includes('דירה')||l.name.includes('נדל');
-    const val=isHome?homeNet:(parseFloat(l.amount)||0);
-    if(val>0){seenNames.add(l.name);liquidItems.push({name:isHome?l.name+' (נטו)':l.name, val});}
+    const val=parseFloat(row.vals[latestColLiq])||0;
+    if(val>0&&!seenNames.has(row.name)){
+      seenNames.add(row.name);
+      liquidItems.push({name:row.name, val});
+    }
   });
-  // From goals where-map (only if not already in manual locations)
-  Object.entries(whereMap).forEach(([name,val])=>{
-    if(!seenNames.has(name)&&val>0)liquidItems.push({name,val});
-  });
-  // Portfolio total
-  if(portGrandTotal>0&&!seenNames.has('תיק השקעות'))liquidItems.push({name:'תיק השקעות',val:portGrandTotal});
+
+  // 4. If no NW data yet, fallback to portfolio total
+  if(!liquidItems.length&&portGrandTotal>0){
+    liquidItems.push({name:'תיק השקעות',val:portGrandTotal});
+  }
 
   // ILLIQUID: pension products
   const illiquidItems=(D.pension||[])
@@ -2117,7 +2326,66 @@ async function exportPDF(){
 }
 
 
-// ══ TOUCH SECTION ══
+// ══ CURRENCY ══
+const CURR_SYMBOLS={ILS:'₪',USD:'$',EUR:'€',GBP:'£'};
+// Extra currencies added by user
+function getAllCurrencies(){
+  const extra=Object.keys(D.exchangeRates||{}).filter(c=>!['ILS','USD','EUR','GBP'].includes(c));
+  return ['ILS','USD','EUR','GBP',...extra];
+}
+function buildCurrOptions(selected){
+  return getAllCurrencies().map(c=>`<option value="${c}"${c===selected?' selected':''}>${getCurrSymbol(c)} ${c}</option>`).join('')+
+    `<option value="__add__">+ הוסף מטבע...</option>`;
+}
+function getCurrSymbol(c){return CURR_SYMBOLS[c]||c;}
+
+
+function toILS(amount,currency){
+  if(!currency||currency==='ILS')return parseFloat(amount)||0;
+  if(!D.exchangeRates||!D.exchangeRates[currency]){
+    console.warn('No exchange rate for',currency,'rates:',D.exchangeRates);
+  }
+  const rate=(D.exchangeRates||{})[currency]||1;
+  return (parseFloat(amount)||0)*rate;
+}
+
+function nwRowName(el){
+  const sec=el.dataset.sec,ri=+el.dataset.ri;
+  D.nwData[sec].rows[ri].name=el.value;markDirty();
+}
+function nwRowCurrency(el){
+  const sec=el.dataset.sec,ri=+el.dataset.ri;
+  if(el.value==='__add__'){
+    const code=prompt('הכנס קוד מטבע (לדוגמא: CHF, JPY, CAD):','');
+    if(!code){el.value=D.nwData[sec].rows[ri].currency||'ILS';return;}
+    const upper=code.trim().toUpperCase();
+    if(!D.exchangeRates[upper]){
+      const rate=parseFloat(prompt(`שער חליפין: כמה ₪ שווה 1 ${upper}?`,''));
+      if(isNaN(rate)||rate<=0){el.value=D.nwData[sec].rows[ri].currency||'ILS';return;}
+      D.exchangeRates[upper]=rate;
+      CURR_SYMBOLS[upper]=upper;
+    }
+    D.nwData[sec].rows[ri].currency=upper;
+    renderNW();renderNWSummary();markDirty();
+    return;
+  }
+  D.nwData[sec].rows[ri].currency=el.value;
+  renderNWSummary();markDirty();
+}
+
+// Override sumSec to convert currencies
+function getCellCurrency(row,ci){
+  return (row.cellCurrencies&&row.cellCurrencies[ci])||row.currency||'ILS';
+}
+function sumSec(sec,col){
+  return(D.nwData[sec].rows||[]).reduce((s,r)=>{
+    const raw=parseFloat(r.vals[col])||0;
+    const cur=getCellCurrency(r,col);
+    return s+toILS(raw,cur);
+  },0);
+}
+
+
 function touchSection(sec){
   if(!D.lastUpdated)D.lastUpdated={};
   D.lastUpdated[sec]=new Date().toISOString();
@@ -2503,7 +2771,7 @@ function renderAnalysis(snaps){
 }
 
 
-function sumSec(sec,col){return(D.nwData[sec].rows||[]).reduce((s,r)=>s+(parseFloat(r.vals[col])||0),0);}
+// sumSec replaced by currency-aware version above
 function fmt(n){
   if(n===null||n===undefined||isNaN(n))return '₪0';
   const a=Math.abs(Math.round(n));
@@ -2526,30 +2794,87 @@ document.addEventListener('keydown',e=>{
   if(document.getElementById('lf').style.display!=='none')doLogin();else doReg();
 });
 
-// ── Global number formatting: type=text when not focused, type=number when editing ──
-function formatNumDisplay(el){
-  const raw=el.dataset.rawVal||el.value;
-  const n=parseFloat(raw);
-  if(raw===''||isNaN(n)){el.type='number';el.value=raw;return;}
-  el.dataset.rawVal=raw;
-  el.type='text';
-  el.value=n.toLocaleString('he-IL');
-}
-function unformatNum(el){
-  el.type='number';
-  el.value=el.dataset.rawVal||'';
-}
-document.addEventListener('focusin', e=>{
-  const el=e.target;
-  if(el.dataset.numFormat){unformatNum(el);}
-}, true);
-document.addEventListener('focusout', e=>{
-  const el=e.target;
-  if(el.dataset.numFormat){
-    el.dataset.rawVal=el.value;
-    formatNumDisplay(el);
+// ── Number formatting: show formatted value in a sibling span ──
+// Pure approach: input stays type=number, we show a <span> overlay when not focused
+function attachNumFormat(el){
+  if(el._numFormatAttached) return;
+  el._numFormatAttached = true;
+  // Wrap input in a relative-position container
+  const parent = el.parentNode;
+  if(!parent) return;
+  // Only set relative if parent is a dedicated wrapper, not a grid container
+  const tag = parent.tagName.toLowerCase();
+  const cls = parent.className || '';
+  const isGrid = cls.includes('nwrow') || cls.includes('port-row') || cls.includes('il') || tag === 'form';
+  if(!isGrid) {
+    if(getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+  } else {
+    // Wrap the input in a relative div
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:relative;min-width:0;overflow:hidden;display:contents;';
+    parent.insertBefore(wrapper, el);
+    wrapper.appendChild(el);
+    return attachNumFormat(el); // re-run with new parent
   }
+  // Create display span (shows formatted value when not focused)
+  const span = document.createElement('span');
+  span.className = 'num-display';
+  span.style.cssText = [
+    'position:absolute','inset:0','display:none',
+    'align-items:center','justify-content:flex-end',
+    'padding:0 8px','pointer-events:none',
+    'font-family:var(--font)','font-weight:700',
+    'color:var(--teal)','font-size:inherit',
+    'direction:ltr','white-space:nowrap','overflow:hidden'
+  ].join(';');
+  parent.appendChild(span);
+  function showFormatted(){
+    const raw = el.value;
+    const n = parseFloat(raw);
+    if(raw !== '' && !isNaN(n) && n !== 0){
+      span.textContent = n.toLocaleString('he-IL');
+      span.style.display = 'flex';
+      el.style.opacity = '0';
+    } else {
+      span.style.display = 'none';
+      el.style.opacity = '1';
+    }
+  }
+  function showRaw(){
+    span.style.display = 'none';
+    el.style.opacity = '1';
+    el.style.color = '';
+  }
+  el.addEventListener('focus', showRaw);
+  el.addEventListener('blur', ()=>{ setTimeout(showFormatted, 50); });
+  // IMPORTANT: on input, always show raw (user is typing)
+  el.addEventListener('input', showRaw);
+  // Initial display
+  if(el.value !== '' && el.value !== '0') showFormatted();
+}
+// Attach to all number inputs on page load and after renders
+function attachAllNumFormats(){
+  document.querySelectorAll('input[type="number"]').forEach(el=>{
+    if(!el._numFormatAttached) attachNumFormat(el);
+  });
+}
+// Run after every render
+const _origRenderAll = typeof renderAll === 'function' ? renderAll : null;
+
+// Auto-attach number formatting to new inputs via MutationObserver
+const _numObserver = new MutationObserver(()=>{
+  document.querySelectorAll('input[type="number"]:not([data-nf-attached])').forEach(el=>{
+    el.setAttribute('data-nf-attached','1');
+    attachNumFormat(el);
+  });
 });
+_numObserver.observe(document.body, {childList:true, subtree:true});
+window.addEventListener('load', ()=>setTimeout(()=>{
+  document.querySelectorAll('input[type="number"]').forEach(el=>{
+    if(!el._numFormatAttached) attachNumFormat(el);
+  });
+}, 500));
+
 // Warn before leaving if dirty
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 </script>
