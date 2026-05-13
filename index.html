@@ -1112,7 +1112,8 @@ function renderAll(){
   document.getElementById('pen-notes').value=D.penNotes||'';
   document.getElementById('gnotes').value=D.gnotes||'';
   renderSettings();
-  renderGoals();renderLocs();renderLocsAutoSummary();renderPension();renderNW();renderPortfolio();renderPortfolio();renderDash();
+  renderGoals();renderLocs();renderLocsAutoSummary();renderPension();renderNW();renderPortfolio();
+  attachAllNumFormats();renderPortfolio();renderDash();
   updateLastUpdatedBars();
 }
 
@@ -1158,7 +1159,6 @@ function switchGoalTab(tab){
   document.getElementById('goals-by-horizon').style.display=tab==='active'?'block':'none';
   document.getElementById('goals-done-list').style.display=tab==='done'?'block':'none';
 }
-function _afterRender(){setTimeout(()=>lucide&&lucide.createIcons&&lucide.createIcons(),50);}
 function renderGoals(){
   const byH=[[],[],[],[]];
   (D.goals||[]).filter(g=>!g.done).forEach(g=>{byH[g.h||0].push({g,idx:(D.goals||[]).indexOf(g)});});
@@ -2947,20 +2947,9 @@ function attachNumFormat(el){
   }
 }
 
-// Auto-attach number formatting to all number inputs
-const _numObserver = new MutationObserver(()=>{
-  document.querySelectorAll('input[type="number"]:not([data-nf-attached])').forEach(el=>{
-    el.setAttribute('data-nf-attached','1');
-    attachNumFormat(el);
-  });
-});
-_numObserver.observe(document.body,{childList:true,subtree:true});
+// Auto-attach number formatting after renders
 window.addEventListener('DOMContentLoaded',()=>{
-  setTimeout(()=>{if(typeof lucide!=='undefined')lucide.createIcons();},200);
-  // Re-run after any DOM mutations
-  new MutationObserver(()=>{
-    if(typeof lucide!=='undefined')lucide.createIcons();
-  }).observe(document.body,{childList:true,subtree:true});
+  setTimeout(()=>{if(typeof lucide!=='undefined')lucide.createIcons();},300);
 });
 window.addEventListener('load',()=>setTimeout(()=>{
   document.querySelectorAll('input[type="number"]').forEach(attachNumFormat);
