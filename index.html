@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מעקב פיננסי | Tom Ani</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -523,6 +523,11 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 </style>
 </head>
 <body>
+<div id="init-loader" style="position:fixed;inset:0;background:#080c14;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px;">
+  <div style="width:40px;height:40px;border:3px solid rgba(66,235,214,.2);border-top-color:#42ebd6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <div style="color:#42ebd6;font-family:Heebo,sans-serif;font-size:14px;font-weight:600">טוען...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <!-- AUTH -->
 <div id="auth">
@@ -998,6 +1003,7 @@ auth.onAuthStateChanged(async user=>{
       }
       if(!D.nwData[sec])D.nwData[sec]={rows:[]};
     });
+    document.getElementById('init-loader').style.display='none';
     injectLogos();
     document.getElementById('auth').style.display='none';
     document.getElementById('app').style.display='flex';
@@ -1012,6 +1018,7 @@ auth.onAuthStateChanged(async user=>{
     goTo('dash',document.querySelector('.nbtn'));
   }else{
     CU=null;D={};
+    document.getElementById('init-loader').style.display='none';
     document.getElementById('app').style.display='none';
     document.getElementById('auth').style.display='flex';
     injectLogos();
