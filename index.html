@@ -1093,11 +1093,13 @@ function collectAll(){
 }
 
 // ══ NAV ══
+let _lastTab='';
 function goTo(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
   document.getElementById('p-'+id).classList.add('on');
   btn.classList.add('on');
+  _lastTab=id;
   if(id==='dash')renderDash();
   if(id==='history')renderHistory();
   if(id==='portfolio'){renderPortfolio();renderPortfolioCharts();}
@@ -1111,10 +1113,22 @@ function renderAll(){
   document.getElementById('monthly').value=D.monthly||'';
   document.getElementById('pen-notes').value=D.penNotes||'';
   document.getElementById('gnotes').value=D.gnotes||'';
+  // Only render what's immediately needed
   renderSettings();
-  renderGoals();renderLocs();renderLocsAutoSummary();renderPension();renderNW();renderPortfolio();
-  attachAllNumFormats();renderPortfolio();renderDash();
+  renderDash();
   updateLastUpdatedBars();
+  // Defer heavy renders to next tick
+  setTimeout(()=>{
+    renderGoals();
+    renderLocs();
+    renderLocsAutoSummary();
+  },50);
+  setTimeout(()=>{
+    renderPension();
+    renderNW();
+    renderPortfolio();
+    attachAllNumFormats();
+  },100);
 }
 
 // ══ CASH FLOW CALCULATOR ══
