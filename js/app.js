@@ -1224,36 +1224,6 @@ function renderDash(){
       </div>
     </div>`;
 
-  document.getElementById('dash-stats').innerHTML=`
-    <div class="stat teal">
-      <label>שווי נטו</label>
-      <div class="val vt">${fmt(nwTotal)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">
-        נכסים ${fmt(nwAssets)} + השקעות ${fmt(nwInvest+nwSavings)} − חובות ${fmt(nwDebts)}
-      </div>
-      <div class="sub">${prev&&(nwTotal-prev.netWorth)!==0?deltaBadge(nwTotal-prev.netWorth):''}</div>
-    </div>
-    <div class="stat">
-      <label><i data-lucide="home" class="tile-icon"></i> נכסים</label>
-      <div class="val vg">${fmt(nwAssets)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">
-        ${(D.nwData.assets.rows||[]).filter(r=>parseFloat(r.vals[latestCol])).map(r=>r.name).slice(0,2).join(' · ')||'דירה, רכב, מזומן'}
-      </div>
-    </div>
-        <div class="stat">
-      <label>פנסיה ו<i data-lucide="piggy-bank" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> חסכונות</label>
-      <div class="val vp">${fmt(penFromNW||penTotal)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">
-        ${(D.pension||[]).map(p=>p.name).filter(Boolean).slice(0,2).join(' · ')||'הוסף בטאב פנסיה'}
-      </div>
-    </div>
-    <div class="stat">
-      <label>השקעות נזילות 📈</label>
-      <div class="val vb">${fmt(portFromNW+nwSavings)}</div>
-      <div class="sub" style="font-size:10px;color:var(--t3)">
-        ${portFromNW>0?'תיק ₪'+Math.round(portFromNW/1000)+'K':''}${portFromNW>0&&nwSavings>0?' · ':''}${savingsSubText||'קרן חירום + קרן כספית'}
-      </div>
-    </div>`;
 
   // ── Two donuts: liquid vs illiquid ──
   if(chAlloc)chAlloc.destroy();
