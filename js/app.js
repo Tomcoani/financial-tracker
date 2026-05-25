@@ -1144,6 +1144,14 @@ let chAlloc=null,chAlloc2=null,chNW=null;
 function renderDash(){
   collectAll();
   const cur=calcCurrent(),snaps=D.snapshots||[],prev=snaps.length?snaps[snaps.length-1]:null;
+  // Calculate correct NW values FIRST — so cmp-area and all tiles use consistent data
+  const latestCol=getLatestNWCol();
+  const nwAssets=sumSec('assets',latestCol);
+  const nwInvest=sumSec('investments',latestCol);
+  const nwSavings=sumSec('savings',latestCol);
+  const nwDebts=sumSec('debts',latestCol);
+  const nwTotal=nwAssets+nwInvest+nwSavings-nwDebts;
+  cur.netWorth=nwTotal;
 
   // Check for stale pension dates (alert if any >6 months old)
   const now=new Date();
@@ -1175,15 +1183,6 @@ function renderDash(){
       </div>
     </div>`;
   }else{cmpArea.innerHTML='';}
-  // Dashboard reads directly from NW data (same source as NW tab)
-  // Exact breakdown from NW tab
-  const latestCol=getLatestNWCol();
-  const nwAssets=sumSec('assets',latestCol);
-  const nwInvest=sumSec('investments',latestCol);
-  const nwSavings=sumSec('savings',latestCol);
-  const nwDebts=sumSec('debts',latestCol);
-  const nwTotal=nwAssets+nwInvest+nwSavings-nwDebts;
-  cur.netWorth=nwTotal;
 
   // Pension = investment rows that are פנסיה/השתלמות
   const penFromNW=(D.nwData.investments.rows||[]).reduce((s,r)=>{
@@ -1236,6 +1235,8 @@ function renderDash(){
       </div>
     </div>`;
 
+  // Insights card
+  renderDashInsights(nwTotal,nwAssets,nwInvest,nwSavings,nwDebts,latestCol,prev);
 
   // ── Two donuts: liquid vs illiquid ──
   if(chAlloc)chAlloc.destroy();
@@ -1243,25 +1244,23 @@ function renderDash(){
 
   // LIQUID: from locations, excluding pension/השתלמות
   // Also factor in NW debt to get "net" home value
-  const latestColDonut=getLatestNWCol();
-  const homeBruto=sumSec('assets',latestColDonut); // total assets
-  const debt=sumSec('debts',latestColDonut);
+  const homeBruto=nwAssets; // already computed at top
+  const debt=nwDebts;
   const homeNet=Math.max(0,homeBruto-debt); // net home value
 
   // Build liquid assets from locations, replacing home value with net
   const liquidItems=[];
-  // Build liquid items directly from NW data sections
-  const latestColLiq=getLatestNWCol();
+  // Build liquid items directly from NW data sections (latestCol already set at top)
   const portGrandTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   const seenNames=new Set();
 
   // 1. Assets from NW tab (נכסים section) - use net home value
   (D.nwData.assets.rows||[]).forEach(row=>{
     if(!row.name)return;
-    const raw=parseFloat(row.vals[latestColLiq])||0;
+    const raw=parseFloat(row.vals[latestCol])||0;
     if(!raw)return;
     const isHome=row.name.includes('בית')||row.name.includes('דירה')||row.name.includes('נדל');
-    const val=isHome?Math.max(0,raw-(sumSec('debts',latestColLiq))):raw;
+    const val=isHome?Math.max(0,raw-(sumSec('debts',latestCol))):raw;
     if(val>0&&!seenNames.has(row.name)){
       seenNames.add(row.name);
       liquidItems.push({name:isHome?row.name+' (נטו)':row.name, val});
@@ -1271,7 +1270,7 @@ function renderDash(){
   // 2. Savings (חסכונות) - קרן חירום etc
   (D.nwData.savings.rows||[]).forEach(row=>{
     if(!row.name)return;
-    const val=parseFloat(row.vals[latestColLiq])||0;
+    const val=parseFloat(row.vals[latestCol])||0;
     if(val>0&&!seenNames.has(row.name)){
       seenNames.add(row.name);
       liquidItems.push({name:row.name, val});
@@ -1283,7 +1282,7 @@ function renderDash(){
     if(!row.name)return;
     const isPension=row.name.includes('פנסיה')||row.name.includes('השתלמות');
     if(isPension)return;
-    const val=parseFloat(row.vals[latestColLiq])||0;
+    const val=parseFloat(row.vals[latestCol])||0;
     if(val>0&&!seenNames.has(row.name)){
       seenNames.add(row.name);
       liquidItems.push({name:row.name, val});
@@ -1697,7 +1696,16 @@ function renderSettings(){
 }
 async function saveSettings(){
   collectAll();
+  if(!D.settings)D.settings={};
+  D.settings.displayName=document.getElementById('set-name').value||'';
+  D.settings.age=document.getElementById('set-age').value||'';
+  D.settings.email=document.getElementById('set-email').value||'';
+  D.settings.freq=document.getElementById('set-freq').value||'30';
+  if(!D.settings.notifyEmail)D.settings.notifyEmail=D.settings.email;
   D.lastSaved=new Date().toISOString();
+  // Update header name immediately
+  const unameEl=document.getElementById('uname');
+  if(unameEl&&D.settings.displayName)unameEl.textContent=D.settings.displayName;
   await saveDataFS(CU,D);
   showToast('הגדרות נשמרו ✓');
 }
@@ -1935,6 +1943,96 @@ async function doReset(){
   document.getElementById('reset-modal').style.display='none';
   renderAll();
   showToast('הנתונים אופסו ✓');
+}
+
+// ══ DASHBOARD INSIGHTS ══
+function renderDashInsights(nwTotal,nwAssets,nwInvest,nwSavings,nwDebts,latestCol,prevSnap){
+  const el=document.getElementById('dash-insights');
+  if(!el)return;
+
+  // Find last 2 non-future periods with actual data for trend
+  const cnt=D.nwPeriodsCount||D.nwPeriods.length||6;
+  const periodsWithData=[];
+  for(let c=cnt-1;c>=0&&periodsWithData.length<2;c--){
+    if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){
+      const tot=sumSec('assets',c)+sumSec('investments',c)+sumSec('savings',c)-sumSec('debts',c);
+      if(tot!==0)periodsWithData.push({c,label:D.nwPeriods[c],nw:tot});
+    }
+  }
+
+  if(nwTotal===0&&periodsWithData.length===0){el.style.display='none';return;}
+  el.style.display='block';
+
+  const latestLabel=periodsWithData[0]?.label||'';
+  const prevNW=periodsWithData.length>=2?periodsWithData[1].nw:null;
+  const nwChange=prevNW!==null?nwTotal-prevNW:null;
+  const lines=[];
+
+  // 1. Net worth trend between NW periods
+  if(nwChange!==null){
+    const abs=Math.abs(nwChange);
+    if(nwChange>0)
+      lines.push({icon:'📈',color:'var(--teal)',text:`שווי הנטו <strong>עלה ב-${fmt(abs)}</strong> מהתקופה הקודמת (${periodsWithData[1].label}) — כיוון מצוין!`});
+    else if(nwChange<0)
+      lines.push({icon:'📉',color:'var(--red)',text:`שווי הנטו <strong>ירד ב-${fmt(abs)}</strong> מהתקופה הקודמת (${periodsWithData[1].label}) — שים לב לשינויים.`});
+    else
+      lines.push({icon:'→',color:'var(--t2)',text:`שווי הנטו <strong>יציב</strong> — אין שינוי מהתקופה הקודמת.`});
+  }else if(nwTotal>0){
+    lines.push({icon:'📊',color:'var(--t2)',text:`שווי נטו נוכחי: <strong>${fmt(nwTotal)}</strong> — המשך לעדכן תקופות כדי לראות מגמות.`});
+  }
+
+  // 2. Snapshot comparison
+  if(prevSnap){
+    const snapChange=nwTotal-prevSnap.netWorth;
+    if(Math.abs(snapChange)>100){
+      const sign=snapChange>=0?'+':'';
+      lines.push({icon:'💾',color:snapChange>=0?'var(--teal)':'var(--red)',
+        text:`מאז תמונת המצב האחרונה (${fmtDate(prevSnap.date)}): <strong>${sign}${fmt(snapChange)}</strong>`});
+    }
+  }
+
+  // 3. Asset mix insight
+  const totalAssets=nwAssets+nwInvest+nwSavings;
+  if(totalAssets>0){
+    const liquidPct=Math.round((nwInvest+nwSavings)/totalAssets*100);
+    if(liquidPct>=60)
+      lines.push({icon:'💧',color:'var(--blue)',text:`נכסים נזילים: <strong>${liquidPct}%</strong> מסך הנכסים — גמישות פיננסית טובה.`});
+    else if(nwAssets>0)
+      lines.push({icon:'🏠',color:'var(--t2)',text:`רוב הנכסים (<strong>${100-liquidPct}%</strong>) אינם נזילים — בדוק איזון.`});
+  }
+
+  // 4. Debt ratio
+  if(nwDebts>0&&totalAssets>0){
+    const debtRatio=Math.round(nwDebts/totalAssets*100);
+    if(debtRatio>40)
+      lines.push({icon:'⚠️',color:'var(--amber)',text:`יחס חוב לנכסים: <strong>${debtRatio}%</strong> — שקול פירעון מוקדם.`});
+    else
+      lines.push({icon:'✅',color:'var(--teal)',text:`יחס חוב לנכסים סביר: <strong>${debtRatio}%</strong>.`});
+  }
+
+  // 5. Goals near completion
+  const nearGoals=(D.goals||[]).filter(g=>{
+    if(g.done)return false;
+    const sv=parseFloat(g.saved)||0,nd=parseFloat(g.needed)||0;
+    return nd>0&&sv/nd>=0.8;
+  });
+  if(nearGoals.length>0){
+    const names=nearGoals.map(g=>g.name).join(', ');
+    lines.push({icon:'🎯',color:'var(--green)',text:`${nearGoals.length>1?nearGoals.length+' מטרות קרובות להשגה':'המטרה "'+names+'" קרובה להשגה'} (80%+ מהיעד)!`});
+  }
+
+  if(lines.length===0){el.style.display='none';return;}
+
+  el.innerHTML=`
+    <div class="ch" style="margin-bottom:12px"><span class="dot" style="background:var(--amber)"></span>💡 תובנות${latestLabel?' — '+latestLabel:''}</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${lines.map(l=>`
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 13px;background:var(--s2);border-radius:9px;border-right:3px solid ${l.color};text-align:right;direction:rtl">
+          <span style="font-size:15px;flex-shrink:0">${l.icon}</span>
+          <span style="font-size:13px;color:var(--t2);line-height:1.6">${l.text}</span>
+        </div>`).join('')}
+    </div>`;
+  if(window.lucide)lucide.createIcons();
 }
 
 // ══ ANALYSIS ══
