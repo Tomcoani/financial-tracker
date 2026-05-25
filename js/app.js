@@ -571,7 +571,19 @@ function autoSyncLocations(){
   // Pension shows separately in the illiquid donut chart
   renderLocs();
 }
-function getLatestNWCol(){const cnt=(D.nwPeriodsCount||D.nwPeriods.length||6);for(let c=cnt-1;c>=0;c--)if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c]))return c;return 0;}
+function getLatestNWCol(){
+  const cnt=(D.nwPeriodsCount||D.nwPeriods.length||6);
+  // First try: rightmost non-future period that has actual data (matches renderNWSummary logic)
+  for(let c=cnt-1;c>=0;c--){
+    if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){
+      if(sumSec('assets',c)||sumSec('investments',c)||sumSec('savings',c)||sumSec('debts',c))return c;
+    }
+  }
+  // Fallback: rightmost non-future period (even if empty)
+  for(let c=cnt-1;c>=0;c--)
+    if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c]))return c;
+  return 0;
+}
 function isFuturePeriod(periodLabel){
   if(!periodLabel)return false;
   const parsed=parsePeriodDate(periodLabel);
