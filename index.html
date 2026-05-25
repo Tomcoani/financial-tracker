@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מעקב פיננסי | Tom Ani</title>
+<link rel="stylesheet" href="styles/main.css">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div id="init-loader" style="position:fixed;inset:0;background:#080c14;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px;">
+  <div style="width:40px;height:40px;border:3px solid rgba(66,235,214,.2);border-top-color:#42ebd6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <div style="color:#42ebd6;font-family:Heebo,sans-serif;font-size:14px;font-weight:600">טוען...</div>
+</div>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="abox">
+    <div class="abrand">
+      <img id="auth-logo" src="" alt="Tom Ani"/>
+      <div style="margin-top:18px;margin-bottom:6px">
+        <div style="font-size:22px;font-weight:800;color:var(--white);letter-spacing:-0.5px">המערכת הפיננסית האישית שלך</div>
+        <div style="font-size:13px;color:var(--t2);margin-top:6px;line-height:1.6">עקוב אחרי המטרות, הפנסיה והשווי הנטו שלך —<br>במקום אחד, מאובטח ונגיש מכל מכשיר</div>
+      </div>
+    </div>
+    <div class="atabs">
+      <button class="atab on" id="tl" onclick="aTab('l')">כניסה</button>
+      <button class="atab" id="tr" onclick="aTab('r')">הרשמה</button>
+    </div>
+    <div class="aerr" id="aerr"></div>
+    <div id="lf">
+      <div class="fg"><label>אימייל</label><input id="lu" type="email" placeholder="your@email.com"/></div>
+      <div class="fg"><label>סיסמה</label><input id="lp" type="password" placeholder="הכנס סיסמה"/></div>
+      <button class="btnmain" onclick="doLogin()">כניסה →</button>
+      <button type="button" onclick="doForgotPassword()" style="width:100%;background:transparent;border:none;
+        color:var(--t2);font-family:var(--font);font-size:13px;cursor:pointer;margin-top:10px;
+        text-decoration:underline;text-underline-offset:3px;">שכחתי סיסמה</button>
+    </div>
+    <div id="rf" style="display:none">
+      <div class="fg"><label>שם מלא</label><input id="rn" placeholder="ישראל ישראלי"/></div>
+      <div class="fg"><label>אימייל</label><input id="ru" type="email" placeholder="your@email.com"/></div>
+      <div class="fg"><label>סיסמה</label><input id="rp" type="password" placeholder="לפחות 6 תווים"/></div>
+      <button class="btnmain" onclick="doReg()">יצירת חשבון →</button>
+    </div>
+    <div class="auth-note">הנתונים שלך מוצפנים ומאובטחים על שרתי Google</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <img id="app-logo" src="" alt="Tom Ani"/>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="upill">שלום, <b id="uname"></b></div>
+      <button class="btn-pdf" onclick="exportPDF()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> ייצוא PDF</button>
+      <button class="btnout" style="border-color:rgba(239,68,68,.3);color:var(--red)" onclick="confirmReset()"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> איפוס</button>
+      <button class="btnout" onclick="doLogout()">יציאה</button>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="nbtn on" onclick="goTo('dash',this)"><i data-lucide="layout-dashboard" class="nav-icon"></i> דשבורד</button>
+    <button class="nbtn" onclick="goTo('goals',this)"><i data-lucide="target" class="nav-icon"></i> מטרות</button>
+    <button class="nbtn" onclick="goTo('pension',this)"><i data-lucide="landmark" class="nav-icon"></i> פנסיה</button>
+    <button class="nbtn" onclick="goTo('nw',this)"><i data-lucide="trending-up" class="nav-icon"></i> שווי נטו</button>
+    <button class="nbtn" onclick="goTo('portfolio',this)"><i data-lucide="briefcase" class="nav-icon"></i> תיק השקעות</button>
+    <button class="nbtn" onclick="goTo('history',this)"><i data-lucide="clock" class="nav-icon"></i> היסטוריה</button>
+    <button class="nbtn" onclick="goTo('notes',this)"><i data-lucide="notebook-pen" class="nav-icon"></i> הערות</button>
+    <button class="nbtn" onclick="goTo('settings',this)"><i data-lucide="settings" class="nav-icon"></i> הגדרות</button>
+    <button class="nbtn" id="admin-nav-btn" style="display:none;color:var(--purple)" onclick="goTo('admin',this)"><i data-lucide="shield" class="nav-icon"></i> ניהול</button>
+  </div>
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel on" id="p-dash">
+      <div id="snap-trigger-area"></div>
+      <div id="update-alerts" style="margin-bottom:8px"></div>
+      <div id="cmp-area"></div>
+      <div class="g4" style="margin-bottom:16px" id="dash-stats"></div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="ch"><span class="dot dt"></span>נכסים נזילים</div>
+          <div class="ch-hint" style="margin-bottom:10px">תיק השקעות, עו"ש, קרן חירום, שווי בית נטו</div>
+          <div class="chwrap"><canvas id="ch-alloc"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="dot dp"></span>נכסים לא נזילים</div>
+          <div class="ch-hint" style="margin-bottom:10px">פנסיה וקרן השתלמות</div>
+          <div class="chwrap"><canvas id="ch-alloc2"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+          <div class="ch"><span class="dot dg"></span>שווי נטו לאורך זמן</div>
+          <div class="chwrap"><canvas id="ch-nw"></canvas></div>
+        </div>
+      <div class="card">
+        <div class="ch"><span class="dot da"></span>סטטוס מטרות</div>
+        <div id="dash-goals"></div>
+      </div>
+      <!-- ANALYSIS SUMMARY -->
+      <div class="card card-teal" id="dash-analysis" style="display:none">
+        <div class="ch"><span class="dot dt"></span>ניתוח תקופתי — מה השתנה</div>
+        <div id="analysis-content"></div>
+      </div>
+    </div>
+
+    <!-- GOALS -->
+    <div class="panel" id="p-goals">
+      <div class="last-updated-bar" id="lup-p-goals"><span class="lup-dot"></span><span>טוען...</span></div>
+      <!-- CASH FLOW CALCULATOR -->
+      <div class="cashflow-box">
+        <h3><i data-lucide="coins" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> כמה יש לי להשקיע החודש?</h3>
+        <div class="hint">ענה על 3 שאלות פשוטות וקבל תשובה מיידית</div>
+        <div class="cashflow-row">
+          <div class="cf-field">
+            <label>כמה יש לך היום בעו"ש? (₪)</label>
+            <input type="number" id="cf-balance" placeholder="0" oninput="calcCashFlow()"/>
+          </div>
+          <div class="cf-field">
+            <label>מה ה"אפס החדש" שלך? (סכום מינימלי לשמור) (₪)</label>
+            <input type="number" id="cf-zero" placeholder="0" oninput="calcCashFlow()"/>
+          </div>
+        </div>
+        <div class="cf-field" style="margin-bottom:12px">
+          <label>הוצאות צפויות עד חיוב האשראי הבא? (שכ"ד, מע"מ, ביטוח לאומי וכד') (₪)</label>
+          <input type="number" id="cf-expenses" placeholder="0" oninput="calcCashFlow()"/>
+        </div>
+        <div id="cf-result" class="cf-result" style="display:none"></div>
+      </div>
+      <!-- hidden monthly sync -->
+      <input id="monthly" type="number" style="display:none" oninput="markDirty()"/>
+      <!-- GOALS LIST -->
+      <div class="card">
+        <div class="ch-title">המטרות שלי</div>
+        <div class="ch-hint">לחץ על שם המטרה לעריכה. לחץ על תג הזמן לשינוי הטווח.</div>
+        <div class="goal-tabs">
+          <button class="gtab on" id="gt-active" onclick="switchGoalTab('active')">פעילות</button>
+          <button class="gtab" id="gt-done" onclick="switchGoalTab('done')">✅ הושלמו</button>
+        </div>
+        <div id="goals-by-horizon"></div>
+        <div id="goals-done-list" style="display:none"></div>
+        <button class="btnadd" onclick="addGoal()">+ הוספת מטרה חדשה</button>
+      </div>
+      <!-- LOCATIONS -->
+      <div class="card">
+        <div class="ch-title">כמה כסף יש לי ואיפה</div>
+        <div class="ch-hint">הטבלה מתעדכנת אוטומטית לפי "איפה הכסף" שמילאת במטרות. ניתן לערוך ידנית או להוסיף מיקומים נוספים.</div>
+        <div id="locs-auto-summary" style="margin-bottom:10px"></div>
+        <div id="locs-list"></div>
+        <button class="btnadd" onclick="addLoc()">+ הוספת מיקום ידני</button>
+      </div>
+    </div>
+
+    <!-- PENSION -->
+    <div class="panel" id="p-pension">
+      <div class="last-updated-bar" id="lup-p-pension"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="card"><div class="ch"><span class="dot dp"></span>סיכום</div>
+        <div class="g3" id="pen-summary"></div></div>
+      <div class="card">
+        <div class="ch-title">המוצרים שלי</div>
+        <div class="ch-hint">לחץ על שם המוצר לעריכה. ניתן להוסיף מספר מסלולים לכל מוצר.</div>
+        <div id="pension-list"></div>
+        <button class="btnadd" onclick="addPension()">+ הוספת מוצר פנסיוני</button>
+      </div>
+      <div class="card">
+        <div class="ch-title">הערות פנסיה</div>
+        <textarea id="pen-notes" rows="3" style="width:100%;background:var(--s2);border:1.5px solid var(--border);
+          border-radius:10px;padding:14px;color:var(--white);font-family:var(--font);font-size:14px;
+          resize:vertical;outline:none;direction:rtl;text-align:right"
+          placeholder="הערות, תזכורות, שאלות לפגישה הבאה..." oninput="markDirty()"></textarea>
+      </div>
+    </div>
+
+    <!-- NET WORTH -->
+    <div class="panel" id="p-nw">
+      <div class="last-updated-bar" id="lup-p-nw"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div id="nw-summary-stats" class="g4" style="margin-bottom:16px"></div>
+      <div class="card">
+        <div class="ch-title">תקופות מעקב</div>
+        <div class="ch-hint">הכנס תאריך לתקופה הראשונה (פורמט: מ/שנה, לדוגמא 1/2025) — שאר התקופות מחושבות אוטומטית</div>
+        <div class="g3" id="period-heads"></div>
+      </div>
+      <div class="card"><div class="ch-title"><i data-lucide="home" class="tile-icon"></i> נכסים</div>
+        <div class="ch-hint">שווי נכסים פיזיים — דירה, רכב, מזומן</div>
+        <div class="nw-table-wrap"><div id="nw-assets"></div></div>
+        <button class="btnadd" style="margin-top:8px" onclick="addNWRow('assets')">+ הוסף שורה</button></div>
+      <div class="card"><div class="ch-title"><i data-lucide="trending-up" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> השקעות</div>
+        <div class="ch-hint">מתמלא אוטומטית מנתוני הפנסיה — ניתן לערוך ידנית</div>
+        <div class="nw-table-wrap"><div id="nw-investments"></div></div>
+        <button class="btnadd" style="margin-top:8px" onclick="addNWRow('investments')">+ הוסף שורה</button></div>
+      <div class="card"><div class="ch-title"><i data-lucide="piggy-bank" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> חסכונות</div>
+        <div class="ch-hint">קרן חירום וחסכונות — נכלל בחישוב שווי נטו</div>
+        <div class="nw-table-wrap"><div id="nw-savings"></div></div>
+        <button class="btnadd" style="margin-top:8px" onclick="addNWRow('savings')">+ הוסף שורה</button></div>
+      <div class="card"><div class="ch-title"><i data-lucide="credit-card" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> חובות</div>
+        <div class="ch-hint">משכנתא, הלוואות — מנוכה מסך הנכסים</div>
+        <div class="nw-table-wrap"><div id="nw-debts"></div></div>
+        <button class="btnadd" style="margin-top:8px" onclick="addNWRow('debts')">+ הוסף שורה</button></div>
+    </div>
+
+    <!-- PORTFOLIO -->
+    <div class="panel" id="p-portfolio">
+      <div class="last-updated-bar" id="lup-p-portfolio"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div id="portfolios-container"></div>
+      <button class="btnadd" style="margin-bottom:16px" onclick="addPortfolio()">+ הוספת תיק השקעות חדש</button>
+      <div class="g3" style="margin-bottom:16px">
+        <div class="stat teal"><label>שווי תיק</label><div class="val vt" id="port-total">₪0</div></div>
+        <div class="stat"><label>מספר השקעות</label><div class="val vb" id="port-count">0</div></div>
+        <div class="stat"><label>קטגוריות</label><div class="val va" id="port-cats">0</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><span class="dot dt"></span>התפלגות נוכחית</div>
+          <div class="chwrap"><canvas id="ch-port"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="dot da"></span>המלצת איזון</div>
+          <div id="rebalance-box"><p style="color:var(--t3);font-size:13px;text-align:right">הוסף השקעות עם אחוז יעד כדי לקבל המלצה</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="panel" id="p-history">
+      <div class="last-updated-bar" id="lup-p-history"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="card">
+        <div class="ch-title">היסטוריית תמונות מצב</div>
+        <div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.7;text-align:right">
+          כל חודש לחץ "שמור תמונת מצב" בדשבורד. כאן תראה את כל ההיסטוריה עם השוואה בין תקופות.
+        </div>
+        <div class="hist-chart-wrap" id="hist-chart-wrap" style="display:none">
+          <canvas id="ch-hist"></canvas>
+        </div>
+        <div id="history-list"></div>
+        <div id="history-empty" style="text-align:center;padding:30px;color:var(--t3);font-size:13px;display:none">
+          עדיין אין תמונות מצב
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="panel" id="p-notes">
+      <div class="last-updated-bar" id="lup-p-notes"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="card">
+        <div class="ch-title">הערות חופשיות</div>
+        <textarea id="gnotes" rows="20" style="width:100%;background:var(--s2);border:1.5px solid var(--border);
+          border-radius:12px;padding:18px;color:var(--white);font-family:var(--font);font-size:15px;
+          resize:vertical;outline:none;direction:rtl;line-height:1.9;text-align:right"
+          placeholder="כל מה שעל הלב..." oninput="markDirty()"></textarea>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="p-settings">
+      <div class="last-updated-bar" id="lup-p-settings"><span class="lup-dot"></span><span>טוען...</span></div>
+
+      <!-- Retirement calculator link -->
+      <div class="retirement-banner">
+        <div class="rb-text">
+          <h3><i data-lucide="calculator" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> מחשבון פרישה מוקדמת</h3>
+          <p>חשב מתי תוכל לפרוש בהתבסס על הנתונים הפיננסיים שלך</p>
+        </div>
+        <a href="https://www.tomani.co.il/early-retirement" target="_blank" class="btn-retirement">פתח מחשבון →</a>
+      </div>
+
+      <!-- User settings -->
+      <div class="card">
+        <div class="ch-title">הגדרות אישיות</div>
+        <div class="ch-hint">הפרטים האישיים שלך — משמשים לתזכורות ולהתאמה אישית</div>
+        <div class="settings-row">
+          <div class="sf"><label>שם מלא</label><input id="set-name" placeholder="ישראל ישראלי" oninput="markDirty()"/></div>
+          <div class="sf"><label>גיל</label><input id="set-age" type="number" placeholder="35" oninput="markDirty()"/></div>
+        </div>
+        <div class="settings-row">
+          <div class="sf"><label>אימייל לתזכורות</label><input id="set-email" type="email" placeholder="your@email.com" oninput="markDirty()"/></div>
+          <div class="sf"><label>תדירות עדכון מטרות</label>
+            <select id="set-freq" oninput="markDirty()">
+              <option value="30">כל חודש</option>
+              <option value="14">כל שבועיים</option>
+              <option value="7">כל שבוע</option>
+            </select>
+          </div>
+        </div>
+        <button class="btnsave" onclick="saveSettings()" style="margin-top:8px">שמור הגדרות ✓</button>
+      </div>
+    </div>
+
+    <!-- ADMIN (only for info@tomani.co) -->
+    <div class="panel" id="p-admin">
+      <div class="admin-banner"><i data-lucide="shield-check" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> לוח ניהול — גישה מוגבלת לתום אני בלבד</div>
+      <div class="card" style="border-color:rgba(66,235,214,.25)">
+        <div class="ch-title"><i data-lucide="user-plus" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> יצירת משתמש חדש</div>
+        <div class="ch-hint">צור חשבון ללקוח חדש — הם יקבלו מייל עם סיסמה זמנית וישנו אותה בכניסה הראשונה</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="sf"><label>שם מלא</label><input id="new-user-name" placeholder="ישראל ישראלי"/></div>
+          <div class="sf"><label>אימייל</label><input id="new-user-email" type="email" placeholder="client@email.com"/></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button onclick="adminCreateUser()" class="btnsave" style="padding:10px 24px">צור חשבון ושלח מייל →</button>
+          <span id="create-user-status" style="font-size:13px;color:var(--t2)"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch-title">לקוחות שצריכים עדכון</div>
+        <div class="ch-hint">רשימת כל המשתמשים הרשומים ומצב העדכון שלהם</div>
+        <div id="admin-users-list"><p style="color:var(--t3);font-size:13px;text-align:right">טוען נתוני לקוחות...</p></div>
+      </div>
+      <div class="card">
+        <div class="ch-title">סטטיסטיקות כלליות</div>
+        <div class="g3" id="admin-stats"></div>
+      </div>
+      <div class="card" style="border-color:rgba(139,92,246,.3)">
+        <div class="ch-title"><i data-lucide="lock" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> מודל אבטחה</div>
+        <div style="font-size:13px;color:var(--t2);line-height:1.8;text-align:right">
+          <div style="margin-bottom:8px">✅ <strong>כל משתמש</strong> — גישה לנתונים שלו בלבד, מאובטח ע"י Firebase מצד השרת</div>
+          <div style="margin-bottom:8px">✅ <strong>תום אני</strong> (info@tomani.co) — גישת קריאה לכל המשתמשים</div>
+          <div style="margin-bottom:8px">✅ <strong>איפוס סיסמה</strong> — לחץ "שלח איפוס סיסמה" ליד כל לקוח</div>
+          <div style="margin-bottom:8px"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>כדי שהאבטחה תעבוד</strong> — ודא שה-Firestore Rules מוגדרים נכון:</div>
+          <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;direction:ltr;text-align:left;line-height:1.6;color:#a78bfa">
+            match /users/{userId}/{document=**} {<br>
+            &nbsp;&nbsp;allow read, write: if request.auth != null &&<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;(request.auth.uid == userId ||<br>
+            &nbsp;&nbsp;&nbsp;&nbsp; request.auth.token.email == 'info@tomani.co');<br>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAVE BAR (fixed bottom) -->
+    <div class="save-bar" id="save-bar" style="display:none">
+      <div><span>יש שינויים שלא נשמרו — <b>אל תשכח לשמור</b></span>
+        <span class="save-status" id="save-status"></span></div>
+      <button class="btnsave" onclick="manualSave()">שמור עכשיו ✓</button>
+    </div>
+
+  </div><!-- end content -->
+</div><!-- end app -->
+
+<!-- MODALS -->
+<div class="overlay" id="snap-modal" style="display:none">
+  <div class="modal">
+    <h2><i data-lucide="camera" style="width:16px;height:16px;vertical-align:middle;margin-left:6px"></i> שמירת תמונת מצב</h2>
+    <p>זה יתעד את כל הנתונים שלך נכון להיום וישמר בענן.</p>
+    <div id="snap-preview"></div>
+    <div class="modal-btns">
+      <button class="btnsnap secondary" onclick="closeModal()">ביטול</button>
+      <button class="btnsnap primary" onclick="confirmSnap()">שמור ☁️ ✓</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="hist-modal" style="display:none">
+  <div class="modal">
+    <h2 id="hm-title"></h2>
+    <div id="hm-body"></div>
+    <div class="modal-btns">
+      <button class="btnsnap secondary" onclick="closeHistModal()">סגור</button>
+      <button class="btnsnap" style="flex:1;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fca5a5;" onclick="deleteSnap()">מחק</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET MODAL -->
+<div class="overlay" id="reset-modal" style="display:none">
+  <div class="modal">
+    <h2 style="color:var(--red)"><i data-lucide="alert-triangle" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;color:var(--red)"></i> איפוס כל הנתונים</h2>
+    <p>פעולה זו תמחק לצמיתות את <strong>כל המידע שהכנסת</strong> — מטרות, פנסיה, שווי נטו, תיק השקעות, היסטוריה והכל.<br><br>לא ניתן לבטל פעולה זו.</p>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:14px;margin-bottom:4px;font-size:13px;color:#fca5a5;text-align:right">
+      האם אתה בטוח שברצונך למחוק את כל הנתונים?
+    </div>
+    <div class="modal-btns">
+      <button class="btnsnap secondary" onclick="document.getElementById('reset-modal').style.display='none'">ביטול</button>
+      <button class="btnsnap" style="background:var(--red);color:#fff;flex:1" onclick="doReset()">כן, מחק הכל</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">נשמר ☁️</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

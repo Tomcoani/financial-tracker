@@ -1,0 +1,11 @@
+# Backup file
+index.original.html
+
+# Large installer
+*.exe
+
+# Claude config
+.claude/
+
+# Firebase cache
+.firebase/
