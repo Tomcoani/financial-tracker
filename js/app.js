@@ -1741,6 +1741,12 @@ function renderCalendar(){
 // ══ ADMIN ══
 async function renderAdmin(){
   if(!CU)return;
+  // Double-check: only admin may render this panel
+  const me=auth.currentUser;
+  if(!me||me.email!==ADMIN_EMAIL){
+    document.getElementById('admin-users-list').innerHTML='<p style="color:var(--danger);text-align:right">אין הרשאה.</p>';
+    return;
+  }
   const statsEl=document.getElementById('admin-stats');
   const listEl=document.getElementById('admin-users-list');
   if(listEl)listEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">טוען נתוני לקוחות...</p>';
