@@ -64,7 +64,17 @@ async function loadData(uid){
   catch(e){console.error(e);return null;}
 }
 async function saveDataFS(uid,d){
-  try{await db.collection('users').doc(uid).collection('data').doc('main').set(d);}
+  try{
+    // Write full data to subcollection
+    await db.collection('users').doc(uid).collection('data').doc('main').set(d);
+    // Also update parent /users/{uid} doc so admin listing works
+    await db.collection('users').doc(uid).set({
+      email: d.settings?.email||'',
+      displayName: d.settings?.displayName||'',
+      lastSaved: d.lastSaved||null,
+      lastUpdated: d.lastUpdated||{}
+    },{merge:true});
+  }
   catch(e){console.error(e);}
 }
 
@@ -72,6 +82,8 @@ async function saveDataFS(uid,d){
 auth.onAuthStateChanged(async user=>{
   if(user){
     CU=user.uid;
+    // Ensure parent /users/{uid} doc exists for admin listing
+    db.collection('users').doc(CU).set({email:user.email||'',firstSeen:user.metadata.creationTime||null},{merge:true}).catch(()=>{});
     const loaded=await loadData(CU);
     D=loaded||defData();
     if(!D.snapshots)D.snapshots=[];
@@ -1403,7 +1415,7 @@ function renderDash(){
 function updateLastUpdatedBars(){
   const ts=D.lastSaved?new Date(D.lastSaved):null;
   const label=ts?'עודכן לאחרונה: '+fmtDate(ts.toISOString())+' '+ts.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):'טרם נשמר';
-  ['p-goals','p-pension','p-nw','p-portfolio','p-history','p-notes'].forEach(pid=>{
+  ['p-goals','p-pension','p-nw','p-portfolio','p-history','p-notes','p-settings'].forEach(pid=>{
     const el=document.getElementById('lup-'+pid);
     if(el)el.innerHTML=`<span class="lup-dot"></span><span>${label}</span>`;
   });

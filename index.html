@@ -110,7 +110,7 @@
 
     <!-- GOALS -->
     <div class="panel" id="p-goals">
-      <div class="last-updated-bar" id="lup-p-goals"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="last-updated-bar" id="lup-p-goals"><span class="lup-dot"></span><span></span></div>
       <!-- CASH FLOW CALCULATOR -->
       <div class="cashflow-box">
         <h3><i data-lucide="coins" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> כמה יש לי להשקיע החודש?</h3>
@@ -157,7 +157,7 @@
 
     <!-- PENSION -->
     <div class="panel" id="p-pension">
-      <div class="last-updated-bar" id="lup-p-pension"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="last-updated-bar" id="lup-p-pension"><span class="lup-dot"></span><span></span></div>
       <div class="card"><div class="ch"><span class="dot dp"></span>סיכום</div>
         <div class="g3" id="pen-summary"></div></div>
       <div class="card">
@@ -177,7 +177,7 @@
 
     <!-- NET WORTH -->
     <div class="panel" id="p-nw">
-      <div class="last-updated-bar" id="lup-p-nw"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="last-updated-bar" id="lup-p-nw"><span class="lup-dot"></span><span></span></div>
       <div id="nw-summary-stats" class="g4" style="margin-bottom:16px"></div>
       <div class="card">
         <div class="ch-title">תקופות מעקב</div>
@@ -204,7 +204,7 @@
 
     <!-- PORTFOLIO -->
     <div class="panel" id="p-portfolio">
-      <div class="last-updated-bar" id="lup-p-portfolio"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="last-updated-bar" id="lup-p-portfolio"><span class="lup-dot"></span><span></span></div>
       <div id="portfolios-container"></div>
       <button class="btnadd" style="margin-bottom:16px" onclick="addPortfolio()">+ הוספת תיק השקעות חדש</button>
       <div class="g3" style="margin-bottom:16px">
@@ -226,7 +226,7 @@
 
     <!-- HISTORY -->
     <div class="panel" id="p-history">
-      <div class="last-updated-bar" id="lup-p-history"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="last-updated-bar" id="lup-p-history"><span class="lup-dot"></span><span></span></div>
       <div class="card">
         <div class="ch-title">היסטוריית תמונות מצב</div>
         <div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.7;text-align:right">
@@ -244,7 +244,7 @@
 
     <!-- NOTES -->
     <div class="panel" id="p-notes">
-      <div class="last-updated-bar" id="lup-p-notes"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="last-updated-bar" id="lup-p-notes"><span class="lup-dot"></span><span></span></div>
       <div class="card">
         <div class="ch-title">הערות חופשיות</div>
         <textarea id="gnotes" rows="20" style="width:100%;background:var(--s2);border:1.5px solid var(--border);
@@ -256,7 +256,7 @@
 
     <!-- SETTINGS -->
     <div class="panel" id="p-settings">
-      <div class="last-updated-bar" id="lup-p-settings"><span class="lup-dot"></span><span>טוען...</span></div>
+      <div class="last-updated-bar" id="lup-p-settings"><span class="lup-dot"></span><span></span></div>
 
       <!-- Retirement calculator link -->
       <div class="retirement-banner">
@@ -321,6 +321,11 @@
           <div style="margin-bottom:8px">✅ <strong>איפוס סיסמה</strong> — לחץ "שלח איפוס סיסמה" ליד כל לקוח</div>
           <div style="margin-bottom:8px"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>כדי שהאבטחה תעבוד</strong> — ודא שה-Firestore Rules מוגדרים נכון:</div>
           <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;direction:ltr;text-align:left;line-height:1.6;color:#a78bfa">
+            match /users/{userId} {<br>
+            &nbsp;&nbsp;allow read, write: if request.auth != null &&<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;(request.auth.uid == userId ||<br>
+            &nbsp;&nbsp;&nbsp;&nbsp; request.auth.token.email == 'info@tomani.co');<br>
+            }<br>
             match /users/{userId}/{document=**} {<br>
             &nbsp;&nbsp;allow read, write: if request.auth != null &&<br>
             &nbsp;&nbsp;&nbsp;&nbsp;(request.auth.uid == userId ||<br>
