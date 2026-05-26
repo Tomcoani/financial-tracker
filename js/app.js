@@ -27,11 +27,14 @@ const COLS=['#42ebd6','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#38bdf8
 const PORT_CATS=['מניות ישראל','מניות חו"ל','אג"ח','נדל"ן','סחורות','מזומן','אחר'];
 let CU=null, D={}, dirty=false, autoSaveTimer=null, toastTimer=null;
 
+// Gender-aware Hebrew copywriting helper — returns male form by default
+function g(m,f){return D?.settings?.gender==='female'?f:m;}
+
 function nw6(n){return Array(n||D?.nwPeriodsCount||6).fill('');}
 function defData(){
   return {
     monthly:'',future:'',penNotes:'',gnotes:'',
-    settings:{displayName:'',email:'',age:'',notifyEmail:''},
+    settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
     goals:[{name:'קרן חירום',where:'עו"ש',saved:'',needed:'',h:0,done:false}],
     locations:[{name:'עו"ש',amount:''},{name:'תיק השקעות',amount:''}],
@@ -129,10 +132,15 @@ auth.onAuthStateChanged(async user=>{
     if(user.email===ADMIN_EMAIL){
       document.getElementById('admin-nav-btn').style.display='';
     }
-    if(!D.settings)D.settings={displayName:'',email:user.email||'',age:'',notifyEmail:user.email||''};
+    if(!D.settings)D.settings={displayName:'',email:user.email||'',age:'',notifyEmail:user.email||'',gender:'male'};
+    if(!D.settings.gender)D.settings.gender='male'; // migrate existing users
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
     renderAll();
     goTo('dash',document.querySelector('.nbtn'));
+    // Auto-start onboarding tour on first login
+    if(!localStorage.getItem('tour_done_'+CU)){
+      setTimeout(()=>startTour(),900);
+    }
   }else{
     CU=null;D={};
     document.getElementById('init-loader').style.display='none';
@@ -279,7 +287,7 @@ function calcCashFlow(){
     const mi=document.getElementById('monthly');
     if(mi)mi.value=available;
     el.className='cf-result good';
-    el.innerHTML=`מעולה! 🎉<br>יש לך <strong>${fmt(available)}</strong> שאתה יכול להשקיע החודש`;
+    el.innerHTML=`מעולה! 🎉<br>יש לך <strong>${fmt(available)}</strong> ש${g('אתה יכול','את יכולה')} להשקיע החודש`;
   } else {
     D.monthly='0';
     const mi=document.getElementById('monthly');
@@ -306,12 +314,12 @@ function renderGoals(){
   HZ.forEach((hz,hi)=>{
     if(!byH[hi].length)return;
     const grp=document.createElement('div');grp.className='hz-group';
-    grp.innerHTML=`<div class="hz-group-title">${hz} <span style="font-size:10px;color:var(--t3);font-weight:400">(לחץ על תג הזמן במטרה כדי לשנות)</span></div>`;
+    grp.innerHTML=`<div class="hz-group-title">${hz} <span style="font-size:10px;color:var(--t3);font-weight:400">(${g('לחץ','לחצי')} על תג הזמן במטרה כדי לשנות)</span></div>`;
     byH[hi].forEach(({g,idx})=>grp.appendChild(mkGoal(g,idx)));
     hzEl.appendChild(grp);
   });
   if(!(D.goals||[]).filter(g=>!g.done).length)
-    hzEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">לחץ "הוספת מטרה חדשה" כדי להתחיל</p>';
+    hzEl.innerHTML=`<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">${g('לחץ','לחצי')} "הוספת מטרה חדשה" כדי להתחיל</p>`;
   const doneEl=document.getElementById('goals-done-list');doneEl.innerHTML='';
   const done=(D.goals||[]).filter(g=>g.done);
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
@@ -357,21 +365,21 @@ function gu(el){
 function cycH(i){D.goals[i].h=((D.goals[i].h||0)+1)%4;renderGoals();touchSection('goals');markDirty();}
 function toggleDone(i){// also refresh locations
 
-  const g=D.goals[i];
+  const gl=D.goals[i];
   // Validate all fields before marking as done
-  if(!g.done){
+  if(!gl.done){
     const missing=[];
-    if(!g.name||!g.name.trim())missing.push('שם המטרה');
-    if(!g.saved||parseFloat(g.saved)<=0)missing.push('כמה חסכת');
-    if(!g.needed||parseFloat(g.needed)<=0)missing.push('סכום יעד');
-    if(!g.where||!g.where.trim())missing.push('איפה הכסף');
+    if(!gl.name||!gl.name.trim())missing.push('שם המטרה');
+    if(!gl.saved||parseFloat(gl.saved)<=0)missing.push('כמה חסכת');
+    if(!gl.needed||parseFloat(gl.needed)<=0)missing.push('סכום יעד');
+    if(!gl.where||!gl.where.trim())missing.push('איפה הכסף');
     // h is always set (0-3), so horizon is always valid
     if(missing.length>0){
       showGoalError(i,'לא ניתן לסמן כהושלם — חסרים הפרטים הבאים: '+missing.join(', '));
       return;
     }
-    if(parseFloat(g.saved)<parseFloat(g.needed)){
-      if(!confirm('הסכום שחסכת ('+fmt(parseFloat(g.saved))+') קטן מהיעד ('+fmt(parseFloat(g.needed))+'). בכל זאת לסמן כהושלם?'))return;
+    if(parseFloat(gl.saved)<parseFloat(gl.needed)){
+      if(!confirm('הסכום שחסכת ('+fmt(parseFloat(gl.saved))+') קטן מהיעד ('+fmt(parseFloat(gl.needed))+'). בכל זאת לסמן כהושלם?'))return;
     }
   }
   D.goals[i].done=!D.goals[i].done;
@@ -442,7 +450,7 @@ function mkPen(p,i){
   const d=document.createElement('div');d.className='pen-card';
   d.innerHTML=`
     <div class="pen-head">
-      <input class="pnin" value="${esc(p.name)}" placeholder="שם המוצר (לחץ לעריכה)" data-i="${i}" data-f="name" oninput="pu(this)"/>
+      <input class="pnin" value="${esc(p.name)}" placeholder="שם המוצר (${g('לחץ','לחצי')} לעריכה)" data-i="${i}" data-f="name" oninput="pu(this)"/>
       <div class="pbadge">${p.amount?fmt(parseFloat(p.amount)):''}</div>
       <button class="bdel" onclick="delPen(${i})">×</button>
     </div>
@@ -1374,10 +1382,10 @@ function renderDash(){
   }
   if(chNW)chNW.destroy();
   const ctx=document.getElementById('ch-nw').getContext('2d');
-  const g=ctx.createLinearGradient(0,0,0,200);
-  g.addColorStop(0,'rgba(66,235,214,.3)');g.addColorStop(1,'rgba(66,235,214,0)');
+  const grad=ctx.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(66,235,214,.3)');grad.addColorStop(1,'rgba(66,235,214,0)');
   chNW=new Chart(ctx,{type:'line',
-    data:{labels,datasets:[{label:'שווי נטו',data:nwVals,borderColor:'#42ebd6',backgroundColor:g,
+    data:{labels,datasets:[{label:'שווי נטו',data:nwVals,borderColor:'#42ebd6',backgroundColor:grad,
       pointBackgroundColor:'#42ebd6',tension:.4,fill:true,pointRadius:5,pointHoverRadius:7}]},
     options:{plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#64748b',font:{family:'Heebo',size:11}},grid:{color:'#1a2235'}},
@@ -1397,7 +1405,7 @@ function renderDash(){
         <span style="font-size:10px;color:var(--t2)">${pct}%</span>
       </div>
     </div>`;
-  }).join('')||'<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">לחץ על "מטרות" להוספת מטרות</p>';
+  }).join('')||`<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">${g('לחץ','לחצי')} על "מטרות" להוספת מטרות</p>`;
 
   renderAnalysis(snaps);
   renderUpdateAlerts();
@@ -1659,7 +1667,7 @@ function renderUpdateAlerts(){
     if(days===null){
       cls='warning';
       title=`${s.icon} ${s.label} — טרם עודכן`;
-      sub=`לא עדכנת את ה${s.label} עדיין — לחץ לעדכן`;
+      sub=`לא עדכנת את ה${s.label} עדיין — ${g('לחץ','לחצי')} לעדכן`;
     } else if(remaining<=0){
       cls='urgent';
       title=`${s.icon} ${s.label} — הגיע הזמן לעדכן!`;
@@ -1693,7 +1701,7 @@ function goToTab(id){
 
 // ══ SETTINGS ══
 function renderSettings(){
-  if(!D.settings)D.settings={displayName:'',email:'',age:'',freq:'30'};
+  if(!D.settings)D.settings={displayName:'',email:'',age:'',freq:'30',gender:'male'};
   const s=D.settings;
   ['set-name','set-age','set-email','set-freq'].forEach(id=>{
     const el=document.getElementById(id);
@@ -1703,6 +1711,8 @@ function renderSettings(){
     if(id==='set-email')el.value=s.email||'';
     if(id==='set-freq')el.value=s.freq||'30';
   });
+  const gEl=document.getElementById('set-gender');
+  if(gEl)gEl.value=s.gender||'male';
   renderCalendar();
 }
 async function saveSettings(){
@@ -1712,6 +1722,7 @@ async function saveSettings(){
   D.settings.age=document.getElementById('set-age').value||'';
   D.settings.email=document.getElementById('set-email').value||'';
   D.settings.freq=document.getElementById('set-freq').value||'30';
+  D.settings.gender=document.getElementById('set-gender')?.value||'male';
   if(!D.settings.notifyEmail)D.settings.notifyEmail=D.settings.email;
   D.lastSaved=new Date().toISOString();
   // Update header name immediately
@@ -1985,7 +1996,7 @@ function renderDashInsights(nwTotal,nwAssets,nwInvest,nwSavings,nwDebts,latestCo
     if(nwChange>0)
       lines.push({icon:'📈',color:'var(--teal)',text:`שווי הנטו <strong>עלה ב-${fmt(abs)}</strong> מהתקופה הקודמת (${periodsWithData[1].label}) — כיוון מצוין!`});
     else if(nwChange<0)
-      lines.push({icon:'📉',color:'var(--red)',text:`שווי הנטו <strong>ירד ב-${fmt(abs)}</strong> מהתקופה הקודמת (${periodsWithData[1].label}) — שים לב לשינויים.`});
+      lines.push({icon:'📉',color:'var(--red)',text:`שווי הנטו <strong>ירד ב-${fmt(abs)}</strong> מהתקופה הקודמת (${periodsWithData[1].label}) — ${g('שים','שימי')} לב לשינויים.`});
     else
       lines.push({icon:'→',color:'var(--t2)',text:`שווי הנטו <strong>יציב</strong> — אין שינוי מהתקופה הקודמת.`});
   }else if(nwTotal>0){
@@ -2009,14 +2020,14 @@ function renderDashInsights(nwTotal,nwAssets,nwInvest,nwSavings,nwDebts,latestCo
     if(liquidPct>=60)
       lines.push({icon:'💧',color:'var(--blue)',text:`נכסים נזילים: <strong>${liquidPct}%</strong> מסך הנכסים — גמישות פיננסית טובה.`});
     else if(nwAssets>0)
-      lines.push({icon:'🏠',color:'var(--t2)',text:`רוב הנכסים (<strong>${100-liquidPct}%</strong>) אינם נזילים — בדוק איזון.`});
+      lines.push({icon:'🏠',color:'var(--t2)',text:`רוב הנכסים (<strong>${100-liquidPct}%</strong>) אינם נזילים — ${g('בדוק','בדקי')} איזון.`});
   }
 
   // 4. Debt ratio
   if(nwDebts>0&&totalAssets>0){
     const debtRatio=Math.round(nwDebts/totalAssets*100);
     if(debtRatio>40)
-      lines.push({icon:'⚠️',color:'var(--amber)',text:`יחס חוב לנכסים: <strong>${debtRatio}%</strong> — שקול פירעון מוקדם.`});
+      lines.push({icon:'⚠️',color:'var(--amber)',text:`יחס חוב לנכסים: <strong>${debtRatio}%</strong> — ${g('שקול','שקלי')} פירעון מוקדם.`});
     else
       lines.push({icon:'✅',color:'var(--teal)',text:`יחס חוב לנכסים סביר: <strong>${debtRatio}%</strong>.`});
   }
@@ -2088,7 +2099,7 @@ function renderAnalysis(snaps){
     trendMsg=`<div style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:13px;text-align:right;line-height:1.7;${nwTrend?'background:rgba(66,235,214,.08);border:1px solid var(--teal-border);color:var(--teal)':'background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:#fcd34d'}">
       ${nwTrend
         ? `📈 מגמה חיובית! שווי הנטו שלך עלה ב-${snaps.length-1} תקופות רצופות. סה"כ גדלת ב-${fmt(nwTotalChange)} מאז התחלת.`
-        : `📊 שווי הנטו לא ממשיך לעלות בעקביות. בדוק מה השתנה ואיפה אפשר לשפר.`
+        : `📊 שווי הנטו לא ממשיך לעלות בעקביות. ${g('בדוק','בדקי')} מה השתנה ואיפה אפשר לשפר.`
       }
     </div>`;
   }
@@ -2192,3 +2203,127 @@ window.addEventListener('load',()=>setTimeout(()=>{
 
 // Warn before leaving if dirty
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+
+// ══ ONBOARDING TOUR ══
+let tourStep=0;
+// Tour steps are computed lazily (inside startTour) so g() uses the correct gender setting
+function getTourSteps(){
+  return [
+    {
+      el:'nav-dash',
+      title:'ברוכ'+g('','ה')+' הבא'+g('','ה')+' לדשבורד! 👋',
+      text:'כאן '+g('תראה','תראי')+' תמונת מצב מלאה של הפיננסים שלך — שווי נטו, מטרות, פנסיה ותזרים חודשי. הכל במקום אחד.'
+    },
+    {
+      el:'nav-goals',
+      title:'המטרות הפיננסיות שלך 🎯',
+      text:'הגדר'+g('','י')+' מטרות חיסכון — קרן חירום, דירה, חופשה — '+g('ועקוב','ועקבי')+' אחרי ההתקדמות שלך לאורך זמן.'
+    },
+    {
+      el:'nav-pension',
+      title:'ניהול פנסיה ואפיקי השקעה 🏦',
+      text:'הכנס'+g('','י')+' נתוני פנסיה, קרן השתלמות וביטוחים — '+g('ועקוב','ועקבי')+' אחרי הצמיחה שלהם. '+g('קבל','קבלי')+' התראה כשהגיע הזמן לעדכן.'
+    },
+    {
+      el:'nav-nw',
+      title:'שווי נטו לאורך זמן 📈',
+      text:'הכנס'+g('','י')+' נכסים, השקעות, חסכונות וחובות לכל תקופה — '+g('וראה','וראי')+' את הגרף המלא של הצמיחה שלך.'
+    },
+    {
+      el:'nav-portfolio',
+      title:'תיק השקעות 💼',
+      text:'נהל'+g('','י')+' את תיק ההשקעות שלך לפי ברוקרים. '+g('ראה','ראי')+' פיזור לפי קטגוריות '+g('וקבל','וקבלי')+' המלצות לאיזון מחדש.'
+    },
+    {
+      el:'nav-history',
+      title:'היסטוריה ותמונות מצב 🕐',
+      text:g('שמור','שמרי')+' תמונת מצב בכל עדכון חשוב — '+g('ועקוב','ועקבי')+' אחרי ההתקדמות שלך. '+g('ראה','ראי')+' גרפים ו'+g('השווה','השווי')+' בין תקופות.'
+    },
+    {
+      el:'nav-settings',
+      title:'הגדרות אישיות ⚙️',
+      text:'עדכן'+g('','י')+' שם, גיל ואימייל. '+g('בחר','בחרי')+' תדירות עדכון ולשון פנייה. '+g('לחץ','לחצי')+' "הצג סיור מחדש" בכל עת כדי לחזור להסבר הזה.',
+      last:true
+    }
+  ];
+}
+let TOUR_STEPS=[];
+
+function startTour(){
+  TOUR_STEPS=getTourSteps(); // Recompute with current gender preference
+  tourStep=0;
+  showTourStep();
+}
+
+function showTourStep(){
+  const step=TOUR_STEPS[tourStep];
+  if(!step){closeTour();return;}
+
+  const overlay=document.getElementById('tour-overlay');
+  const ring=document.getElementById('tour-ring');
+  const card=document.getElementById('tour-card');
+  const counter=document.getElementById('tour-step-counter');
+  const titleEl=document.getElementById('tour-title');
+  const textEl=document.getElementById('tour-text');
+  const nextBtn=document.getElementById('tour-next-btn');
+
+  // Navigate to the tab this step points to (for nav buttons)
+  const targetEl=document.getElementById(step.el);
+  if(targetEl&&targetEl.classList.contains('nbtn')){
+    targetEl.click();
+  }
+
+  // Position the highlight ring around the target element
+  setTimeout(()=>{
+    const t=document.getElementById(step.el);
+    if(t){
+      const r=t.getBoundingClientRect();
+      const pad=6;
+      ring.style.top=(r.top-pad)+'px';
+      ring.style.left=(r.left-pad)+'px';
+      ring.style.width=(r.width+pad*2)+'px';
+      ring.style.height=(r.height+pad*2)+'px';
+      ring.style.display='block';
+    } else {
+      ring.style.display='none';
+    }
+  },180);
+
+  overlay.style.display='block';
+  card.style.display='block';
+
+  counter.textContent='שלב '+(tourStep+1)+' מתוך '+TOUR_STEPS.length;
+  titleEl.textContent=step.title;
+  textEl.innerHTML=step.text;
+  nextBtn.textContent=step.last?'סיים ✓':'הבא →';
+}
+
+function nextTourStep(){
+  tourStep++;
+  if(tourStep>=TOUR_STEPS.length){
+    closeTour();
+  } else {
+    showTourStep();
+  }
+}
+
+function closeTour(){
+  document.getElementById('tour-overlay').style.display='none';
+  document.getElementById('tour-ring').style.display='none';
+  document.getElementById('tour-card').style.display='none';
+  // Mark tour as done for this user so it won't auto-show again
+  if(CU)localStorage.setItem('tour_done_'+CU,'1');
+}
+
+// Re-position highlight ring on resize
+window.addEventListener('resize',()=>{
+  if(document.getElementById('tour-card').style.display==='block'&&TOUR_STEPS[tourStep]){
+    const t=document.getElementById(TOUR_STEPS[tourStep].el);
+    if(t){
+      const r=t.getBoundingClientRect(),pad=6;
+      const ring=document.getElementById('tour-ring');
+      ring.style.top=(r.top-pad)+'px';ring.style.left=(r.left-pad)+'px';
+      ring.style.width=(r.width+pad*2)+'px';ring.style.height=(r.height+pad*2)+'px';
+    }
+  }
+});

@@ -509,3 +509,19 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 
 
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── ONBOARDING TOUR ── */
+@keyframes tour-pulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(66,235,214,.25),0 8px 32px rgba(0,0,0,.5);}
+  50%{box-shadow:0 0 0 8px rgba(66,235,214,.1),0 8px 32px rgba(0,0,0,.5);}
+}
+#tour-ring{
+  transition:top .3s ease,left .3s ease,width .3s ease,height .3s ease;
+  animation:tour-pulse 2s ease-in-out infinite;
+}
+#tour-card{
+  animation:tour-pulse 2.4s ease-in-out infinite;
+}
+#tour-next-btn:hover{opacity:.85;}
+#tour-overlay{cursor:pointer;}
+#tour-step-counter{letter-spacing:.5px;text-transform:uppercase;font-weight:600;}

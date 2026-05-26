@@ -63,14 +63,14 @@
     </div>
   </div>
   <div class="nav">
-    <button class="nbtn on" onclick="goTo('dash',this)"><i data-lucide="layout-dashboard" class="nav-icon"></i> דשבורד</button>
-    <button class="nbtn" onclick="goTo('goals',this)"><i data-lucide="target" class="nav-icon"></i> מטרות</button>
-    <button class="nbtn" onclick="goTo('pension',this)"><i data-lucide="landmark" class="nav-icon"></i> פנסיה</button>
-    <button class="nbtn" onclick="goTo('nw',this)"><i data-lucide="trending-up" class="nav-icon"></i> שווי נטו</button>
-    <button class="nbtn" onclick="goTo('portfolio',this)"><i data-lucide="briefcase" class="nav-icon"></i> תיק השקעות</button>
-    <button class="nbtn" onclick="goTo('history',this)"><i data-lucide="clock" class="nav-icon"></i> היסטוריה</button>
-    <button class="nbtn" onclick="goTo('notes',this)"><i data-lucide="notebook-pen" class="nav-icon"></i> הערות</button>
-    <button class="nbtn" onclick="goTo('settings',this)"><i data-lucide="settings" class="nav-icon"></i> הגדרות</button>
+    <button id="nav-dash" class="nbtn on" onclick="goTo('dash',this)"><i data-lucide="layout-dashboard" class="nav-icon"></i> דשבורד</button>
+    <button id="nav-goals" class="nbtn" onclick="goTo('goals',this)"><i data-lucide="target" class="nav-icon"></i> מטרות</button>
+    <button id="nav-pension" class="nbtn" onclick="goTo('pension',this)"><i data-lucide="landmark" class="nav-icon"></i> פנסיה</button>
+    <button id="nav-nw" class="nbtn" onclick="goTo('nw',this)"><i data-lucide="trending-up" class="nav-icon"></i> שווי נטו</button>
+    <button id="nav-portfolio" class="nbtn" onclick="goTo('portfolio',this)"><i data-lucide="briefcase" class="nav-icon"></i> תיק השקעות</button>
+    <button id="nav-history" class="nbtn" onclick="goTo('history',this)"><i data-lucide="clock" class="nav-icon"></i> היסטוריה</button>
+    <button id="nav-notes" class="nbtn" onclick="goTo('notes',this)"><i data-lucide="notebook-pen" class="nav-icon"></i> הערות</button>
+    <button id="nav-settings" class="nbtn" onclick="goTo('settings',this)"><i data-lucide="settings" class="nav-icon"></i> הגדרות</button>
     <button class="nbtn" id="admin-nav-btn" style="display:none;color:var(--purple)" onclick="goTo('admin',this)"><i data-lucide="shield" class="nav-icon"></i> ניהול</button>
   </div>
   <div class="content">
@@ -286,6 +286,17 @@
             </select>
           </div>
         </div>
+        <div class="settings-row">
+          <div class="sf"><label>לשון פנייה מועדפת</label>
+            <select id="set-gender" oninput="markDirty()">
+              <option value="male">זכר — "לחץ", "בדוק", "אתה"</option>
+              <option value="female">נקבה — "לחצי", "בדקי", "את"</option>
+            </select>
+          </div>
+          <div class="sf" style="display:flex;align-items:flex-end">
+            <button class="btnout" onclick="startTour()" style="width:100%">🗺️ הצג סיור מחדש</button>
+          </div>
+        </div>
         <button class="btnsave" onclick="saveSettings()" style="margin-top:8px">שמור הגדרות ✓</button>
       </div>
     </div>
@@ -382,6 +393,19 @@
       <button class="btnsnap secondary" onclick="document.getElementById('reset-modal').style.display='none'">ביטול</button>
       <button class="btnsnap" style="background:var(--red);color:#fff;flex:1" onclick="doReset()">כן, מחק הכל</button>
     </div>
+  </div>
+</div>
+
+<!-- ONBOARDING TOUR -->
+<div id="tour-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;pointer-events:all" onclick="closeTour()"></div>
+<div id="tour-ring" style="display:none;position:fixed;border:2px solid #42ebd6;border-radius:10px;pointer-events:none;z-index:9999;transition:all .3s ease"></div>
+<div id="tour-card" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:10000;width:min(400px,90vw);background:var(--s1);border:1px solid rgba(66,235,214,.4);border-radius:16px;padding:20px 24px;direction:rtl;text-align:right;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+  <div id="tour-step-counter" style="font-size:11px;color:var(--t3);margin-bottom:8px"></div>
+  <div id="tour-title" style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:8px"></div>
+  <div id="tour-text" style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:16px"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <button onclick="closeTour()" style="background:transparent;border:none;color:var(--t3);font-family:var(--font);font-size:12px;cursor:pointer;padding:0;white-space:nowrap">דלג על הסיור</button>
+    <button id="tour-next-btn" onclick="nextTourStep()" class="btnsave" style="padding:8px 22px;font-size:13px">הבא →</button>
   </div>
 </div>
 
