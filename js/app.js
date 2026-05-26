@@ -150,12 +150,20 @@ function aTab(t){
   document.getElementById('rf').style.display=t==='r'?'block':'none';
   document.getElementById('aerr').style.display='none';
 }
-function showErr(m){const e=document.getElementById('aerr');e.textContent=m;e.style.display='block';}
+function showErr(m){
+  const e=document.getElementById('aerr');
+  // Reset teal styling that doForgotPassword may have applied
+  e.style.background='';e.style.borderColor='';e.style.color='';
+  e.textContent=m;e.style.display='block';
+}
 async function doLogin(){
   const e=v('lu'),p=v('lp');
   if(!e||!p)return showErr('נא למלא את כל השדות');
+  const btn=document.querySelector('#lf .btnmain');
+  if(btn){btn.disabled=true;btn.textContent='מתחבר...';}
   try{await auth.signInWithEmailAndPassword(e,p);}
-  catch(err){showErr(fbErr(err.code));}
+  catch(err){showErr(fbErr(err.code)||'שגיאת התחברות — בדוק אימייל וסיסמה');}
+  finally{if(btn){btn.disabled=false;btn.textContent='כניסה →';}}
 }
 async function doReg(){
   const name=v('rn'),e=v('ru'),p=v('rp');
@@ -179,7 +187,7 @@ async function doForgotPassword(){
     document.getElementById('aerr').style.background='rgba(66,235,214,.1)';
     document.getElementById('aerr').style.borderColor='rgba(66,235,214,.3)';
     document.getElementById('aerr').style.color='var(--teal)';
-    showErr('✓ מייל איפוס נשלח ל-'+email+'. בדוק את תיבת הדואר שלך.');
+    showErr('✓ מייל איפוס נשלח ל-'+email+'. בדוק את תיבת הדואר שלך — ובדוק גם בתיקיית הספאם.');
   }catch(e){
     showErr(fbErr(e.code)||'שגיאה בשליחת מייל איפוס');
   }
@@ -257,16 +265,10 @@ function renderAll(){
 
 // ══ CASH FLOW CALCULATOR ══
 function calcCashFlow(){
-  const balance=parseFloat(document.getElementById('cf-balance').value)||0;
-  const zero=parseFloat(document.getElementById('cf-zero').value)||0;
-  const expenses=parseFloat(document.getElementById('cf-expenses').value)||0;
-  // Auto-update עו"ש location from balance input
-  if(balance>0){
-    const ewLoc=(D.locations||[]).find(l=>l.name&&(l.name.includes('עו"ש')||l.name.includes('עובר')));
-    if(ewLoc)ewLoc.amount=String(balance);
-    else if(D.locations)D.locations[0]={name:'עו"ש',amount:String(balance)};
-    renderLocs();
-  }
+  // Strip thousands commas so "10,000" parses as 10000 not 10
+  const balance=parseFloat(document.getElementById('cf-balance').value.replace(/,/g,''))||0;
+  const zero=parseFloat(document.getElementById('cf-zero').value.replace(/,/g,''))||0;
+  const expenses=parseFloat(document.getElementById('cf-expenses').value.replace(/,/g,''))||0;
   const el=document.getElementById('cf-result');
   if(!balance&&!zero&&!expenses){el.style.display='none';return;}
   const available=balance-zero-expenses;
@@ -304,7 +306,7 @@ function renderGoals(){
   HZ.forEach((hz,hi)=>{
     if(!byH[hi].length)return;
     const grp=document.createElement('div');grp.className='hz-group';
-    grp.innerHTML=`<div class="hz-group-title">${hz}</div>`;
+    grp.innerHTML=`<div class="hz-group-title">${hz} <span style="font-size:10px;color:var(--t3);font-weight:400">(לחץ על תג הזמן במטרה כדי לשנות)</span></div>`;
     byH[hi].forEach(({g,idx})=>grp.appendChild(mkGoal(g,idx)));
     hzEl.appendChild(grp);
   });
@@ -461,7 +463,7 @@ function mkPen(p,i){
       </div>
     </div>
     <div class="pr2">
-      <div class="pf"><label>תאריך עדכון</label><input type="date" value="${p.date||''}" data-i="${i}" data-f="date" oninput="pu(this)"/></div>
+      <div class="pf"><label>תאריך דוח אחרון <span style="font-size:10px;color:var(--t3);font-weight:400">— מתי קיבלת דוח מחברת הביטוח?</span></label><input type="date" value="${p.date||''}" data-i="${i}" data-f="date" oninput="pu(this)"/></div>
     </div>
     <div class="pen-section-title">מסלולי השקעה</div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;display:grid;grid-template-columns:2fr 1fr 80px;gap:8px;text-align:right">
@@ -595,14 +597,19 @@ function isFuturePeriod(periodLabel){
 }
 function renderNW(){
   const ph=document.getElementById('period-heads');ph.innerHTML='';
+  // Hint row above period inputs
+  const hint=document.createElement('div');
+  hint.style.cssText='font-size:11px;color:var(--t3);text-align:right;margin-bottom:6px;grid-column:1/-1;';
+  hint.textContent='הכנס חודש/שנה לכל עמודה (לדוגמה: 5/2025). מלא את הראשון — שאר יתמלאו אוטומטית.';
+  ph.appendChild(hint);
   const count=D.nwPeriodsCount||6;
   for(let i=0;i<count;i++){
     const d=document.createElement('div');
     d.style.cssText='display:flex;flex-direction:column;gap:3px;';
-    d.innerHTML=`<input class="period-date-input" value="${D.nwPeriods[i]||''}" 
-      placeholder="${i===0?'1/2025':'מ/שנה'}" 
+    d.innerHTML=`<input class="period-date-input" value="${D.nwPeriods[i]||''}"
+      placeholder="${i===0?'חודש/שנה':'הבא'}"
       data-i="${i}" oninput="nwPeriodChange(this)" onblur="nwPeriodBlur(this)"
-      title="הכנס תאריך בפורמט מ/שנה"/>`;
+      title="הכנס חודש ושנה, לדוגמה: 5/2025"/>`;
     ph.appendChild(d);
   }
   // Add/remove period buttons
@@ -764,12 +771,13 @@ function nwPeriodBlur(el){
   const normalized=parsed?(parsed.m+'/'+parsed.y):raw;
   D.nwPeriods[i]=normalized;
   el.value=normalized;
-  // Auto-fill subsequent periods only from first field, only if they are empty
+  // Auto-fill subsequent empty periods (monthly intervals) only from first field
   if(i===0&&normalized&&parsed){
     try{
       let {m,y}=parsed;
-      for(let j=1;j<6;j++){
-        m+=6;if(m>12){m-=12;y++;}
+      const cnt=D.nwPeriodsCount||6;
+      for(let j=1;j<cnt;j++){
+        m+=1;if(m>12){m=1;y++;}
         if(!D.nwPeriods[j]||D.nwPeriods[j].includes('NaN')||D.nwPeriods[j]===''){
           D.nwPeriods[j]=m+'/'+y;
         }
@@ -1167,8 +1175,11 @@ function renderDash(){
       <i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>תאריך עדכון ישן:</strong> ${staleProducts.join('، ')} — לא עודכן כבר חצי שנה ומעלה
     </div>`:''}
     <div class="snap-trigger">
-      <div><p><b>תמונת מצב חודשית</b><br>לחץ כדי לתעד את המצב הפיננסי שלך ולראות שינויים לאורך זמן.</p>
-        ${prev?`<div style="font-size:11px;color:var(--t3);margin-top:4px">תמונת מצב אחרונה: ${fmtDate(prev.date)}</div>`:''}</div>
+      <div>
+        <p><b>תמונת מצב חודשית</b><br>
+        <span style="font-size:12px;color:var(--t3)">המערכת שומרת את הנתונים שלך אוטומטית — תמונת מצב <strong>מצלמת</strong> את המצב הפיננסי הנוכחי כדי שתוכל להשוות בעתיד ולראות כמה התקדמת.</span></p>
+        ${prev?`<div style="font-size:11px;color:var(--t3);margin-top:4px">תמונת מצב אחרונה: ${fmtDate(prev.date)}</div>`:'<div style="font-size:11px;color:var(--amber);margin-top:4px">טרם נשמרה תמונת מצב ראשונה — מומלץ לשמור עכשיו!</div>'}
+      </div>
       <button class="btnsnaptrig" onclick="openSnapModal()"><i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> שמור תמונת מצב</button>
     </div>`;
   const cmpArea=document.getElementById('cmp-area');
