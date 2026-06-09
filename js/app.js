@@ -1299,12 +1299,14 @@ let chAlloc=null,chAlloc2=null,chNW=null;
 function renderDash(){
   collectAll();
   const cur=calcCurrent(),snaps=D.snapshots||[],prev=snaps.length?snaps[snaps.length-1]:null;
-  // Calculate correct NW values FIRST — so cmp-area and all tiles use consistent data
-  const latestCol=getLatestNWCol();
-  const nwAssets=sumSec('assets',latestCol);
-  const nwInvest=sumSec('investments',latestCol);
-  const nwSavings=sumSec('savings',latestCol);
-  const nwDebts=sumSec('debts',latestCol);
+  // Best-estimate NW: each row uses its own most-recent non-empty value.
+  // Prevents the common case where updating only investments in a new period
+  // zeros out assets/savings/debts (they were never entered for that period).
+  const latestCol=getLatestNWCol(); // still used for per-row name sub-texts
+  const nwAssets=sumSecBest('assets');
+  const nwInvest=sumSecBest('investments');
+  const nwSavings=sumSecBest('savings');
+  const nwDebts=sumSecBest('debts');
   const nwTotal=nwAssets+nwInvest+nwSavings-nwDebts;
   cur.netWorth=nwTotal;
 
@@ -1342,20 +1344,19 @@ function renderDash(){
     </div>`;
   }else{cmpArea.innerHTML='';}
 
-  // Pension = investment rows that are פנסיה/השתלמות
+  // Pension = investment rows that are פנסיה/השתלמות — use best per-row value
   const penFromNW=(D.nwData.investments.rows||[]).reduce((s,r)=>{
     const isPen=r.name&&(r.name.includes('פנסיה')||r.name.includes('השתלמות'));
-    return s+(isPen?toILS(parseFloat(r.vals[latestCol])||0,getCellCurrency(r,latestCol)):0);
+    return s+(isPen?rowLatestILS(r):0);
   },0);
-  // Liquid = ONLY non-pension investment rows (תיק השקעות) + savings (קרן חירום, קרן כספית)
-  // Pension rows = פנסיה / השתלמות
+  // Liquid = ONLY non-pension investment rows + savings
   const liquidInvest=(D.nwData.investments.rows||[]).reduce((s,r)=>{
     const isPen=r.name&&(r.name.includes('פנסיה')||r.name.includes('השתלמות'));
-    return s+(!isPen?toILS(parseFloat(r.vals[latestCol])||0,getCellCurrency(r,latestCol)):0);
+    return s+(!isPen?rowLatestILS(r):0);
   },0);
-  // Savings sub-text (קרן חירום, קרן כספית etc.)
+  // Savings sub-text
   const savingsRows=(D.nwData.savings.rows||[])
-    .map(r=>({name:r.name,val:toILS(parseFloat(r.vals[latestCol])||0,getCellCurrency(r,latestCol))}))
+    .map(r=>({name:r.name,val:rowLatestILS(r)}))
     .filter(r=>r.val>0);
   const savingsTotal=savingsRows.reduce((s,r)=>s+r.val,0);
   const savingsSubText=savingsRows.map(r=>`${r.name} ${fmt(r.val)}`).join(' · ');
@@ -1375,14 +1376,14 @@ function renderDash(){
       <label><i data-lucide="home" class="tile-icon"></i> נכסים</label>
       <div class="val vg">${fmt(nwAssets)}</div>
       <div class="sub" style="font-size:10px;color:var(--t3)">
-        ${(D.nwData.assets.rows||[]).filter(r=>parseFloat(r.vals[latestCol])).map(r=>r.name).slice(0,2).join(' · ')||'דירה, רכב, מזומן'}
+        ${(D.nwData.assets.rows||[]).filter(r=>rowLatestILS(r)>0).map(r=>r.name).slice(0,2).join(' · ')||'דירה, רכב, מזומן'}
       </div>
     </div>
     <div class="stat">
       <label><i data-lucide="landmark" class="tile-icon"></i> פנסיה והשתלמות</label>
       <div class="val vp">${fmt(penFromNW||nwInvest)}</div>
       <div class="sub" style="font-size:10px;color:var(--t3)">
-        ${(D.nwData.investments.rows||[]).filter(r=>{const n=r.name||'';return(n.includes('פנסיה')||n.includes('השתלמות'))&&parseFloat(r.vals[latestCol])}).map(r=>r.name).join(' · ')||'פנסיה + קרן השתלמות'}
+        ${(D.nwData.investments.rows||[]).filter(r=>{const n=r.name||'';return(n.includes('פנסיה')||n.includes('השתלמות'))&&rowLatestILS(r)>0}).map(r=>r.name).join(' · ')||'פנסיה + קרן השתלמות'}
       </div>
     </div>
     <div class="stat">
@@ -1925,19 +1926,18 @@ function sumSec(sec,col){
 // Best-estimate sum for a section: each row uses its MOST RECENT non-empty, non-future value.
 // This means NW tiles show the correct total even when different sections were updated at
 // different times (e.g. house = 9/2023, investments = 1/2026).
-function sumSecBest(sec){
+function rowLatestILS(row){
   const cnt=D.nwPeriodsCount||6;
-  return(D.nwData[sec].rows||[]).reduce((total,row)=>{
-    for(let c=cnt-1;c>=0;c--){
-      const p=D.nwPeriods[c]||'';
-      if(p&&isFuturePeriod(p))continue;
-      const raw=parseFloat(row.vals[c])||0;
-      if(raw!==0){
-        return total+toILS(raw,getCellCurrency(row,c));
-      }
-    }
-    return total;
-  },0);
+  for(let c=cnt-1;c>=0;c--){
+    const p=D.nwPeriods[c]||'';
+    if(p&&isFuturePeriod(p))continue;
+    const raw=parseFloat(row.vals[c])||0;
+    if(raw!==0)return toILS(raw,getCellCurrency(row,c));
+  }
+  return 0;
+}
+function sumSecBest(sec){
+  return(D.nwData[sec].rows||[]).reduce((total,row)=>total+rowLatestILS(row),0);
 }
 
 function touchSection(sec){
