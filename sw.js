@@ -1,6 +1,6 @@
 // Service Worker — Financial Tracker PWA
 // Cache name includes date — change this on each deploy to bust stale cache
-const CACHE_NAME = 'finance-tracker-20260610';
+const CACHE_NAME = 'finance-tracker-20260610b';
 const STATIC_ASSETS = [
   './index.html',
   './js/app.js',
