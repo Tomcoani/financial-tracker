@@ -622,7 +622,7 @@ function renderNW(){
   // Hint row above period inputs
   const hint=document.createElement('div');
   hint.style.cssText='font-size:11px;color:var(--t3);text-align:right;margin-bottom:6px;grid-column:1/-1;';
-  hint.textContent='הכנס חודש/שנה לכל עמודה (לדוגמה: 5/2025). מלא את הראשון — שאר יתמלאו אוטומטית.';
+  hint.textContent='מלא רק את התאריך הראשון (לדוגמה: 9/2023) — שאר התאריכים יתמלאו אוטומטית.';
   ph.appendChild(hint);
   const count=D.nwPeriodsCount||6;
   for(let i=0;i<count;i++){
@@ -781,19 +781,21 @@ function renderNWSummary(){
       if(D.nwPeriods[i]&&!isFuturePeriod(D.nwPeriods[i])){latestIdx=i;break;}
     }
   }
-  const latest=latestIdx>=0?totals[latestIdx]:{a:0,iv:0,sv:0,d:0,nw:0};
-  const prev=latestIdx>0?totals[latestIdx-1]:null;
   // Best-estimate totals: each section uses its own most-recent data
   const best_a=sumSecBest('assets'),best_iv=sumSecBest('investments');
   const best_sv=sumSecBest('savings'),best_d=sumSecBest('debts');
   const best_nw=best_a+best_iv+best_sv-best_d;
-  // Compare best_nw to previous snapshot for delta
-  const prevNW=prev?prev.nw:null;
-  const nwDelta=prevNW&&best_nw!==prevNW?best_nw-prevNW:null;
-  // KPI tiles use best-estimate values
+  // Find the most recent PREVIOUS period with actual data for delta (skip empty periods)
+  let prevNW=null;
+  for(let i=latestIdx-1;i>=0;i--){
+    const p=D.nwPeriods[i];
+    if(p&&!isFuturePeriod(p)&&totals[i].nw!==0){prevNW=totals[i].nw;break;}
+  }
+  const nwDelta=(prevNW!==null)?best_nw-prevNW:null;
+  // KPI tiles
   document.getElementById('nw-summary-stats').innerHTML=`
     <div class="stat teal"><label>שווי נטו</label><div class="val vt">${fmt(best_nw)}</div>
-      <div class="sub">${nwDelta?deltaBadge(nwDelta):'<span style="font-size:10px;color:var(--t3)">נתון עדכני לכל סעיף</span>'}</div></div>
+      <div class="sub">${nwDelta!==null&&nwDelta!==0?deltaBadge(nwDelta):''}</div></div>
     <div class="stat"><label>נכסים</label><div class="val vg">${fmt(best_a)}</div></div>
     <div class="stat"><label>השקעות + חסכונות</label><div class="val vb">${fmt(best_iv+best_sv)}</div></div>
     <div class="stat"><label>חובות</label><div class="val vr">${fmt(best_d)}</div></div>`;
