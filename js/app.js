@@ -26,6 +26,7 @@ const HC=['h0','h1','h2','h3'];
 const COLS=['#42ebd6','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#38bdf8','#f472b6'];
 const PORT_CATS=['מניות ישראל','מניות חו"ל','אג"ח','נדל"ן','סחורות','מזומן','אחר'];
 let CU=null, D={}, dirty=false, autoSaveTimer=null, toastTimer=null;
+let nwColHidden={};  // column index → true when collapsed
 
 // Gender-aware Hebrew copywriting helper — returns male form by default
 function g(m,f){return D?.settings?.gender==='female'?f:m;}
@@ -122,6 +123,10 @@ auth.onAuthStateChanged(async user=>{
         D.nwData[sec]={rows:Object.entries(D.nwData[sec]).map(([name,vals])=>({name,vals:Array.isArray(vals)?vals:nw6()}))};
       }
       if(!D.nwData[sec])D.nwData[sec]={rows:[]};
+      // Pad vals arrays — fixes "incomplete number" when rows were created with fewer periods
+      (D.nwData[sec].rows||[]).forEach(row=>{
+        while(row.vals.length<D.nwPeriodsCount)row.vals.push('');
+      });
     });
     document.getElementById('init-loader').style.display='none';
     injectLogos();
@@ -347,10 +352,10 @@ function mkGoal(g,i){
       <button class="bdel" onclick="delGoal(${i})">×</button>
     </div>
     <div class="gnums">
-      <div class="mf"><label>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
-      <div class="mf"><label>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
+      <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת? הכנס את הסכום הנוכחי בשקלים.</span></span>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
+      <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
     </div>
-    <div class="mf" style="margin-bottom:9px"><label>איפה הכסף</label>
+    <div class="mf" style="margin-bottom:9px"><label><span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span>איפה הכסף</label>
       <input value="${esc(g.where)}" placeholder="עו\"ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
         style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
     </div>
@@ -643,32 +648,48 @@ function renderNW(){
   renderNWSection('nw-debts','debts');
   renderNWSummary();
 }
+// Build a grid-template-columns string respecting column collapse
+function nwGridCols(cnt){
+  const lbl='160px',del='24px';
+  const cols=Array.from({length:cnt},(_,i)=>nwColHidden[i]?'22px':'minmax(0,1fr)').join(' ');
+  return `${lbl} ${cols} ${del}`;
+}
 function renderNWSection(elId,sec){
   const el=document.getElementById(elId);el.innerHTML='';
   const cnt=D.nwPeriodsCount||6;
   document.documentElement.style.setProperty('--nw-count',cnt);
-  document.querySelectorAll('.nwrow').forEach(r=>r.style.gridTemplateColumns=`160px repeat(${cnt},minmax(0,1fr)) 24px`);
-  const hr=document.createElement('div');hr.className='nwrow';
+  const tpl=nwGridCols(cnt);
+  document.documentElement.style.setProperty('--nw-tpl',tpl);
+  const secLabels={assets:'סה"כ נכסים',investments:'סה"כ השקעות',savings:'סה"כ חסכונות',debts:'סה"כ חובות'};
+  // ── Header row ──
+  const hr=document.createElement('div');hr.className='nwrow';hr.style.gridTemplateColumns=tpl;
   hr.innerHTML=`<div style="font-size:10px;color:var(--t3);font-weight:700;text-align:right;overflow:hidden;min-width:0;max-width:160px">סעיף</div>
-    ${D.nwPeriods.map((p,i)=>{
-    const future=p&&isFuturePeriod(p);
-    const style=future
-      ? 'text-align:center;font-size:10px;color:rgba(71,85,105,0.5);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;min-width:0'
-      : 'text-align:center;font-size:10px;color:var(--t3);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
-    return `<div style="${style}">${p||(future?'עתיד':'ת'+(i+1))}</div>`;
-  }).join('')}
+    ${D.nwPeriods.slice(0,cnt).map((p,i)=>{
+      const future=p&&isFuturePeriod(p);
+      const isHidden=!!nwColHidden[i];
+      if(isHidden){
+        return `<div class="nw-col-hidden-ph" title="הצג עמודה ${p||'ת'+(i+1)}" onclick="toggleNWCol(${i})">▶</div>`;
+      }
+      const style=future
+        ?'text-align:center;font-size:10px;color:rgba(71,85,105,0.5);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;min-width:0'
+        :'text-align:center;font-size:10px;color:var(--t3);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+      const label=p||(future?'עתיד':'ת'+(i+1));
+      return `<div style="${style}"><span>${label}</span>
+        <button class="col-toggle" onclick="toggleNWCol(${i})" title="הסתר עמודה">▼</button></div>`;
+    }).join('')}
     <div></div>`;
   el.appendChild(hr);
+  // ── Data rows ──
   (D.nwData[sec].rows||[]).forEach((row,ri)=>{
-    const r=document.createElement('div');r.className='nwrow';
-    const rowCurr=(row.currency||'ILS');
-    const rowSymbol=getCurrSymbol(rowCurr);
+    const r=document.createElement('div');r.className='nwrow';r.style.gridTemplateColumns=tpl;
     r.innerHTML=`
       <div style="overflow:hidden;min-width:0;max-width:160px;">
         <input value="${esc(row.name)}" placeholder="שם" data-sec="${sec}" data-ri="${ri}" oninput="nwRowName(this)" style="text-align:right;direction:rtl;width:100%;background:transparent;border:none;outline:none;color:var(--t2);font-family:var(--font);font-size:12px;border-bottom:1px dashed var(--border);"/>
-
-      </div></div>
-      ${row.vals.map((val,ci)=>{
+      </div>
+      ${row.vals.slice(0,cnt).map((val,ci)=>{
+        if(nwColHidden[ci]){
+          return `<div class="nw-col-hidden-ph" title="הצג עמודה" onclick="toggleNWCol(${ci})">▶</div>`;
+        }
         const periodLabel=D.nwPeriods[ci]||'';
         const isFuture=isFuturePeriod(periodLabel);
         if(isFuture){
@@ -699,6 +720,47 @@ function renderNWSection(elId,sec){
       <button class="bdel" style="font-size:14px" onclick="delNWRow('${sec}',${ri})">×</button>`;
     el.appendChild(r);
   });
+  // ── Section total row ──
+  const totalRow=document.createElement('div');
+  totalRow.className='nwrow nw-total-row';totalRow.style.gridTemplateColumns=tpl;
+  const prevColTotals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSec(sec,c));
+  totalRow.innerHTML=`
+    <div class="nw-total-lbl">${secLabels[sec]||'סה"כ'}</div>
+    ${prevColTotals.map((sum,c)=>{
+      if(nwColHidden[c])return `<div></div>`;
+      const p=D.nwPeriods[c]||'';
+      if(p&&isFuturePeriod(p))return `<div class="nw-total-cell" style="color:rgba(66,235,214,.3);">—</div>`;
+      return `<div class="nw-total-cell">${sum>0?fmt(sum):'—'}</div>`;
+    }).join('')}
+    <div></div>`;
+  el.appendChild(totalRow);
+  // ── Delta row (change vs previous non-empty period) ──
+  const hasAnyData=prevColTotals.some(v=>v>0);
+  if(hasAnyData){
+    const deltaRow=document.createElement('div');
+    deltaRow.className='nwrow nw-delta-row';deltaRow.style.gridTemplateColumns=tpl;
+    deltaRow.innerHTML=`
+      <div style="font-size:10px;color:var(--t3);text-align:right;padding-right:2px;overflow:hidden;max-width:160px;">Δ פער</div>
+      ${prevColTotals.map((sum,c)=>{
+        if(nwColHidden[c])return `<div></div>`;
+        const p=D.nwPeriods[c]||'';
+        if(!p||isFuturePeriod(p))return `<div class="nw-delta-cell"></div>`;
+        // Find previous non-empty period
+        let prevSum=null;
+        for(let pc=c-1;pc>=0;pc--){
+          const pp=D.nwPeriods[pc]||'';
+          if(pp&&!isFuturePeriod(pp)&&prevColTotals[pc]>0){prevSum=prevColTotals[pc];break;}
+        }
+        if(prevSum===null||sum===0)return `<div class="nw-delta-cell"></div>`;
+        const d=sum-prevSum;
+        if(d===0)return `<div class="nw-delta-cell" style="color:var(--t3)">ללא שינוי</div>`;
+        const col=d>0?'var(--green)':'var(--red)';
+        const arrow=d>0?'↑':'↓';
+        return `<div class="nw-delta-cell" style="color:${col}">${arrow} ${d>0?'+':''}${fmt(d)}</div>`;
+      }).join('')}
+      <div></div>`;
+    el.appendChild(deltaRow);
+  }
 }
 function renderNWSummary(){
   const cnt=D.nwPeriodsCount||D.nwPeriods.length||6;
@@ -714,7 +776,6 @@ function renderNWSummary(){
       latestIdx=i;break;
     }
   }
-  // If no period with data found, use latest non-future period
   if(latestIdx===-1){
     for(let i=cnt-1;i>=0;i--){
       if(D.nwPeriods[i]&&!isFuturePeriod(D.nwPeriods[i])){latestIdx=i;break;}
@@ -722,17 +783,78 @@ function renderNWSummary(){
   }
   const latest=latestIdx>=0?totals[latestIdx]:{a:0,iv:0,sv:0,d:0,nw:0};
   const prev=latestIdx>0?totals[latestIdx-1]:null;
+  // KPI tiles
   document.getElementById('nw-summary-stats').innerHTML=`
     <div class="stat teal"><label>שווי נטו</label><div class="val vt">${fmt(latest.nw)}</div>
       <div class="sub">${prev&&(latest.nw-prev.nw)!==0?deltaBadge(latest.nw-prev.nw):''}</div></div>
     <div class="stat"><label>נכסים</label><div class="val vg">${fmt(latest.a)}</div></div>
     <div class="stat"><label>השקעות + חסכונות</label><div class="val vb">${fmt(latest.iv+latest.sv)}</div></div>
     <div class="stat"><label>חובות</label><div class="val vr">${fmt(latest.d)}</div></div>`;
+
+  // Multi-period history table — only periods with a label
+  const activePeriods=D.nwPeriods.slice(0,cnt).map((p,i)=>({p,i})).filter(({p})=>p);
+  if(activePeriods.length>1){
+    const rows=[
+      {key:'a',label:'נכסים',color:'var(--green)'},
+      {key:'iv',label:'השקעות',color:'var(--blue)'},
+      {key:'sv',label:'חסכונות',color:'var(--purple)'},
+      {key:'d',label:'(-) חובות',color:'var(--red)'},
+    ];
+    // Build per-column delta for NW
+    const nwDeltas=activePeriods.map(({i},ai)=>{
+      if(ai===0)return null;
+      const prevAi=ai-1;
+      if(totals[activePeriods[prevAi].i].nw===0)return null;
+      return totals[i].nw - totals[activePeriods[prevAi].i].nw;
+    });
+    let tableHtml=`<div class="nw-history-wrap"><table class="nw-history-table"><thead><tr>
+      <th class="th-label">קטגוריה</th>
+      ${activePeriods.map(({p,i})=>{
+        const fut=isFuturePeriod(p);
+        return `<th style="${fut?'color:rgba(71,85,105,.5);font-style:italic':''}>${p}</th>`;
+      }).join('')}
+    </tr></thead><tbody>`;
+    rows.forEach(({key,label,color})=>{
+      tableHtml+=`<tr><td class="td-label">${label}</td>
+        ${activePeriods.map(({i})=>{
+          const v=totals[i][key];
+          return `<td style="color:${color}">${v>0?fmt(v):'—'}</td>`;
+        }).join('')}</tr>`;
+    });
+    // NW totals row
+    tableHtml+=`<tr class="nw-row-total"><td class="td-label">שווי נטו</td>
+      ${activePeriods.map(({i})=>`<td>${fmt(totals[i].nw)}</td>`).join('')}
+    </tr>`;
+    // Delta row
+    tableHtml+=`<tr class="delta-row"><td class="td-label">Δ שינוי</td>
+      ${nwDeltas.map(d=>{
+        if(d===null)return '<td>—</td>';
+        const col=d>0?'var(--green)':'var(--red)';
+        return `<td style="color:${col}">${d>0?'↑ +':'↓ '}${fmt(d)}</td>`;
+      }).join('')}
+    </tr>`;
+    tableHtml+=`</tbody></table></div>`;
+    // Write into dedicated container (cleared each render, no stacking)
+    let histEl=document.getElementById('nw-history-container');
+    if(!histEl){
+      histEl=document.createElement('div');histEl.id='nw-history-container';
+      document.getElementById('nw-summary-stats').insertAdjacentElement('afterend',histEl);
+    }
+    histEl.innerHTML=tableHtml;
+  } else {
+    const histEl=document.getElementById('nw-history-container');
+    if(histEl)histEl.innerHTML='';
+  }
+}
+function toggleNWCol(i){
+  nwColHidden[i]=!nwColHidden[i];
+  renderNW();
 }
 function addNWPeriod(){
   if(!D.nwPeriodsCount)D.nwPeriodsCount=6;
   D.nwPeriodsCount++;
   D.nwPeriods.push('');
+  nwColHidden={};  // reset collapse when structure changes
   // extend all rows
   ['assets','investments','savings','debts'].forEach(sec=>{
     (D.nwData[sec].rows||[]).forEach(row=>{row.vals.push('');});
@@ -743,6 +865,7 @@ function removeNWPeriod(){
   if(!D.nwPeriodsCount||D.nwPeriodsCount<=1)return;
   D.nwPeriodsCount--;
   D.nwPeriods.pop();
+  nwColHidden={};  // reset collapse when structure changes
   ['assets','investments','savings','debts'].forEach(sec=>{
     (D.nwData[sec].rows||[]).forEach(row=>{row.vals.pop();});
   });
