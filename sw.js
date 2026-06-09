@@ -1,5 +1,6 @@
 // Service Worker — Financial Tracker PWA
-const CACHE_NAME = 'finance-tracker-v1';
+// Cache name includes date — change this on each deploy to bust stale cache
+const CACHE_NAME = 'finance-tracker-20260610';
 const STATIC_ASSETS = [
   './index.html',
   './js/app.js',
@@ -16,7 +17,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate: clean up old caches
+// Activate: clean up ALL old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -25,11 +26,12 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch: network-first for Firebase/CDN, cache-first for local assets
+// Fetch: NETWORK-FIRST for local assets (always gets fresh code when online)
+// Falls back to cache only when offline
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Always network for Firebase, Google APIs, CDN resources
+  // Always pass through to network for Firebase / CDN / external resources
   if (
     url.hostname.includes('firebase') ||
     url.hostname.includes('googleapis') ||
@@ -38,20 +40,21 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('cloudflare') ||
     url.hostname.includes('fonts.g')
   ) {
-    return; // let browser handle externals normally
+    return;
   }
 
-  // Cache-first for local static assets
+  // Network-first: try to fetch fresh, update cache, fall back to cache if offline
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
+    fetch(event.request)
+      .then(response => {
         if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => caches.match('./index.html'));
-    })
+      })
+      .catch(() =>
+        caches.match(event.request).then(cached => cached || caches.match('./index.html'))
+      )
   );
 });
