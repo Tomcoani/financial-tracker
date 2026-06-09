@@ -772,37 +772,7 @@ function renderNWSummary(){
     const sv=sumSecBestAtCol('savings',c),d=sumSecBestAtCol('debts',c);
     return {a,iv,sv,d,nw:a+iv+sv-d};
   });
-  // Latest = most recent non-future period with actual data
-  let latestIdx=-1;
-  for(let i=cnt-1;i>=0;i--){
-    const p=D.nwPeriods[i];
-    if(p&&!isFuturePeriod(p)&&(totals[i].a||totals[i].iv||totals[i].sv||totals[i].d)){
-      latestIdx=i;break;
-    }
-  }
-  if(latestIdx===-1){
-    for(let i=cnt-1;i>=0;i--){
-      if(D.nwPeriods[i]&&!isFuturePeriod(D.nwPeriods[i])){latestIdx=i;break;}
-    }
-  }
-  // Best-estimate totals: each section uses its own most-recent data
-  const best_a=sumSecBest('assets'),best_iv=sumSecBest('investments');
-  const best_sv=sumSecBest('savings'),best_d=sumSecBest('debts');
-  const best_nw=best_a+best_iv+best_sv-best_d;
-  // Find the most recent PREVIOUS period with actual data for delta (skip empty periods)
-  let prevNW=null;
-  for(let i=latestIdx-1;i>=0;i--){
-    const p=D.nwPeriods[i];
-    if(p&&!isFuturePeriod(p)&&totals[i].nw!==0){prevNW=totals[i].nw;break;}
-  }
-  const nwDelta=(prevNW!==null)?best_nw-prevNW:null;
-  // KPI tiles
-  document.getElementById('nw-summary-stats').innerHTML=`
-    <div class="stat teal"><label>שווי נטו</label><div class="val vt">${fmt(best_nw)}</div>
-      <div class="sub">${nwDelta!==null&&nwDelta!==0?deltaBadge(nwDelta):''}</div></div>
-    <div class="stat"><label>נכסים</label><div class="val vg">${fmt(best_a)}</div></div>
-    <div class="stat"><label>השקעות + חסכונות</label><div class="val vb">${fmt(best_iv+best_sv)}</div></div>
-    <div class="stat"><label>חובות</label><div class="val vr">${fmt(best_d)}</div></div>`;
+  // KPI summary tiles removed from NW tab — calculation lives on Dashboard only.
 
   // Multi-period history table — only periods with a label
   const activePeriods=D.nwPeriods.slice(0,cnt).map((p,i)=>({p,i})).filter(({p})=>p);
