@@ -783,13 +783,20 @@ function renderNWSummary(){
   }
   const latest=latestIdx>=0?totals[latestIdx]:{a:0,iv:0,sv:0,d:0,nw:0};
   const prev=latestIdx>0?totals[latestIdx-1]:null;
-  // KPI tiles
+  // Best-estimate totals: each section uses its own most-recent data
+  const best_a=sumSecBest('assets'),best_iv=sumSecBest('investments');
+  const best_sv=sumSecBest('savings'),best_d=sumSecBest('debts');
+  const best_nw=best_a+best_iv+best_sv-best_d;
+  // Compare best_nw to previous snapshot for delta
+  const prevNW=prev?prev.nw:null;
+  const nwDelta=prevNW&&best_nw!==prevNW?best_nw-prevNW:null;
+  // KPI tiles use best-estimate values
   document.getElementById('nw-summary-stats').innerHTML=`
-    <div class="stat teal"><label>שווי נטו</label><div class="val vt">${fmt(latest.nw)}</div>
-      <div class="sub">${prev&&(latest.nw-prev.nw)!==0?deltaBadge(latest.nw-prev.nw):''}</div></div>
-    <div class="stat"><label>נכסים</label><div class="val vg">${fmt(latest.a)}</div></div>
-    <div class="stat"><label>השקעות + חסכונות</label><div class="val vb">${fmt(latest.iv+latest.sv)}</div></div>
-    <div class="stat"><label>חובות</label><div class="val vr">${fmt(latest.d)}</div></div>`;
+    <div class="stat teal"><label>שווי נטו</label><div class="val vt">${fmt(best_nw)}</div>
+      <div class="sub">${nwDelta?deltaBadge(nwDelta):'<span style="font-size:10px;color:var(--t3)">נתון עדכני לכל סעיף</span>'}</div></div>
+    <div class="stat"><label>נכסים</label><div class="val vg">${fmt(best_a)}</div></div>
+    <div class="stat"><label>השקעות + חסכונות</label><div class="val vb">${fmt(best_iv+best_sv)}</div></div>
+    <div class="stat"><label>חובות</label><div class="val vr">${fmt(best_d)}</div></div>`;
 
   // Multi-period history table — only periods with a label
   const activePeriods=D.nwPeriods.slice(0,cnt).map((p,i)=>({p,i})).filter(({p})=>p);
@@ -1915,7 +1922,23 @@ function sumSec(sec,col){
     return s+toILS(raw,cur);
   },0);
 }
-
+// Best-estimate sum for a section: each row uses its MOST RECENT non-empty, non-future value.
+// This means NW tiles show the correct total even when different sections were updated at
+// different times (e.g. house = 9/2023, investments = 1/2026).
+function sumSecBest(sec){
+  const cnt=D.nwPeriodsCount||6;
+  return(D.nwData[sec].rows||[]).reduce((total,row)=>{
+    for(let c=cnt-1;c>=0;c--){
+      const p=D.nwPeriods[c]||'';
+      if(p&&isFuturePeriod(p))continue;
+      const raw=parseFloat(row.vals[c])||0;
+      if(raw!==0){
+        return total+toILS(raw,getCellCurrency(row,c));
+      }
+    }
+    return total;
+  },0);
+}
 
 function touchSection(sec){
   if(!D.lastUpdated)D.lastUpdated={};
