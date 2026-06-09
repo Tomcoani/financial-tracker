@@ -146,6 +146,10 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .pfill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--teal2),var(--teal));transition:width .5s;}
 .pfill.done{background:linear-gradient(90deg,var(--green),#34d399);}
 .plbl{font-size:11px;color:var(--t2);text-align:right;}
+.goal-monthly-hint{font-size:12px;color:var(--t2);margin-top:8px;padding:8px 12px;
+  background:rgba(66,235,214,.06);border-radius:8px;border-right:3px solid var(--teal-border);
+  text-align:right;line-height:1.6;}
+.goal-monthly-hint strong{color:var(--teal);font-weight:800;}
 .goal-tabs{display:flex;gap:4px;margin-bottom:16px;}
 .gtab{padding:8px 18px;border-radius:9px;border:1.5px solid var(--border);background:transparent;
   color:var(--t2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
@@ -477,6 +481,63 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .days-future{background:rgba(66,235,214,.15);color:var(--teal);}
 .days-past{background:rgba(245,158,11,.15);color:#fcd34d;}
 .days-overdue{background:rgba(239,68,68,.15);color:#fca5a5;}
+
+/* ── MOBILE BOTTOM NAV ── */
+.mobile-bottom-nav{display:none;}
+.mobile-more-menu{display:none;}
+
+@media(max-width:640px){
+  /* Hide top nav, show bottom nav */
+  .nav{display:none !important;}
+  .topbar{padding:0 12px;height:52px;}
+  /* Hide text labels on topbar buttons, keep icons */
+  .btn-label-pdf,.btn-label-reset{display:none;}
+  .upill b{font-size:12px;}
+
+  /* Sticky bottom nav */
+  .mobile-bottom-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:500;
+    background:var(--s1);border-top:1px solid var(--border);
+    padding-bottom:env(safe-area-inset-bottom,0);
+    height:calc(58px + env(safe-area-inset-bottom,0));
+  }
+  .mbn-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;background:transparent;border:none;color:var(--t3);
+    font-family:var(--font);font-size:10px;font-weight:600;cursor:pointer;
+    padding:8px 2px 6px;transition:color .15s;
+  }
+  .mbn-btn i{width:20px;height:20px;}
+  .mbn-btn.on{color:var(--teal);}
+  .mbn-btn:active{opacity:.7;}
+
+  /* More menu (slides up from bottom) */
+  .mobile-more-menu{
+    position:fixed;bottom:58px;left:0;right:0;z-index:499;
+    background:var(--s1);border-top:1px solid var(--border);
+    border-radius:20px 20px 0 0;padding:16px 0 8px;
+    box-shadow:0 -8px 32px rgba(0,0,0,.4);
+  }
+  .mobile-more-menu button{
+    display:flex;align-items:center;gap:14px;width:100%;
+    background:transparent;border:none;color:var(--t2);
+    font-family:var(--font);font-size:14px;font-weight:600;
+    padding:14px 24px;cursor:pointer;text-align:right;
+    transition:background .15s;
+  }
+  .mobile-more-menu button:active{background:var(--s2);}
+  .mobile-more-menu button i{width:18px;height:18px;flex-shrink:0;}
+  .mmore-footer{border-top:1px solid var(--border);margin-top:8px;padding-top:4px;display:flex;}
+  .mmore-footer button{flex:1;justify-content:center;font-size:13px;}
+
+  /* Push content above bottom nav */
+  .content{padding-bottom:74px !important;}
+  /* Toast above bottom nav */
+  .toast{bottom:70px;}
+  /* Save bar above bottom nav */
+  .save-bar{margin-bottom:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;
+    position:sticky;bottom:0;z-index:100;}
+}
 
 /* ── RETIREMENT LINK ── */
 .retirement-banner{background:linear-gradient(135deg,rgba(66,235,214,.08),rgba(59,130,246,.06));

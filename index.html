@@ -2,8 +2,14 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>מעקב פיננסי | Tom Ani</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#42ebd6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="פיננסי">
 <link rel="stylesheet" href="styles/main.css">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -57,8 +63,8 @@
     <img id="app-logo" src="" alt="Tom Ani"/>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="upill">שלום, <b id="uname"></b></div>
-      <button class="btn-pdf" onclick="exportPDF()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> ייצוא PDF</button>
-      <button class="btnout" style="border-color:rgba(239,68,68,.3);color:var(--red)" onclick="confirmReset()"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> איפוס</button>
+      <button class="btn-pdf" onclick="exportPDF()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i><span class="btn-label-pdf"> ייצוא PDF</span></button>
+      <button class="btnout" style="border-color:rgba(239,68,68,.3);color:var(--red)" onclick="confirmReset()"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i><span class="btn-label-reset"> איפוס</span></button>
       <button class="btnout" onclick="doLogout()">יציאה</button>
     </div>
   </div>
@@ -356,6 +362,38 @@
     </div>
 
   </div><!-- end content -->
+
+  <!-- MOBILE BOTTOM NAV (shown only on mobile via CSS) -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <button class="mbn-btn on" id="mbn-dash" onclick="goTo('dash',document.getElementById('nav-dash'));syncMobileNav('dash')">
+      <i data-lucide="layout-dashboard"></i><span>דשבורד</span>
+    </button>
+    <button class="mbn-btn" id="mbn-goals" onclick="goTo('goals',document.getElementById('nav-goals'));syncMobileNav('goals')">
+      <i data-lucide="target"></i><span>מטרות</span>
+    </button>
+    <button class="mbn-btn" id="mbn-pension" onclick="goTo('pension',document.getElementById('nav-pension'));syncMobileNav('pension')">
+      <i data-lucide="landmark"></i><span>פנסיה</span>
+    </button>
+    <button class="mbn-btn" id="mbn-nw" onclick="goTo('nw',document.getElementById('nav-nw'));syncMobileNav('nw')">
+      <i data-lucide="trending-up"></i><span>שווי נטו</span>
+    </button>
+    <button class="mbn-btn" id="mbn-more" onclick="toggleMobileMore()">
+      <i data-lucide="more-horizontal"></i><span>עוד</span>
+    </button>
+  </nav>
+
+  <!-- MOBILE MORE MENU -->
+  <div class="mobile-more-menu" id="mobile-more-menu" style="display:none">
+    <button onclick="goTo('portfolio',document.getElementById('nav-portfolio'));syncMobileNav('portfolio');closeMobileMore()"><i data-lucide="briefcase"></i> תיק השקעות</button>
+    <button onclick="goTo('history',document.getElementById('nav-history'));syncMobileNav('history');closeMobileMore()"><i data-lucide="clock"></i> היסטוריה</button>
+    <button onclick="goTo('notes',document.getElementById('nav-notes'));syncMobileNav('notes');closeMobileMore()"><i data-lucide="notebook-pen"></i> הערות</button>
+    <button onclick="goTo('settings',document.getElementById('nav-settings'));syncMobileNav('settings');closeMobileMore()"><i data-lucide="settings"></i> הגדרות</button>
+    <div class="mmore-footer">
+      <button onclick="exportPDF();closeMobileMore()"><i data-lucide="file-down"></i> ייצוא PDF</button>
+      <button onclick="doLogout()"><i data-lucide="log-out"></i> יציאה</button>
+    </div>
+  </div>
+
 </div><!-- end app -->
 
 <!-- MODALS -->

@@ -240,6 +240,7 @@ function goTo(id,btn){
   document.getElementById('p-'+id).classList.add('on');
   btn.classList.add('on');
   _lastTab=id;
+  syncMobileNav(id);
   if(id==='dash')renderDash();
   if(id==='history')renderHistory();
   if(id==='portfolio'){renderPortfolio();renderPortfolioCharts();}
@@ -325,10 +326,17 @@ function renderGoals(){
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
   done.forEach(g=>{doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g)));});
 }
+// Months per horizon index — matches HZ labels: 12m / 1-5y / 5-10y / 10+y
+const GOAL_HZ_MONTHS=[12,36,84,180];
 function mkGoal(g,i){
   const sv=parseFloat(g.saved)||0,nd=parseFloat(g.needed)||0;
   const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
   const hi=g.h||0,isDone=g.done;
+  // Monthly savings hint
+  const remaining=nd-sv;
+  const hzMonths=GOAL_HZ_MONTHS[hi];
+  const monthlyNeeded=(!isDone&&remaining>0&&nd>0)?Math.ceil(remaining/hzMonths):0;
+  const hzLabel=hi===0?'12 חודשים':hi===1?'3 שנים':hi===2?'7 שנים':'15 שנה';
   const d=document.createElement('div');
   d.className='goal-card'+(isDone?' completed':'');
   d.innerHTML=`
@@ -347,7 +355,8 @@ function mkGoal(g,i){
         style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
     </div>
     <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
-    <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${isDone?' 🎉':''}</div>`;
+    <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${isDone?' 🎉':''}</div>
+    ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>₪${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}`;
   return d;
 }
 function gu(el){
@@ -1511,67 +1520,217 @@ function renderHistoryChart(snaps){
 
 // ══ PDF EXPORT ══
 async function exportPDF(){
-  // Build a print-friendly summary page and open print dialog
-  const cur = calcCurrent();
-  const snaps = D.snapshots||[];
-  const uname = document.getElementById('uname').textContent||'';
-  const now = new Date().toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'});
+  const cur=calcCurrent();
+  const snaps=D.snapshots||[];
+  const uname=document.getElementById('uname').textContent||'';
+  const now=new Date().toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'});
+  const logoSrc='data:image/png;base64,'+LOGO_B64;
 
-  const goalRows = (D.goals||[]).filter(g=>!g.done).map(g=>{
-    const sv=parseFloat(g.saved)||0,nd=parseFloat(g.needed)||0,pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
-    return `<tr><td>${esc(g.name)}</td><td>${fmt(sv)}</td><td>${fmt(nd)}</td><td>${pct}%</td><td>${(g.h||0)===0?'12 חודשים':(g.h||0)===1?'1-5 שנים':(g.h||0)===2?'5-10 שנים':'10+ שנים'}</td></tr>`;
+  // Net worth breakdown
+  const latestCol=getLatestNWCol();
+  const nwAssets=sumSec('assets',latestCol),nwInvest=sumSec('investments',latestCol);
+  const nwSavings=sumSec('savings',latestCol),nwDebts=sumSec('debts',latestCol);
+  const nwTotal=nwAssets+nwInvest+nwSavings-nwDebts;
+  const nwPeriodLabel=D.nwPeriods[latestCol]||'';
+
+  // Goals rows with monthly calc
+  const goalRows=(D.goals||[]).filter(gl=>!gl.done).map(gl=>{
+    const sv=parseFloat(gl.saved)||0,nd=parseFloat(gl.needed)||0;
+    const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
+    const monthly=nd>sv&&nd>0?Math.ceil((nd-sv)/GOAL_HZ_MONTHS[gl.h||0]):0;
+    return `<tr>
+      <td>${esc(gl.name)}</td>
+      <td>${fmt(sv)}</td><td>${fmt(nd)}</td>
+      <td><div class="pbar-pdf"><div class="pfill-pdf" style="width:${pct}%"></div></div><span>${pct}%</span></td>
+      <td>${HZ[gl.h||0]}</td>
+      <td>${monthly?'₪'+fmt(monthly)+'/חודש':'—'}</td>
+    </tr>`;
   }).join('');
 
-  const penRows = (D.pension||[]).map(p=>`<tr><td>${esc(p.name)}</td><td>${p.amount?fmt(parseFloat(p.amount)):''}</td><td>${esc(p.house)}</td><td>${p.feesDeposit||''}%</td><td>${p.feesAccum||''}%</td></tr>`).join('');
+  // Pension rows
+  const penRows=(D.pension||[]).map(p=>`<tr>
+    <td>${esc(p.name)}</td>
+    <td class="num">${p.amount?fmt(parseFloat(p.amount)):'—'}</td>
+    <td>${esc(p.house)||'—'}</td>
+    <td>${p.feesDeposit?p.feesDeposit+'%':'—'}</td>
+    <td>${p.feesAccum?p.feesAccum+'%':'—'}</td>
+    <td>${p.date||'—'}</td>
+  </tr>`).join('');
 
-  const html = `<!DOCTYPE html><html lang="he" dir="rtl">
-  <head><meta charset="UTF-8"><title>מעקב פיננסי — ${uname}</title>
-  <style>
-    body{font-family:Arial,sans-serif;direction:rtl;color:#1a1a2e;padding:30px;font-size:13px;}
-    h1{color:#0d1220;font-size:22px;border-bottom:3px solid #42ebd6;padding-bottom:8px;}
-    h2{font-size:15px;color:#333;margin-top:24px;margin-bottom:8px;border-right:4px solid #42ebd6;padding-right:10px;}
-    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0;}
-    .stat-box{background:#f8f9fa;border:1px solid #e2e8f0;border-radius:8px;padding:14px;text-align:right;}
-    .stat-box .label{font-size:10px;color:#666;text-transform:uppercase;margin-bottom:4px;}
-    .stat-box .value{font-size:18px;font-weight:700;color:#0d1220;}
-    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
-    th{background:#0d1220;color:white;padding:8px 10px;text-align:right;font-size:12px;}
-    td{padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;}
-    tr:nth-child(even)td{background:#f8f9fa;}
-    .footer{margin-top:30px;font-size:10px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px;}
-    @media print{body{padding:15px;}}
-  </style></head>
-  <body>
-  <h1>📊 סיכום פיננסי אישי — ${uname}</h1>
-  <p style="color:#666;font-size:12px">תאריך הפקה: ${now}</p>
-  
-  <h2>מצב כספי נוכחי</h2>
-  <div class="stats">
-    <div class="stat-box"><div class="label">שווי נטו</div><div class="value">${fmt(cur.netWorth)}</div></div>
-    <div class="stat-box"><div class="label">חיסכון חודשי</div><div class="value">${fmt(cur.monthly)}</div></div>
-    <div class="stat-box"><div class="label">פנסיה וחסכונות</div><div class="value">${fmt(cur.penTotal)}</div></div>
-    <div class="stat-box"><div class="label">התקדמות מטרות</div><div class="value">${cur.goalsNeeded>0?Math.round(cur.goalsSaved/cur.goalsNeeded*100)+'%':'—'}</div></div>
+  // Portfolio rows
+  const portRows=(D.portfolios||[]).flatMap(port=>
+    (port.items||[]).filter(it=>it.name&&it.value).map(it=>`<tr>
+      <td>${esc(port.brokerName)||'—'}</td>
+      <td>${esc(it.name)}</td>
+      <td>${esc(it.category)}</td>
+      <td class="num">${fmt(parseFloat(it.value)||0)}</td>
+      <td>${it.targetPct?it.targetPct+'%':'—'}</td>
+    </tr>`)
+  ).join('');
+
+  // History rows (last 10)
+  const histRows=[...snaps].reverse().slice(0,10).map(s=>{
+    const prev=snaps[snaps.indexOf(s)-1];
+    const delta=prev?s.netWorth-(prev.netWorth||0):null;
+    return `<tr>
+      <td>${s.label||'—'} · ${fmtDate(s.date)}</td>
+      <td class="num">${fmt(s.netWorth||0)}</td>
+      <td class="num" style="color:${delta===null?'inherit':delta>=0?'#059669':'#dc2626'}">${delta===null?'—':(delta>=0?'+':'')+fmt(delta)}</td>
+      <td class="num">${fmt(s.monthly||0)}</td>
+      <td class="num">${fmt(s.penTotal||0)}</td>
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>סיכום פיננסי — ${esc(uname)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Arial',sans-serif;direction:rtl;color:#1e293b;background:#fff;font-size:13px;line-height:1.5;}
+  /* HEADER */
+  .pdf-header{background:#080c14;color:#f1f5f9;padding:24px 32px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0;}
+  .pdf-header img{height:32px;object-fit:contain;filter:brightness(1);}
+  .pdf-header-text h1{font-size:18px;font-weight:800;color:#42ebd6;margin-bottom:2px;}
+  .pdf-header-text p{font-size:11px;color:#94a3b8;}
+  /* CONTENT */
+  .pdf-body{padding:24px 32px;}
+  /* SECTION */
+  .section{margin-bottom:28px;break-inside:avoid;}
+  .section-title{font-size:13px;font-weight:800;color:#0d1220;border-right:4px solid #42ebd6;padding-right:10px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em;}
+  /* KPI TILES */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+  .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;text-align:right;}
+  .kpi.teal{border-color:#a7f3d0;background:linear-gradient(135deg,#f0fdf4,#f8fafc);}
+  .kpi label{font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;}
+  .kpi .val{font-size:20px;font-weight:900;color:#0d1220;letter-spacing:-0.5px;}
+  .kpi .sub{font-size:10px;color:#94a3b8;margin-top:3px;}
+  /* NW BREAKDOWN */
+  .nw-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;}
+  .nw-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;text-align:right;}
+  .nw-item label{font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px;}
+  .nw-item .v{font-size:14px;font-weight:800;color:#0d1220;}
+  .nw-item.debts .v{color:#dc2626;}
+  /* TABLES */
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;}
+  th{background:#0f172a;color:#f1f5f9;padding:8px 10px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.04em;}
+  td{padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;vertical-align:middle;}
+  td.num{direction:ltr;text-align:left;font-weight:700;color:#0d1220;}
+  tr:last-child td{border-bottom:none;}
+  tr:nth-child(even) td{background:#fafafa;}
+  /* PROGRESS BAR in table */
+  .pbar-pdf{display:inline-block;width:60px;height:6px;background:#e2e8f0;border-radius:3px;vertical-align:middle;margin-left:6px;}
+  .pfill-pdf{height:100%;border-radius:3px;background:linear-gradient(90deg,#2dd4bf,#42ebd6);}
+  /* FOOTER */
+  .pdf-footer{margin-top:32px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#94a3b8;}
+  .pdf-footer img{height:18px;opacity:.5;object-fit:contain;}
+  /* PRINT */
+  @media print{
+    body{font-size:12px;}
+    .pdf-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .section{break-inside:avoid;}
+    @page{margin:0;size:A4;}
+  }
+</style>
+</head>
+<body>
+
+<div class="pdf-header">
+  <img src="${logoSrc}" alt="Tom Ani"/>
+  <div class="pdf-header-text" style="text-align:right">
+    <h1>סיכום פיננסי אישי</h1>
+    <p>${esc(uname)} &nbsp;·&nbsp; הופק: ${now}</p>
+  </div>
+</div>
+
+<div class="pdf-body">
+
+  <!-- KPI TILES -->
+  <div class="kpi-row">
+    <div class="kpi teal">
+      <label>שווי נטו${nwPeriodLabel?' ('+nwPeriodLabel+')':''}</label>
+      <div class="val">${fmt(nwTotal)}</div>
+      <div class="sub">נכסים פחות חובות</div>
+    </div>
+    <div class="kpi">
+      <label>חיסכון חודשי</label>
+      <div class="val">${fmt(cur.monthly)}</div>
+      <div class="sub">זמין להשקעה</div>
+    </div>
+    <div class="kpi">
+      <label>פנסיה ואפיקי חיסכון</label>
+      <div class="val">${fmt(cur.penTotal)}</div>
+      <div class="sub">${(D.pension||[]).filter(p=>p.amount).length} מוצרים</div>
+    </div>
+    <div class="kpi">
+      <label>התקדמות מטרות</label>
+      <div class="val">${cur.goalsNeeded>0?Math.round(cur.goalsSaved/cur.goalsNeeded*100)+'%':'—'}</div>
+      <div class="sub">${(D.goals||[]).filter(gl=>!gl.done).length} מטרות פעילות</div>
+    </div>
   </div>
 
-  <h2>מטרות חיסכון</h2>
-  <table><thead><tr><th>מטרה</th><th>נחסך</th><th>יעד</th><th>התקדמות</th><th>טווח</th></tr></thead>
-  <tbody>${goalRows||'<tr><td colspan="5">אין מטרות</td></tr>'}</tbody></table>
+  <!-- NET WORTH BREAKDOWN -->
+  ${nwTotal!==0?`<div class="section">
+    <div class="section-title">פירוט שווי נטו</div>
+    <div class="nw-grid">
+      <div class="nw-item"><label>נכסים</label><div class="v">${fmt(nwAssets)}</div></div>
+      <div class="nw-item"><label>השקעות ופנסיה</label><div class="v">${fmt(nwInvest)}</div></div>
+      <div class="nw-item"><label>חסכונות</label><div class="v">${fmt(nwSavings)}</div></div>
+      <div class="nw-item debts"><label>חובות</label><div class="v">${nwDebts>0?'−'+fmt(nwDebts):'—'}</div></div>
+    </div>
+  </div>`:''}
 
-  <h2>מוצרי פנסיה</h2>
-  <table><thead><tr><th>מוצר</th><th>סה"כ</th><th>בית השקעות</th><th>דמי ניהול הפקדה</th><th>דמי ניהול צבירה</th></tr></thead>
-  <tbody>${penRows||'<tr><td colspan="5">אין נתונים</td></tr>'}</tbody></table>
+  <!-- GOALS -->
+  ${goalRows?`<div class="section">
+    <div class="section-title">מטרות חיסכון פעילות</div>
+    <table>
+      <thead><tr><th>מטרה</th><th>נחסך</th><th>יעד</th><th>התקדמות</th><th>טווח</th><th>חיסכון חודשי נדרש</th></tr></thead>
+      <tbody>${goalRows}</tbody>
+    </table>
+  </div>`:''}
 
-  ${snaps.length?`<h2>היסטוריה (${snaps.length} תמונות מצב)</h2>
-  <table><thead><tr><th>תקופה</th><th>שווי נטו</th><th>חיסכון חודשי</th><th>פנסיה</th></tr></thead>
-  <tbody>${[...snaps].reverse().map(s=>`<tr><td>${s.label} · ${fmtDate(s.date)}</td><td>${fmt(s.netWorth||0)}</td><td>${fmt(s.monthly||0)}</td><td>${fmt(s.penTotal||0)}</td></tr>`).join('')}</tbody></table>`:''}
+  <!-- PENSION -->
+  ${penRows?`<div class="section">
+    <div class="section-title">מוצרי פנסיה ואפיקי חיסכון</div>
+    <table>
+      <thead><tr><th>מוצר</th><th>יתרה</th><th>בית השקעות</th><th>דמי ניהול הפקדה</th><th>דמי ניהול צבירה</th><th>תאריך דוח</th></tr></thead>
+      <tbody>${penRows}</tbody>
+    </table>
+  </div>`:''}
 
-  <div class="footer">הופק על ידי מערכת מעקב פיננסי | Tom Ani | ${now}</div>
-  </body></html>`;
+  <!-- PORTFOLIO -->
+  ${portRows?`<div class="section">
+    <div class="section-title">תיק השקעות</div>
+    <table>
+      <thead><tr><th>ברוקר</th><th>נייר ערך</th><th>קטגוריה</th><th>שווי</th><th>אחוז יעד</th></tr></thead>
+      <tbody>${portRows}</tbody>
+    </table>
+  </div>`:''}
 
-  const w = window.open('','_blank','width=900,height=700');
+  <!-- HISTORY -->
+  ${histRows?`<div class="section">
+    <div class="section-title">היסטוריית תמונות מצב${snaps.length>10?' (10 אחרונות)':''}</div>
+    <table>
+      <thead><tr><th>תקופה</th><th>שווי נטו</th><th>שינוי</th><th>חיסכון חודשי</th><th>פנסיה</th></tr></thead>
+      <tbody>${histRows}</tbody>
+    </table>
+  </div>`:''}
+
+</div><!-- /pdf-body -->
+
+<div class="pdf-footer" style="padding:0 32px 20px">
+  <span>מערכת מעקב פיננסי | Tom Ani | info@tomani.co</span>
+  <img src="${logoSrc}" alt=""/>
+</div>
+
+</body></html>`;
+
+  const w=window.open('','_blank','width=1000,height=750');
+  if(!w){showToast('⚠️ אפשר פופ-אפים בדפדפן ונסה שוב');return;}
   w.document.write(html);
   w.document.close();
-  setTimeout(()=>w.print(), 800);
+  setTimeout(()=>w.print(),900);
 }
 
 
@@ -2203,6 +2362,40 @@ window.addEventListener('load',()=>setTimeout(()=>{
 
 // Warn before leaving if dirty
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+
+// ══ PWA SERVICE WORKER ══
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+// ══ MOBILE BOTTOM NAV ══
+function syncMobileNav(tabId){
+  document.querySelectorAll('.mbn-btn').forEach(b=>b.classList.remove('on'));
+  const btn=document.getElementById('mbn-'+tabId);
+  if(btn)btn.classList.add('on');
+  else{
+    // Tabs in "more" menu — highlight "more" button
+    const moreBtn=document.getElementById('mbn-more');
+    if(moreBtn)moreBtn.classList.add('on');
+  }
+}
+function toggleMobileMore(){
+  const m=document.getElementById('mobile-more-menu');
+  if(!m)return;
+  m.style.display=m.style.display==='none'?'block':'none';
+}
+function closeMobileMore(){
+  const m=document.getElementById('mobile-more-menu');
+  if(m)m.style.display='none';
+}
+// Close more menu when tapping elsewhere
+document.addEventListener('click',e=>{
+  const menu=document.getElementById('mobile-more-menu');
+  if(!menu||menu.style.display==='none')return;
+  if(!menu.contains(e.target)&&!e.target.closest('#mbn-more'))closeMobileMore();
+});;
 
 // ══ ONBOARDING TOUR ══
 let tourStep=0;
