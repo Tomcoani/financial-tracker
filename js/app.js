@@ -622,7 +622,7 @@ function renderNW(){
   // Hint row above period inputs
   const hint=document.createElement('div');
   hint.style.cssText='font-size:11px;color:var(--t3);text-align:right;margin-bottom:6px;grid-column:1/-1;';
-  hint.textContent='מלא רק את התאריך הראשון (לדוגמה: 9/2023) — שאר התאריכים יתמלאו אוטומטית.';
+  hint.textContent='הכנס את התאריך הראשון — לדוגמה: 9/2023 (ספטמבר 2023). שאר העמודות יתמלאו אוטומטית.';
   ph.appendChild(hint);
   const count=D.nwPeriodsCount||6;
   for(let i=0;i<count;i++){
@@ -764,8 +764,12 @@ function renderNWSection(elId,sec){
 }
 function renderNWSummary(){
   const cnt=D.nwPeriodsCount||D.nwPeriods.length||6;
+  // Running best-estimate per column: each row carries forward its last known value.
+  // This keeps the history table and KPI tiles consistent (no false drops when only
+  // one section was updated in a period).
   const totals=D.nwPeriods.slice(0,cnt).map((_,c)=>{
-    const a=sumSec('assets',c),iv=sumSec('investments',c),sv=sumSec('savings',c),d=sumSec('debts',c);
+    const a=sumSecBestAtCol('assets',c),iv=sumSecBestAtCol('investments',c);
+    const sv=sumSecBestAtCol('savings',c),d=sumSecBestAtCol('debts',c);
     return {a,iv,sv,d,nw:a+iv+sv-d};
   });
   // Latest = most recent non-future period with actual data
@@ -1940,6 +1944,21 @@ function rowLatestILS(row){
 }
 function sumSecBest(sec){
   return(D.nwData[sec].rows||[]).reduce((total,row)=>total+rowLatestILS(row),0);
+}
+// rowBestAtCol: like rowLatestILS but capped at column maxCol (for history table "running best estimate")
+// Each period shows the best-known value for each row UP TO that period, so carried-forward values
+// prevent the history table from showing misleading 0s for sections not updated every period.
+function rowBestAtCol(row,maxCol){
+  for(let c=maxCol;c>=0;c--){
+    const p=D.nwPeriods[c]||'';
+    if(p&&isFuturePeriod(p))continue;
+    const raw=parseFloat(row.vals[c])||0;
+    if(raw!==0)return toILS(raw,getCellCurrency(row,c));
+  }
+  return 0;
+}
+function sumSecBestAtCol(sec,maxCol){
+  return(D.nwData[sec].rows||[]).reduce((total,row)=>total+rowBestAtCol(row,maxCol),0);
 }
 
 function touchSection(sec){
