@@ -2137,41 +2137,51 @@ async function renderAdmin(){
     if(listEl){
       if(!users.length){listEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">אין לקוחות רשומים עדיין</p>';return;}
       listEl.innerHTML=users.map(u=>`
-        <div class="admin-user-card">
-          <div>
-            <div class="admin-user-name">${esc(u.name)}</div>
-            <div class="admin-user-email">${esc(u.email)}</div>
-            ${u.lastSaved?`<div style="font-size:11px;color:var(--t3);margin-top:2px">עדכון אחרון: ${fmtDate(u.lastSaved)}</div>`:'<div style="font-size:11px;color:var(--red);margin-top:2px">טרם עדכן</div>'}
-            ${u.nw!==null?`<div style="font-size:12px;color:var(--teal);margin-top:3px;font-weight:700">שווי נטו: ${fmt(u.nw)}</div>`:''}
+        <div class="admin-user-card" style="cursor:pointer" onclick="toggleAdminCard('${u.uid}')">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <div class="admin-user-name" style="margin:0">${esc(u.name)}</div>
+              ${u.nw!==null?`<div style="font-size:13px;color:var(--teal);font-weight:700">${fmt(u.nw)}</div>`:''}
+              <div class="admin-alerts" style="margin:0">
+                ${u.alerts.length===0
+                  ? '<span class="admin-alert-tag tag-ok"><i data-lucide="check-circle" style="width:12px;height:12px;vertical-align:middle"></i> מעודכן</span>'
+                  : u.alerts.map(a=>`<span class="admin-alert-tag ${a.cls}">⚠️ ${a.label}</span>`).join('')}
+              </div>
+            </div>
           </div>
-          <div class="admin-alerts">
-            ${u.alerts.length===0
-              ? '<span class="admin-alert-tag tag-ok"><i data-lucide="check-circle" style="width:12px;height:12px;vertical-align:middle"></i> מעודכן</span>'
-              : u.alerts.map(a=>`<span class="admin-alert-tag ${a.cls}">⚠️ ${a.label}</span>`).join('')}
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-            <div style="font-size:10px;color:var(--t3)">מטרות: ${u.goalsAge!==null?u.goalsAge+' ימים':'טרם'}</div>
-            <div style="font-size:10px;color:var(--t3)">פנסיה: ${u.penAge!==null?u.penAge+' ימים':'טרם'}</div>
-            <div style="font-size:10px;color:var(--t3)">שווי נטו: ${u.nwAge!==null?u.nwAge+' ימים':'טרם'}</div>
-            ${u.email?`<button onclick="adminSendPasswordReset('${u.email}')" 
-              style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d;
-              border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-              <i data-lucide="key-round" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> שלח איפוס סיסמה
-            </button>`:''}
-          </div>
+          <div style="font-size:13px;color:var(--t3);transition:transform .2s" id="acarrow-${u.uid}">▼</div>
         </div>
-        ${u.snapshots&&u.snapshots.length>1?`
-        <div style="width:100%;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <div style="font-size:10px;color:var(--t3);font-weight:700;margin-bottom:8px;text-align:right"><i data-lucide="trending-up" class="nav-icon"></i> שווי נטו לאורך זמן</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-            ${[...u.snapshots].reverse().slice(0,6).map(s=>`
-              <div style="text-align:center;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;min-width:70px">
-                <div style="font-size:10px;color:var(--t3);margin-bottom:3px">${s.label}</div>
-                <div style="font-size:12px;font-weight:700;color:${s.netWorth>=0?'var(--teal)':'var(--red)'}">${fmt(s.netWorth)}</div>
-              </div>`).join('')}
+        <div id="acd-${u.uid}" style="display:none;padding:12px 16px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;background:var(--s1);margin-bottom:2px">
+          <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div class="admin-user-email">${esc(u.email)}</div>
+              ${u.lastSaved?`<div style="font-size:11px;color:var(--t3);margin-top:4px">עדכון אחרון: ${fmtDate(u.lastSaved)}</div>`:'<div style="font-size:11px;color:var(--red);margin-top:4px">טרם עדכן</div>'}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              <div style="font-size:10px;color:var(--t3)">מטרות: ${u.goalsAge!==null?u.goalsAge+' ימים':'טרם'}</div>
+              <div style="font-size:10px;color:var(--t3)">פנסיה: ${u.penAge!==null?u.penAge+' ימים':'טרם'}</div>
+              <div style="font-size:10px;color:var(--t3)">שווי נטו: ${u.nwAge!==null?u.nwAge+' ימים':'טרם'}</div>
+              ${u.email?`<button onclick="event.stopPropagation();adminSendPasswordReset('${u.email}')"
+                style="margin-top:4px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d;
+                border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                <i data-lucide="key-round" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> שלח איפוס סיסמה
+              </button>`:''}
+            </div>
           </div>
-        </div>`:''}
+          ${u.snapshots&&u.snapshots.length>1?`
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--t3);font-weight:700;margin-bottom:8px;text-align:right">שווי נטו לאורך זמן</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              ${[...u.snapshots].reverse().slice(0,6).map(s=>`
+                <div style="text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;min-width:70px">
+                  <div style="font-size:10px;color:var(--t3);margin-bottom:3px">${s.label}</div>
+                  <div style="font-size:12px;font-weight:700;color:${s.netWorth>=0?'var(--teal)':'var(--red)'}">${fmt(s.netWorth)}</div>
+                </div>`).join('')}
+            </div>
+          </div>`:''}
+        </div>
         `).join('');
+      lucide.createIcons();
     }
   }catch(e){
     console.error('Admin error:',e);
@@ -2180,6 +2190,14 @@ async function renderAdmin(){
 }
 
 // ══ ADMIN TOOLS ══
+function toggleAdminCard(uid){
+  const det=document.getElementById('acd-'+uid);
+  const arr=document.getElementById('acarrow-'+uid);
+  if(!det)return;
+  const open=det.style.display==='none';
+  det.style.display=open?'block':'none';
+  if(arr)arr.style.transform=open?'rotate(180deg)':'';
+}
 async function adminSendPasswordReset(email){
   if(!email)return;
   if(!confirm('שלח מייל איפוס סיסמה אל '+email+'?'))return;
