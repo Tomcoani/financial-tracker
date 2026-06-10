@@ -2165,6 +2165,11 @@ async function renderAdmin(){
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                 <i data-lucide="key-round" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> שלח איפוס סיסמה
               </button>`:''}
+              <button onclick="event.stopPropagation();adminDeleteUser('${u.uid}','${esc(u.name)}')"
+                style="margin-top:4px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;
+                border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                <i data-lucide="trash-2" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> מחק לקוח
+              </button>
             </div>
           </div>
           ${u.snapshots&&u.snapshots.length>1?`
@@ -2189,6 +2194,17 @@ async function renderAdmin(){
 }
 
 // ══ ADMIN TOOLS ══
+async function adminDeleteUser(uid,name){
+  if(!confirm('למחוק את הלקוח "'+name+'"?\n\nכל הנתונים שלו יימחקו לצמיתות ולא ניתן לשחזר.'))return;
+  try{
+    await db.collection('users').doc(uid).collection('data').doc('main').delete();
+    await db.collection('users').doc(uid).delete();
+    showToast('לקוח נמחק ✓');
+    renderAdmin();
+  }catch(e){
+    alert('שגיאה במחיקה: '+e.message);
+  }
+}
 function toggleAdminCard(uid){
   const det=document.getElementById('acd-'+uid);
   const arr=document.getElementById('acarrow-'+uid);
