@@ -2193,9 +2193,12 @@ async function adminSendPasswordReset(email){
 
 async function adminCreateUser(){
   const name=document.getElementById('new-user-name').value.trim();
-  const email=document.getElementById('new-user-email').value.trim();
+  // Strip invisible Unicode bidi/zero-width chars that sneak in via copy-paste in RTL forms
+  const email=document.getElementById('new-user-email').value
+    .trim().replace(/[​-‏‪-‮⁦-⁩﻿]/g,'').toLowerCase();
   const status=document.getElementById('create-user-status');
   if(!name||!email){status.textContent='נא למלא שם ואימייל';status.style.color='var(--red)';return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){status.textContent='אימייל לא תקין: '+email;status.style.color='var(--red)';return;}
   status.textContent='יוצר חשבון...';status.style.color='var(--t2)';
   // Use a secondary Firebase app instance so the admin session stays active
   // (createUserWithEmailAndPassword normally replaces the current auth user)
@@ -2221,8 +2224,23 @@ async function adminCreateUser(){
     setTimeout(()=>renderAdmin(),1500);
   }catch(e){
     await secondaryAuth.signOut().catch(()=>{});
-    status.textContent='שגיאה: '+fbErr(e.code);
-    status.style.color='var(--red)';
+    if(e.code==='auth/email-already-in-use'){
+      // Account was created in a previous attempt — just send the reset email
+      try{
+        await auth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
+        status.textContent='✓ חשבון כבר קיים — מייל הגדרת סיסמה נשלח ל-'+email+' — בדוק גם ספאם';
+        status.style.color='var(--teal)';
+        document.getElementById('new-user-name').value='';
+        document.getElementById('new-user-email').value='';
+        setTimeout(()=>renderAdmin(),1500);
+      }catch(e2){
+        status.textContent='שגיאה: '+fbErr(e2.code);
+        status.style.color='var(--red)';
+      }
+    } else {
+      status.textContent='שגיאה: '+fbErr(e.code);
+      status.style.color='var(--red)';
+    }
   }
 }
 
