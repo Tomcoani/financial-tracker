@@ -419,6 +419,21 @@
   </div>
 </div>
 
+<!-- WELCOME / NAME MODAL -->
+<div class="overlay" id="welcome-modal" style="display:none">
+  <div class="modal" style="text-align:right">
+    <h2 style="margin-bottom:8px">👋 ברוך הבא!</h2>
+    <p style="color:var(--t2);font-size:13px;margin-bottom:20px">כדי שנוכל לפנות אליך בשמך, איך תרצה שנקרא לך?</p>
+    <input id="welcome-name-input" type="text" placeholder="שם מלא" dir="rtl"
+      style="width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;
+      color:var(--white);font-family:var(--font);font-size:15px;outline:none;text-align:right;margin-bottom:16px"
+      onkeydown="if(event.key==='Enter')saveWelcomeName()"/>
+    <div class="modal-btns">
+      <button class="btnsnap primary" onclick="saveWelcomeName()" style="flex:1">שמור והמשך →</button>
+    </div>
+  </div>
+</div>
+
 <!-- RESET MODAL -->
 <div class="overlay" id="reset-modal" style="display:none">
   <div class="modal">

@@ -140,8 +140,13 @@ auth.onAuthStateChanged(async user=>{
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
     renderAll();
     goTo('dash',document.querySelector('.nbtn'));
-    // Auto-start onboarding tour on first login
-    if(!localStorage.getItem('tour_done_'+CU)){
+    // Prompt for name on first login if not set
+    if(!D.settings.displayName){
+      setTimeout(()=>{
+        document.getElementById('welcome-modal').style.display='flex';
+        document.getElementById('welcome-name-input').focus();
+      },400);
+    } else if(!localStorage.getItem('tour_done_'+CU)){
       setTimeout(()=>startTour(),900);
     }
   }else{
@@ -152,6 +157,22 @@ auth.onAuthStateChanged(async user=>{
     injectLogos();
   }
 });
+
+async function saveWelcomeName(){
+  const name=document.getElementById('welcome-name-input').value.trim();
+  if(!name){
+    document.getElementById('welcome-name-input').style.borderColor='var(--red)';
+    return;
+  }
+  D.settings.displayName=name;
+  D.settings.email=D.settings.email||auth.currentUser?.email||'';
+  document.getElementById('uname').textContent=name;
+  document.getElementById('welcome-modal').style.display='none';
+  await auth.currentUser?.updateProfile({displayName:name});
+  await saveDataFS(CU,D);
+  markDirty();
+  if(!localStorage.getItem('tour_done_'+CU))setTimeout(()=>startTour(),500);
+}
 
 // ══ AUTH ACTIONS ══
 function aTab(t){
