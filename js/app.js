@@ -1214,26 +1214,38 @@ function renderRebalance(total){
     return;
   }
   const totalTarget=items.reduce((s,p)=>s+(parseFloat(p.targetPct)||0),0);
-  let html=`<div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:12px;text-align:right">🎯 כדי להגיע לאיזון המבוקש:</div>`;
-  items.forEach(p=>{
+  const enriched=items.map(p=>{
     const cur=parseFloat(p.value)||0;
     const curPct=total>0?(cur/total*100):0;
     const targetPct=parseFloat(p.targetPct)||0;
-    const targetVal=total*(targetPct/100);
-    const diff=targetVal-cur;
-    if(diff>100){
+    const diff=(total*(targetPct/100))-cur;
+    return{...p,cur,curPct,targetPct,diff};
+  });
+  const toBuy=enriched.filter(p=>p.diff>100).sort((a,b)=>a.diff-b.diff);
+  const balanced=enriched.filter(p=>Math.abs(p.diff)<=100);
+  let html=`<div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:12px;text-align:right">🎯 סדר פעולות לאיזון (מהקל לקשה):</div>`;
+  if(!toBuy.length){
+    html+=`<div style="font-size:13px;color:var(--green);text-align:right;margin-bottom:10px">✅ התיק באיזון מלא</div>`;
+  } else {
+    toBuy.forEach((p,i)=>{
       html+=`<div class="rebalance-item">
-        <span style="text-align:right">${esc(p.name)} <span style="color:var(--t3);font-size:11px">(${curPct.toFixed(1)}% → ${targetPct}%)</span></span>
-        <span class="buy">הפקד ${fmt(diff)}</span>
+        <span style="text-align:right">
+          <span style="color:var(--t3);font-size:11px;font-weight:700;margin-left:6px">${i+1}.</span>
+          ${esc(p.name)} <span style="color:var(--t3);font-size:11px">(${p.curPct.toFixed(1)}% → ${p.targetPct}%)</span>
+        </span>
+        <span class="buy">הפקד ${fmt(p.diff)}</span>
       </div>`;
-    } else if(Math.abs(diff)<=100){
+    });
+  }
+  if(balanced.length){
+    html+=`<div style="font-size:11px;color:var(--t3);margin-top:10px;margin-bottom:6px;text-align:right">באיזון:</div>`;
+    balanced.forEach(p=>{
       html+=`<div class="rebalance-item">
         <span style="text-align:right">${esc(p.name)}</span>
         <span class="hold">✓ באיזון</span>
       </div>`;
-    }
-    // Don't suggest selling
-  });
+    });
+  }
   if(Math.abs(totalTarget-100)>1)
     html+=`<div style="font-size:11px;color:var(--amber);margin-top:10px;text-align:right">⚠️ סך אחוזי היעד: ${totalTarget.toFixed(0)}% (צריך להיות 100%)</div>`;
   html+=`<div style="font-size:11px;color:var(--t3);margin-top:10px;text-align:right">* ההמלצה מבוססת על הפקדות בלבד, לא מכירות</div>`;
