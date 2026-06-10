@@ -320,7 +320,7 @@ function renderGoals(){
   HZ.forEach((hz,hi)=>{
     if(!byH[hi].length)return;
     const grp=document.createElement('div');grp.className='hz-group';
-    grp.innerHTML=`<div class="hz-group-title">${hz} <span style="font-size:10px;color:var(--t3);font-weight:400">(${g('לחץ','לחצי')} על תג הזמן במטרה כדי לשנות)</span></div>`;
+    grp.innerHTML=`<div class="hz-group-title">${hz} <span style="font-size:10px;color:var(--t2);font-weight:400">(${g('לחץ','לחצי')} על כפתור הטווח ↻ במטרה כדי לשנות)</span></div>`;
     byH[hi].forEach(({g,idx})=>grp.appendChild(mkGoal(g,idx)));
     hzEl.appendChild(grp);
   });
@@ -347,7 +347,7 @@ function mkGoal(g,i){
   d.innerHTML=`
     <div class="goal-top">
       <input class="nin" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)"/>
-      ${!isDone?`<button class="htag ${HC[hi]}" onclick="cycH(${i})">${HZ[hi]}</button>`:'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>'}
+      ${!isDone?`<button class="htag ${HC[hi]}" onclick="cycH(${i})" title="לחץ לשינוי טווח הזמן">${HZ[hi]} ↻</button>`:'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>'}
       <button class="htag" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10px" onclick="toggleDone(${i})">${isDone?'↩ פתח':'✓ סמן כהושלם'}</button>
       <button class="bdel" onclick="delGoal(${i})">×</button>
     </div>
@@ -485,7 +485,7 @@ function mkPen(p,i){
       </div>
     </div>
     <div class="pr2">
-      <div class="pf"><label>תאריך דוח אחרון <span style="font-size:10px;color:var(--t3);font-weight:400">— מתי קיבלת דוח מחברת הביטוח?</span></label><input type="date" value="${p.date||''}" data-i="${i}" data-f="date" oninput="pu(this)"/></div>
+      <div class="pf"><label>תאריך בדיקה אחרונה <span style="font-size:10px;color:var(--t3);font-weight:400">— מתי בדקת לאחרונה כמה כסף יש לך?</span></label><input type="date" value="${p.date||''}" data-i="${i}" data-f="date" oninput="pu(this)"/></div>
     </div>
     <div class="pen-section-title">מסלולי השקעה</div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;display:grid;grid-template-columns:2fr 1fr 80px;gap:8px;text-align:right">
@@ -1297,7 +1297,7 @@ function renderDash(){
 
   document.getElementById('snap-trigger-area').innerHTML=`
     ${staleProducts.length?`<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:11px;padding:13px 18px;margin-bottom:12px;font-size:13px;color:#fcd34d;text-align:right">
-      <i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>תאריך עדכון ישן:</strong> ${staleProducts.join('، ')} — לא עודכן כבר חצי שנה ומעלה
+      <i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>לא נבדקה כבר חצי שנה:</strong> ${staleProducts.join('، ')} — כדאי לבדוק מה היתרה הנוכחית
     </div>`:''}
     <div class="snap-trigger">
       <div>
@@ -1801,7 +1801,7 @@ async function exportPDF(){
   ${penRows?`<div class="section">
     <div class="section-title">מוצרי פנסיה ואפיקי חיסכון</div>
     <table>
-      <thead><tr><th>מוצר</th><th>יתרה</th><th>בית השקעות</th><th>דמי ניהול הפקדה</th><th>דמי ניהול צבירה</th><th>תאריך דוח</th></tr></thead>
+      <thead><tr><th>מוצר</th><th>יתרה</th><th>בית השקעות</th><th>דמי ניהול הפקדה</th><th>דמי ניהול צבירה</th><th>בדיקה אחרונה</th></tr></thead>
       <tbody>${penRows}</tbody>
     </table>
   </div>`:''}

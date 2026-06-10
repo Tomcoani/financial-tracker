@@ -58,7 +58,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--white);overflow-x:
 /* ── CARDS ── */
 .card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:16px;}
 .card-teal{border-color:var(--teal-border);background:linear-gradient(135deg,var(--s1),rgba(66,235,214,.03));}
-.ch{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.07em;
+.ch{font-size:11px;font-weight:700;color:var(--white);text-transform:uppercase;letter-spacing:.07em;
   margin-bottom:14px;display:flex;align-items:center;gap:8px;}
 .ch-title{font-size:17px;font-weight:700;color:var(--white);margin-bottom:6px;}
 .ch-hint{font-size:13px;color:var(--t2);margin-bottom:16px;text-align:right;line-height:1.6;}
@@ -133,7 +133,8 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .goal-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
 .nin{background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:15px;font-weight:700;flex:1;min-width:0;text-align:right;}
 .nin::placeholder{color:var(--t3);}
-.htag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;cursor:pointer;border:none;font-family:var(--font);white-space:nowrap;}
+.htag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;cursor:pointer;border:none;font-family:var(--font);white-space:nowrap;transition:opacity .15s,transform .15s;}
+.htag:hover{opacity:.75;transform:scale(1.06);}
 .h0{background:rgba(66,235,214,.2);color:var(--teal);border:1px solid var(--teal-border);font-size:12px;padding:4px 12px}
 .h1{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);font-size:12px;padding:4px 12px}
 .h2{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.3);font-size:12px;padding:4px 12px}
@@ -155,7 +156,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
   color:var(--t2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
 .gtab.on{background:var(--teal-dim);border-color:var(--teal-border);color:var(--teal);}
 .hz-group{margin-bottom:20px;}
-.hz-group-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;
+.hz-group-title{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;
   letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);text-align:right;}
 .bdel{background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 4px;transition:color .2s;flex-shrink:0;}
 .bdel:hover{color:var(--red);}
@@ -193,7 +194,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .fee-good{background:rgba(16,185,129,.15);color:#6ee7b7;}
 .fee-bad{background:rgba(239,68,68,.15);color:#fca5a5;}
 .fee-ok{background:rgba(245,158,11,.15);color:#fcd34d;}
-.pen-section-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;
+.pen-section-title{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;
   letter-spacing:.04em;margin:12px 0 8px;padding-top:10px;border-top:1px solid var(--border);text-align:right;}
 .track-row{display:grid;grid-template-columns:2fr 1fr 80px;gap:8px;align-items:center;margin-bottom:6px;}
 .track-row input{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:7px 10px;
@@ -231,7 +232,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 /* NW multi-period history table */
 .nw-history-wrap{overflow-x:auto;margin-top:14px;}
 .nw-history-table{width:100%;border-collapse:collapse;font-size:12px;min-width:360px;}
-.nw-history-table th{text-align:center;color:var(--t3);font-size:10px;font-weight:700;
+.nw-history-table th{text-align:center;color:var(--t2);font-size:10px;font-weight:700;
   text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--border);
   letter-spacing:.04em;white-space:nowrap;}
 .nw-history-table th.th-label{text-align:right;padding-right:4px;}
