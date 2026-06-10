@@ -663,7 +663,7 @@ function renderNWSection(elId,sec){
   const secLabels={assets:'סה"כ נכסים',investments:'סה"כ השקעות',savings:'סה"כ חסכונות',debts:'סה"כ חובות'};
   // ── Header row ──
   const hr=document.createElement('div');hr.className='nwrow';hr.style.gridTemplateColumns=tpl;
-  hr.innerHTML=`<div style="font-size:10px;color:var(--t3);font-weight:700;text-align:right;overflow:hidden;min-width:0;max-width:160px">סעיף</div>
+  hr.innerHTML=`<div style="font-size:10px;color:var(--t2);font-weight:700;text-align:right;overflow:hidden;min-width:0;max-width:160px">סעיף</div>
     ${D.nwPeriods.slice(0,cnt).map((p,i)=>{
       const future=p&&isFuturePeriod(p);
       const isHidden=!!nwColHidden[i];
@@ -672,7 +672,7 @@ function renderNWSection(elId,sec){
       }
       const style=future
         ?'text-align:center;font-size:10px;color:rgba(71,85,105,0.5);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;min-width:0'
-        :'text-align:center;font-size:10px;color:var(--t3);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+        :'text-align:center;font-size:10px;color:var(--t2);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
       const label=p||(future?'עתיד':'ת'+(i+1));
       return `<div style="${style}"><span>${label}</span>
         <button class="col-toggle" onclick="toggleNWCol(${i})" title="הסתר עמודה">▼</button></div>`;
@@ -723,7 +723,9 @@ function renderNWSection(elId,sec){
   // ── Section total row ──
   const totalRow=document.createElement('div');
   totalRow.className='nwrow nw-total-row';totalRow.style.gridTemplateColumns=tpl;
-  const prevColTotals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSec(sec,c));
+  // Use running best-estimate per column so sections with infrequent updates
+  // don't show "—" in periods where the value simply wasn't re-entered.
+  const prevColTotals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSecBestAtCol(sec,c));
   totalRow.innerHTML=`
     <div class="nw-total-lbl">${secLabels[sec]||'סה"כ'}</div>
     ${prevColTotals.map((sum,c)=>{
@@ -740,7 +742,7 @@ function renderNWSection(elId,sec){
     const deltaRow=document.createElement('div');
     deltaRow.className='nwrow nw-delta-row';deltaRow.style.gridTemplateColumns=tpl;
     deltaRow.innerHTML=`
-      <div style="font-size:10px;color:var(--t3);text-align:right;padding-right:2px;overflow:hidden;max-width:160px;">Δ פער</div>
+      <div style="font-size:10px;color:var(--t2);text-align:right;padding-right:2px;overflow:hidden;max-width:160px;">Δ פער</div>
       ${prevColTotals.map((sum,c)=>{
         if(nwColHidden[c])return `<div></div>`;
         const p=D.nwPeriods[c]||'';
