@@ -2159,7 +2159,7 @@ async function adminSendPasswordReset(email){
   if(!confirm('שלח מייל איפוס סיסמה אל '+email+'?'))return;
   try{
     await auth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
-    showToast('מייל איפוס נשלח ל-'+email+' ✓');
+    showToast('מייל איפוס נשלח ל-'+email+' ✓ — בדוק גם ספאם');
   }catch(e){
     alert('שגיאה: '+e.message);
   }
@@ -2188,7 +2188,7 @@ async function adminCreateUser(){
     // Send password-set email with redirect back to the app
     await secondaryAuth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
     await secondaryAuth.signOut();
-    status.textContent='✓ חשבון נוצר! מייל הגדרת סיסמה נשלח ל-'+email;
+    status.textContent='✓ חשבון נוצר! מייל הגדרת סיסמה נשלח ל-'+email+' — בדוק גם ספאם';
     status.style.color='var(--teal)';
     document.getElementById('new-user-name').value='';
     document.getElementById('new-user-email').value='';
