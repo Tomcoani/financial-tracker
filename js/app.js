@@ -196,11 +196,12 @@ async function doForgotPassword(){
     return;
   }
   try{
-    await auth.sendPasswordResetEmail(email);
+    // continueUrl redirects user back to the app after completing reset on Firebase's page
+    await auth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
     document.getElementById('aerr').style.background='rgba(66,235,214,.1)';
     document.getElementById('aerr').style.borderColor='rgba(66,235,214,.3)';
     document.getElementById('aerr').style.color='var(--teal)';
-    showErr('✓ מייל איפוס נשלח ל-'+email+'. בדוק את תיבת הדואר שלך — ובדוק גם בתיקיית הספאם.');
+    showErr('✓ מייל איפוס נשלח ל-'+email+'. בדוק את תיבת הדואר — כולל תיקיית ספאם!');
   }catch(e){
     showErr(fbErr(e.code)||'שגיאה בשליחת מייל איפוס');
   }
@@ -2157,7 +2158,7 @@ async function adminSendPasswordReset(email){
   if(!email)return;
   if(!confirm('שלח מייל איפוס סיסמה אל '+email+'?'))return;
   try{
-    await auth.sendPasswordResetEmail(email);
+    await auth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
     showToast('מייל איפוס נשלח ל-'+email+' ✓');
   }catch(e){
     alert('שגיאה: '+e.message);
@@ -2170,22 +2171,30 @@ async function adminCreateUser(){
   const status=document.getElementById('create-user-status');
   if(!name||!email){status.textContent='נא למלא שם ואימייל';status.style.color='var(--red)';return;}
   status.textContent='יוצר חשבון...';status.style.color='var(--t2)';
+  // Use a secondary Firebase app instance so the admin session stays active
+  // (createUserWithEmailAndPassword normally replaces the current auth user)
+  const secondaryApp=firebase.apps.find(a=>a.name==='secondary')||
+    firebase.initializeApp(firebase.app().options,'secondary');
+  const secondaryAuth=secondaryApp.auth();
   try{
-    // Create user with temporary password
     const tempPass='TomAni'+Math.floor(Math.random()*9000+1000)+'!';
-    const cred=await auth.createUserWithEmailAndPassword(email,tempPass);
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(email,tempPass);
     await cred.user.updateProfile({displayName:name});
-    await saveDataFS(cred.user.uid,defData());
-    // Send password reset so they set their own password
-    await auth.sendPasswordResetEmail(email);
-    // Sign back in as admin
+    // Save initial data — admin's Firestore rules allow writing to any user doc
+    const newData=defData();
+    newData.settings.displayName=name;
+    newData.settings.email=email;
+    await saveDataFS(cred.user.uid,newData);
+    // Send password-set email with redirect back to the app
+    await secondaryAuth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
+    await secondaryAuth.signOut();
     status.textContent='✓ חשבון נוצר! מייל הגדרת סיסמה נשלח ל-'+email;
     status.style.color='var(--teal)';
     document.getElementById('new-user-name').value='';
     document.getElementById('new-user-email').value='';
-    // Reload admin panel
     setTimeout(()=>renderAdmin(),1500);
   }catch(e){
+    await secondaryAuth.signOut().catch(()=>{});
     status.textContent='שגיאה: '+fbErr(e.code);
     status.style.color='var(--red)';
   }
