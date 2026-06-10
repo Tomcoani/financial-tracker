@@ -543,23 +543,22 @@ function delPen(i){D.pension.splice(i,1);renderPension();markDirty();}
 // ══ NET WORTH ══
 function syncNWFromPension(){
   const latestCol=getLatestNWCol();
-  // Sync portfolio total → תיק השקעות row in investments (ALL filled periods)
+  // syncCol = rightmost non-future period (even if empty), so a freshly-added
+  // period column is used instead of the previous month's data column.
+  const cnt=D.nwPeriodsCount||6;
+  let syncCol=0;
+  for(let c=cnt-1;c>=0;c--){if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){syncCol=c;break;}}
+
+  // Sync portfolio total → תיק השקעות row in investments
+  // Only fills empty cells — never overwrites a value the user entered manually.
   const portTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   if(portTotal>0){
     D.nwData.investments.rows.forEach(row=>{
       if(row.name==='תיק השקעות'||row.name==='תיק'){
-        // Update ALL non-future periods that don't have a manually set value
-        D.nwPeriods.forEach((period,col)=>{
-          if(period&&!isFuturePeriod(period)){
-            // Only fill the LATEST period - don't overwrite historical data
-            if(col===latestCol){
-              row.vals[col]=String(portTotal);
-            }
-          }
-        });
-        // If no periods set yet, fill col 0
         if(!D.nwPeriods.some(p=>p)){
-          row.vals[0]=String(portTotal);
+          if(!row.vals[0])row.vals[0]=String(portTotal);
+        } else if(!row.vals[syncCol]){
+          row.vals[syncCol]=String(portTotal);
         }
       }
     });
@@ -569,7 +568,7 @@ function syncNWFromPension(){
     if(!p.amount)return;
     D.nwData.investments.rows.forEach(row=>{
       if(row.name===p.name||(row.name.includes('פנסיה')&&p.name.includes('פנסי'))||(row.name.includes('השתלמות')&&p.name.includes('השתלמות'))){
-        if(!row.vals[latestCol])row.vals[latestCol]=p.amount;
+        if(!row.vals[syncCol])row.vals[syncCol]=p.amount;
       }
     });
   });
@@ -577,7 +576,7 @@ function syncNWFromPension(){
   const emergGoal=(D.goals||[]).find(g=>g.name&&g.name.includes('חירום'));
   if(emergGoal&&emergGoal.saved){
     D.nwData.savings.rows.forEach(row=>{
-      if(row.name.includes('חירום')&&!row.vals[latestCol])row.vals[latestCol]=emergGoal.saved;
+      if(row.name.includes('חירום')&&!row.vals[syncCol])row.vals[syncCol]=emergGoal.saved;
     });
   }
   // Sync locations → matching NW rows (half-auto: only fills empty cells)
@@ -585,7 +584,7 @@ function syncNWFromPension(){
     if(!loc.name||!loc.amount)return;
     ['assets','investments','savings'].forEach(sec=>{
       D.nwData[sec].rows.forEach(row=>{
-        if(row.name===loc.name&&!row.vals[latestCol])row.vals[latestCol]=loc.amount;
+        if(row.name===loc.name&&!row.vals[syncCol])row.vals[syncCol]=loc.amount;
       });
     });
   });
