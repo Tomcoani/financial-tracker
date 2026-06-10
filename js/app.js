@@ -732,8 +732,8 @@ function renderNWSection(elId,sec){
     ${prevColTotals.map((sum,c)=>{
       if(nwColHidden[c])return `<div></div>`;
       const p=D.nwPeriods[c]||'';
-      if(p&&isFuturePeriod(p))return `<div class="nw-total-cell" style="color:rgba(66,235,214,.3);">—</div>`;
-      return `<div class="nw-total-cell">${sum>0?fmt(sum):'—'}</div>`;
+      if(p&&isFuturePeriod(p))return `<div class="nw-total-cell" id="nwtot-${sec}-${c}" style="color:rgba(66,235,214,.3);">—</div>`;
+      return `<div class="nw-total-cell" id="nwtot-${sec}-${c}">${sum>0?fmt(sum):'—'}</div>`;
     }).join('')}
     <div></div>`;
   el.appendChild(totalRow);
@@ -747,23 +747,49 @@ function renderNWSection(elId,sec){
       ${prevColTotals.map((sum,c)=>{
         if(nwColHidden[c])return `<div></div>`;
         const p=D.nwPeriods[c]||'';
-        if(!p||isFuturePeriod(p))return `<div class="nw-delta-cell"></div>`;
+        if(!p||isFuturePeriod(p))return `<div class="nw-delta-cell" id="nwdlt-${sec}-${c}"></div>`;
         // Find previous non-empty period
         let prevSum=null;
         for(let pc=c-1;pc>=0;pc--){
           const pp=D.nwPeriods[pc]||'';
           if(pp&&!isFuturePeriod(pp)&&prevColTotals[pc]>0){prevSum=prevColTotals[pc];break;}
         }
-        if(prevSum===null||sum===0)return `<div class="nw-delta-cell"></div>`;
+        if(prevSum===null||sum===0)return `<div class="nw-delta-cell" id="nwdlt-${sec}-${c}"></div>`;
         const d=sum-prevSum;
-        if(d===0)return `<div class="nw-delta-cell" style="color:var(--t3)">ללא שינוי</div>`;
+        if(d===0)return `<div class="nw-delta-cell" id="nwdlt-${sec}-${c}" style="color:var(--t3)">ללא שינוי</div>`;
         const col=d>0?'var(--green)':'var(--red)';
         const arrow=d>0?'↑':'↓';
-        return `<div class="nw-delta-cell" style="color:${col}">${arrow} ${d>0?'+':''}${fmt(d)}</div>`;
+        return `<div class="nw-delta-cell" id="nwdlt-${sec}-${c}" style="color:${col}">${arrow} ${d>0?'+':''}${fmt(d)}</div>`;
       }).join('')}
       <div></div>`;
     el.appendChild(deltaRow);
   }
+}
+function liveUpdateNWSec(sec){
+  const cnt=D.nwPeriodsCount||6;
+  const totals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSecBestAtCol(sec,c));
+  totals.forEach((sum,c)=>{
+    const p=D.nwPeriods[c]||'';
+    const totEl=document.getElementById('nwtot-'+sec+'-'+c);
+    if(totEl){
+      if(p&&isFuturePeriod(p)){totEl.style.color='rgba(66,235,214,.3)';totEl.textContent='—';}
+      else{totEl.style.color='';totEl.textContent=sum>0?fmt(sum):'—';}
+    }
+    const dltEl=document.getElementById('nwdlt-'+sec+'-'+c);
+    if(dltEl){
+      if(!p||isFuturePeriod(p)){dltEl.style.color='';dltEl.textContent='';return;}
+      let prevSum=null;
+      for(let pc=c-1;pc>=0;pc--){
+        const pp=D.nwPeriods[pc]||'';
+        if(pp&&!isFuturePeriod(pp)&&totals[pc]>0){prevSum=totals[pc];break;}
+      }
+      if(prevSum===null||sum===0){dltEl.style.color='';dltEl.textContent='';return;}
+      const d=sum-prevSum;
+      if(d===0){dltEl.style.color='var(--t3)';dltEl.textContent='ללא שינוי';return;}
+      dltEl.style.color=d>0?'var(--green)':'var(--red)';
+      dltEl.textContent=(d>0?'↑ +':'↓ ')+fmt(d);
+    }
+  });
 }
 function renderNWSummary(){
   const cnt=D.nwPeriodsCount||D.nwPeriods.length||6;
@@ -921,6 +947,7 @@ function nwCellUpdate(el){
   el.dataset.raw=v;
   D.nwData[sec].rows[ri].vals[ci]=v;
   touchSection('nw');
+  liveUpdateNWSec(sec);
   renderNWSummary();markDirty();
 }
 function nwCellCurrency(el){
