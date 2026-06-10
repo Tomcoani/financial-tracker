@@ -1097,7 +1097,7 @@ function renderPortfolio(){
         color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;outline:none;
         flex:1;min-width:180px;transition:border-color .2s;text-align:right;direction:rtl"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"/>
-      <div style="font-size:16px;font-weight:800;color:var(--teal)">${portTotal>0?fmt(portTotal):''}</div>
+      <div id="port-card-total-${pi}" style="font-size:16px;font-weight:800;color:var(--teal)">${portTotal>0?fmt(portTotal):''}</div>
       ${D.portfolios.length>1?`<button class="bdel" onclick="delPortfolio(${pi})" style="font-size:20px" title="מחק תיק">×</button>`:''}
     </div>`;
     // Column headers
@@ -1136,8 +1136,12 @@ function portItemUpdate(el){
   D.portfolios[pi].items[ii][f]=el.value;
   D.portfolio=D.portfolios.flatMap(p=>p.items||[]);
   const portTotal=(D.portfolios[pi].items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-  const pctEl=document.getElementById(`pct-${pi}-${ii}`);
-  if(pctEl){const v=parseFloat(D.portfolios[pi].items[ii].value)||0;pctEl.textContent=portTotal>0&&v?(v/portTotal*100).toFixed(1)+'%':'—%';}
+  const headerEl=document.getElementById('port-card-total-'+pi);
+  if(headerEl)headerEl.textContent=portTotal>0?fmt(portTotal):'';
+  (D.portfolios[pi].items||[]).forEach((_,idx)=>{
+    const pctEl=document.getElementById(`pct-${pi}-${idx}`);
+    if(pctEl){const v=parseFloat(D.portfolios[pi].items[idx].value)||0;pctEl.textContent=portTotal>0&&v?(v/portTotal*100).toFixed(1)+'%':'—%';}
+  });
   updatePortStats();syncNWFromPension();
   if(document.getElementById('nw-investments'))renderNWSection('nw-investments','investments');
   markDirty();
