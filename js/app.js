@@ -134,9 +134,7 @@ auth.onAuthStateChanged(async user=>{
     document.getElementById('app').style.display='flex';
     document.getElementById('uname').textContent=user.displayName||user.email;
     // Show admin nav only for admin email
-    if(user.email===ADMIN_EMAIL){
-      document.getElementById('admin-nav-btn').style.display='';
-    }
+    document.getElementById('admin-nav-btn').style.display=user.email===ADMIN_EMAIL?'':'none';
     if(!D.settings)D.settings={displayName:'',email:user.email||'',age:'',notifyEmail:user.email||'',gender:'male'};
     if(!D.settings.gender)D.settings.gender='male'; // migrate existing users
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
@@ -2096,10 +2094,11 @@ function renderCalendar(){
 // ══ ADMIN ══
 async function renderAdmin(){
   if(!CU)return;
-  // Double-check: only admin may render this panel
   const me=auth.currentUser;
   if(!me||me.email!==ADMIN_EMAIL){
-    document.getElementById('admin-users-list').innerHTML='<p style="color:var(--danger);text-align:right">אין הרשאה.</p>';
+    // Hide the entire admin tab and redirect to dashboard
+    document.getElementById('admin-nav-btn').style.display='none';
+    goTo('dash',document.getElementById('nav-dash'));
     return;
   }
   const statsEl=document.getElementById('admin-stats');
