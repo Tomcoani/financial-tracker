@@ -197,7 +197,7 @@ async function doForgotPassword(){
   }
   try{
     // continueUrl redirects user back to the app after completing reset on Firebase's page
-    await auth.sendPasswordResetEmail(email,null);
+    await auth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
     document.getElementById('aerr').style.background='rgba(66,235,214,.1)';
     document.getElementById('aerr').style.borderColor='rgba(66,235,214,.3)';
     document.getElementById('aerr').style.color='var(--teal)';
@@ -2184,7 +2184,7 @@ async function adminSendPasswordReset(email){
   if(!email)return;
   if(!confirm('שלח מייל איפוס סיסמה אל '+email+'?'))return;
   try{
-    await auth.sendPasswordResetEmail(email,null);
+    await auth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
     showToast('מייל איפוס נשלח ל-'+email+' ✓ — בדוק גם ספאם');
   }catch(e){
     alert('שגיאה: '+e.message);
@@ -2212,7 +2212,7 @@ async function adminCreateUser(){
     newData.settings.email=email;
     await saveDataFS(cred.user.uid,newData);
     // Send password-set email with redirect back to the app
-    await secondaryAuth.sendPasswordResetEmail(email,null);
+    await secondaryAuth.sendPasswordResetEmail(email,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
     await secondaryAuth.signOut();
     status.textContent='✓ חשבון נוצר! מייל הגדרת סיסמה נשלח ל-'+email+' — בדוק גם ספאם';
     status.style.color='var(--teal)';
