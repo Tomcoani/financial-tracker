@@ -250,7 +250,7 @@ function goTo(id,btn){
   if(id==='dash')renderDash();
   if(id==='history')renderHistory();
   if(id==='portfolio'){renderPortfolio();renderPortfolioCharts();}
-  if(id==='nw'){syncNWFromPension();renderNWSummary();}
+  if(id==='nw'){syncNWFromPension();renderNW();}
   if(id==='settings')renderSettings();
   if(id==='admin')renderAdmin();
 }
