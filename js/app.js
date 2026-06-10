@@ -2114,8 +2114,9 @@ async function renderAdmin(){
         const d=dataSnap.data();
         const lu=d.lastUpdated||{};
         const freq=parseInt(d.settings?.freq||'30');
-        const email=d.settings?.email||'';
-        const name=d.settings?.displayName||email||userDoc.id.substring(0,8);
+        const parentData=userDoc.data()||{};
+        const email=d.settings?.email||parentData.email||'';
+        const name=d.settings?.displayName||parentData.displayName||email||userDoc.id.substring(0,8);
         const alerts=[];
         const goalsAge=daysSince(lu.goals),penAge=daysSince(lu.pension),nwAge=daysSince(lu.nw);
         if(goalsAge===null||goalsAge>freq)alerts.push({label:'מטרות',cls:'tag-urgent'});
