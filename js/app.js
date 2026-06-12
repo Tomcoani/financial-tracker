@@ -347,7 +347,13 @@ function renderAccountSplit(available){
   if(cnt>=2){
     const totalPct=as.pct.slice(0,cnt).reduce((s,v)=>s+v,0);
     const warn=Math.abs(totalPct-100)>0.5;
-    html+=`<div style="display:flex;flex-direction:column;gap:9px">`;
+    html+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <span style="font-size:10px;color:var(--t3);font-weight:700;width:95px;text-align:right;flex-shrink:0">חשבון</span>
+      <span style="font-size:10px;color:var(--t3);font-weight:700;width:56px;text-align:center">% חלוקה</span>
+      <span style="font-size:10px;color:var(--t3);font-weight:700;width:12px"></span>
+      <span style="font-size:10px;color:var(--t3);font-weight:700">סכום לחיסכון החודש</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px">`;
     for(let i=0;i<cnt;i++){
       const pct=as.pct[i]||0;
       const amt=available*(pct/100);
