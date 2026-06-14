@@ -576,23 +576,30 @@ function renderLocs(){
     return;
   }
   const hdr=document.createElement('div');
-  hdr.style.cssText='display:grid;grid-template-columns:2fr 130px 18px 2fr 28px;gap:0;font-size:10px;color:var(--t3);font-weight:700;padding:0 0 7px;border-bottom:1px solid var(--border);margin-bottom:4px;text-align:right';
-  hdr.innerHTML='<span>מיקום נוכחי</span><span>סכום</span><span></span><span>לאן להעביר</span><span></span>';
+  hdr.style.cssText='display:grid;grid-template-columns:1fr 36px 1fr 28px;gap:0;font-size:10px;color:var(--t3);font-weight:700;padding:0 0 8px;margin-bottom:4px;text-align:right';
+  hdr.innerHTML='<span>מיקום נוכחי + סכום</span><span></span><span style="color:var(--teal)">לאן מועבר</span><span></span>';
   el.appendChild(hdr);
   manualLocs.forEach(l=>{
     const ri=(D.locations||[]).indexOf(l);
     const hasTo=(l.whereTo||'').trim();
     const row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:2fr 130px 18px 2fr 28px;gap:0;align-items:center;padding:6px 0;border-bottom:1px solid rgba(30,45,69,.5)';
+    row.style.cssText='display:grid;grid-template-columns:1fr 36px 1fr 28px;gap:0;align-items:stretch;margin-bottom:8px';
     row.innerHTML=`
-      <input value="${esc(l.name)}" placeholder="שם המיקום..." data-i="${ri}" data-f="name" oninput="lu(this)"
-        style="background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right;width:100%"/>
-      <input type="number" value="${l.amount||''}" placeholder="0" data-i="${ri}" data-f="amount" oninput="lu(this);updateLocFooter()"
-        style="background:transparent;border:none;outline:none;font-family:var(--font);font-size:14px;font-weight:700;color:var(--teal);width:100%;text-align:right;direction:rtl"/>
-      <span style="font-size:13px;color:var(--t3);text-align:center;user-select:none">→</span>
-      <input value="${esc(l.whereTo||'')}" placeholder="נשאר / העבר ל..." data-i="${ri}" data-f="whereTo" oninput="lu(this);updateLocFooter()"
-        style="background:transparent;border:none;outline:none;color:${hasTo?'var(--teal)':'var(--t2)'};font-family:var(--font);font-size:13px;text-align:right;width:100%"/>
-      <button class="bdel" onclick="delLoc(${ri})">×</button>`;
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px 0 0 10px;padding:10px 12px;display:flex;flex-direction:column;gap:5px">
+        <input value="${esc(l.name)}" placeholder="שם המיקום..." data-i="${ri}" data-f="name" oninput="lu(this)"
+          style="background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;font-weight:600;text-align:right;width:100%"/>
+        <input type="number" value="${l.amount||''}" placeholder="0 ₪" data-i="${ri}" data-f="amount" oninput="lu(this);updateLocFooter()"
+          style="background:transparent;border:none;outline:none;font-family:var(--font);font-size:15px;font-weight:800;color:var(--teal);width:100%;text-align:right;direction:rtl"/>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;background:var(--s2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);color:${hasTo?'var(--teal)':'var(--border)'};font-size:20px;user-select:none;transition:color .2s">⟶</div>
+      <div style="background:${hasTo?'rgba(66,235,214,.06)':'var(--s2)'};border:1px solid ${hasTo?'var(--teal-border)':'var(--border)'};border-radius:0 10px 10px 0;border-right:none;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;transition:background .2s,border-color .2s">
+        <input value="${esc(l.whereTo||'')}" placeholder="לאן מועבר הכסף..." data-i="${ri}" data-f="whereTo" oninput="lu(this);updateLocFooter()"
+          style="background:transparent;border:none;outline:none;color:${hasTo?'var(--teal)':'var(--t2)'};font-family:var(--font);font-size:13px;font-weight:${hasTo?'600':'400'};text-align:right;width:100%"/>
+        ${hasTo?'':'<div style="font-size:10px;color:var(--t3);margin-top:3px;text-align:right">ריק = נשאר במיקומו</div>'}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding-right:4px">
+        <button class="bdel" onclick="delLoc(${ri})">×</button>
+      </div>`;
     el.appendChild(row);
   });
   const ftr=document.createElement('div');
