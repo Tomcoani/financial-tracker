@@ -496,6 +496,7 @@ function mkGoal(g,i){
       </div>
       <div class="mf" style="margin-bottom:9px"><label><span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span>איפה הכסף</label>
         <input value="${esc(g.where)}" placeholder="עו&quot;ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
+          placeholder="כאן להכניס את המיקום הספציפי שהכסף נמצא בו - עובר ושב / קרן כספית וכד׳"
           style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
       </div>
       <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>

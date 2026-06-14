@@ -161,8 +161,8 @@ select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background
   color:var(--t2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
 .gtab.on{background:var(--teal-dim);border-color:var(--teal-border);color:var(--teal);}
 .hz-group{margin-bottom:20px;}
-.hz-group-title{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;
-  letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);text-align:right;}
+.hz-group-title{font-size:16px;font-weight:800;color:var(--white);
+  margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);text-align:right;}
 .bdel{background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 4px;transition:color .2s;flex-shrink:0;}
 .bdel:hover{color:var(--red);}
 
