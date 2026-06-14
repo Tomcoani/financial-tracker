@@ -295,7 +295,7 @@ function renderAll(){
   setTimeout(()=>{
     renderGoals();
     renderLocs();
-    renderLocsAutoSummary();
+    renderLocsAutoSummary();renderLocsRealloc();
   },50);
   setTimeout(()=>{
     renderPension();
@@ -501,10 +501,15 @@ function mkGoal(g,i){
         <div class="mf"><label>כמה חסכת<span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת? הכנס את הסכום הנוכחי בשקלים.</span></span></label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
         <div class="mf"><label>סכום יעד<span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span></label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
       </div>
-      <div class="mf" style="margin-bottom:9px"><label>איפה הכסף<span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span></label>
-        <input value="${esc(g.where)}" placeholder="עו&quot;ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
-          placeholder="כאן להכניס את המיקום הספציפי שהכסף נמצא בו - עובר ושב / קרן כספית וכד׳"
-          style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
+      <div class="gnums" style="margin-bottom:9px">
+        <div class="mf"><label>איפה הכסף היום<span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד כרגע? לדוגמה: עו"ש, תיק השקעות, קרן כספית.</span></span></label>
+          <input value="${esc(g.where)}" placeholder="כאן להכניס מיקום נוכחי..." data-i="${i}" data-f="where" oninput="gu(this)"
+            style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
+        </div>
+        <div class="mf"><label>לאן להעביר<span class="q-tip">?<span class="q-popup">לאיפה תרצה להעביר כסף זה? השאר ריק אם הכסף נשאר במיקומו.</span></span></label>
+          <input value="${esc(g.whereTo||'')}" placeholder="קרן כספית / תיק השקעות..." data-i="${i}" data-f="whereTo" oninput="gu(this)"
+            style="width:100%;background:transparent;border:none;outline:none;color:var(--teal);font-family:var(--font);font-size:13px;text-align:right"/>
+        </div>
       </div>
       <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
       <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${isDone?' 🎉':''}</div>
@@ -520,7 +525,7 @@ function gu(el){
   const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
   const fill=card.querySelector('.pfill');if(fill)fill.style.width=pct+'%';
   const lbl=card.querySelector('.plbl');if(lbl)lbl.textContent=pct+'% הושג'+(nd>0?' · נשאר '+fmt(nd-sv):'');
-  if(f==='where'||f==='saved')renderLocsAutoSummary();
+  if(f==='where'||f==='saved'||f==='whereTo'){renderLocsAutoSummary();renderLocsRealloc();}
   if(f==='saved'||f==='needed')touchSection('goals');
   markDirty();
 }
@@ -545,7 +550,7 @@ function toggleDone(i){// also refresh locations
     }
   }
   D.goals[i].done=!D.goals[i].done;
-  renderGoals();renderLocsAutoSummary();markDirty();
+  renderGoals();renderLocsAutoSummary();renderLocsRealloc();markDirty();
 }
 function showGoalError(i,msg){
   // Show error inline inside the goal card
@@ -564,7 +569,7 @@ function addGoal(){
   renderGoals();touchSection('goals');markDirty();
   setTimeout(()=>{const last=document.querySelector('#goals-by-horizon .goal-card:last-child');if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
 }
-function delGoal(i){D.goals.splice(i,1);renderGoals();renderLocsAutoSummary();markDirty();}
+function delGoal(i){D.goals.splice(i,1);renderGoals();renderLocsAutoSummary();renderLocsRealloc();markDirty();}
 
 // ══ LOCATIONS ══
 function renderLocs(){
@@ -2607,6 +2612,56 @@ function renderLocsAutoSummary(){
   el.innerHTML=html;
 }
 function toggleLocRow(where){_locExpanded[where]=!_locExpanded[where];renderLocsAutoSummary();}
+
+function renderLocsRealloc(){
+  const el=document.getElementById('locs-realloc');
+  if(!el)return;
+  const rows=(D.goals||[]).filter(g=>!g.done&&g.where&&g.saved);
+  if(!rows.length){el.innerHTML='';return;}
+  // group by whereTo (or "נשאר" if empty)
+  const groups={};
+  let grandTotal=0;
+  rows.forEach(g=>{
+    const dest=(g.whereTo||'').trim()||'נשאר במיקום הנוכחי';
+    if(!groups[dest])groups[dest]={rows:[],total:0};
+    const sv=parseFloat(g.saved)||0;
+    groups[dest].rows.push({name:g.name||'ללא שם',from:g.where.trim(),amt:sv});
+    groups[dest].total+=sv;
+    grandTotal+=sv;
+  });
+  const destKeys=Object.keys(groups).sort((a,b)=>a==='נשאר במיקום הנוכחי'?1:b==='נשאר במיקום הנוכחי'?-1:0);
+  let html=`<div style="font-size:11px;color:var(--teal);margin-bottom:8px;font-weight:600">🔀 חלוקת כספים חדשה — מחושב מהמטרות הפעילות:</div>
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+  <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:0;font-size:10px;font-weight:700;color:var(--t3);
+    padding:8px 14px;border-bottom:1px solid var(--border);text-align:right">
+    <span>מטרה</span><span>מיקום נוכחי</span><span style="text-align:left;min-width:90px">יעד חדש / סכום</span>
+  </div>`;
+  destKeys.forEach((dest,di)=>{
+    const grp=groups[dest];
+    const isLast=di===destKeys.length-1;
+    const isStay=dest==='נשאר במיקום הנוכחי';
+    html+=`<div style="padding:7px 14px;background:${isStay?'transparent':'rgba(66,235,214,.04)'};
+      border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;font-weight:700;color:${isStay?'var(--t2)':'var(--teal)'}">${isStay?'↩ נשאר במיקום הנוכחי':'→ '+esc(dest)}</span>
+      <span style="font-size:13px;font-weight:800;color:${isStay?'var(--t2)':'var(--teal)'}">${fmt(grp.total)} ₪</span>
+    </div>`;
+    grp.rows.forEach((r,ri)=>{
+      const isLastRow=ri===grp.rows.length-1&&isLast;
+      html+=`<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:0;align-items:center;
+        padding:7px 14px 7px 22px;${!isLastRow||!isLast?'border-bottom:1px solid var(--border)':''}background:rgba(0,0,0,.1)">
+        <span style="font-size:12px;color:var(--white)">${esc(r.name)}</span>
+        <span style="font-size:11px;color:var(--t2)">${esc(r.from)}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--t2);text-align:left;min-width:90px">${fmt(r.amt)} ₪</span>
+      </div>`;
+    });
+  });
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;
+    background:rgba(66,235,214,.07);border-top:1px solid var(--teal-border)">
+    <span style="font-size:12px;font-weight:700;color:var(--teal)">סה"כ כספים מוקצים</span>
+    <span style="font-size:15px;font-weight:800;color:var(--teal)">${fmt(grandTotal)} ₪</span>
+  </div></div>`;
+  el.innerHTML=html;
+}
 
 // ══ HISTORY RESTORE + DELETE ══
 async function restoreSnap(i){
