@@ -1905,6 +1905,17 @@ function renderHistoryChart(snaps){
 
 // ══ PDF EXPORT ══
 async function exportPDF(){
+  // Sync textarea values into D before building PDF
+  collectAll();
+
+  // Always fetch fresh advisor notes from Firestore so we don't miss notes added after login
+  if(CU){
+    try{
+      const snap=await db.collection('users').doc(CU).collection('data').doc('main').get();
+      if(snap.exists){const fresh=snap.data();if(fresh.advisorNotes)D.advisorNotes=fresh.advisorNotes;}
+    }catch(e){console.warn('Could not refresh notes:',e);}
+  }
+
   const cur=calcCurrent();
   const snaps=D.snapshots||[];
   const uname=document.getElementById('uname').textContent||'';
@@ -2109,6 +2120,10 @@ async function exportPDF(){
       <tbody>${penRows}</tbody>
     </table>
   </div>`:''}
+  ${D.penNotes?`<div class="section" style="break-inside:avoid">
+    <div class="section-title">הערות פנסיה</div>
+    <div style="font-size:13px;color:#1e293b;line-height:1.8;white-space:pre-wrap;background:#f8fafc;border-radius:8px;padding:14px 16px;border-right:3px solid #42ebd6">${esc(D.penNotes)}</div>
+  </div>`:''}
 
   <!-- PORTFOLIO -->
   ${portRows?`<div class="section">
@@ -2126,6 +2141,12 @@ async function exportPDF(){
       <thead><tr><th>תקופה</th><th>שווי נטו</th><th>שינוי</th><th>חיסכון חודשי</th><th>פנסיה</th></tr></thead>
       <tbody>${histRows}</tbody>
     </table>
+  </div>`:''}
+
+  <!-- CLIENT NOTES -->
+  ${D.gnotes?`<div class="section" style="break-inside:avoid">
+    <div class="section-title">הערות חופשיות</div>
+    <div style="font-size:13px;color:#1e293b;line-height:1.8;white-space:pre-wrap;background:#f8fafc;border-radius:8px;padding:14px 16px;border-right:3px solid #42ebd6">${esc(D.gnotes)}</div>
   </div>`:''}
 
   <!-- ADVISOR NOTES -->
