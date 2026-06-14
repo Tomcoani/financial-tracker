@@ -2216,6 +2216,55 @@ async function saveSettings(){
   showToast('הגדרות נשמרו ✓');
 }
 
+async function userChangePassword(){
+  const statusEl=document.getElementById('sec-pass-status');
+  const show=(msg,ok)=>{statusEl.style.display='block';statusEl.style.color=ok?'var(--green)':'var(--red)';statusEl.textContent=msg;};
+  const curPass=document.getElementById('sec-cur-pass').value;
+  const newPass=document.getElementById('sec-new-pass').value;
+  const confPass=document.getElementById('sec-conf-pass').value;
+  if(!curPass)return show('הכנס סיסמה נוכחית',false);
+  if(!newPass||newPass.length<6)return show('סיסמה חדשה חייבת להכיל לפחות 6 תווים',false);
+  if(newPass!==confPass)return show('הסיסמאות אינן תואמות',false);
+  try{
+    const user=auth.currentUser;
+    const cred=firebase.auth.EmailAuthProvider.credential(user.email,curPass);
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(newPass);
+    show('סיסמה עודכנה בהצלחה ✓',true);
+    ['sec-cur-pass','sec-new-pass','sec-conf-pass'].forEach(id=>{document.getElementById(id).value='';});
+  }catch(e){
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')show('הסיסמה הנוכחית שגויה',false);
+    else if(e.code==='auth/requires-recent-login')show('נדרשת כניסה מחדש — התנתק והתחבר שוב',false);
+    else show(fbErr(e.code),false);
+  }
+}
+async function userChangeEmail(){
+  const statusEl=document.getElementById('sec-email-status');
+  const show=(msg,ok)=>{statusEl.style.display='block';statusEl.style.color=ok?'var(--green)':'var(--red)';statusEl.textContent=msg;};
+  const newEmail=document.getElementById('sec-new-email').value.trim().replace(/[​-‏‪-‮⁦-⁩﻿]/g,'').toLowerCase();
+  const pass=document.getElementById('sec-email-pass').value;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail))return show('כתובת מייל לא תקינה',false);
+  if(!pass)return show('הכנס סיסמה לאימות',false);
+  try{
+    const user=auth.currentUser;
+    const cred=firebase.auth.EmailAuthProvider.credential(user.email,pass);
+    await user.reauthenticateWithCredential(cred);
+    await user.updateEmail(newEmail);
+    if(D.settings)D.settings.email=newEmail;
+    await db.collection('users').doc(CU).update({email:newEmail});
+    await saveDataFS(CU,D);
+    show('מייל עודכן בהצלחה ✓',true);
+    document.getElementById('sec-new-email').value='';
+    document.getElementById('sec-email-pass').value='';
+    const setEl=document.getElementById('set-email');if(setEl)setEl.value=newEmail;
+  }catch(e){
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')show('הסיסמה שגויה',false);
+    else if(e.code==='auth/email-already-in-use')show('המייל הזה כבר בשימוש',false);
+    else if(e.code==='auth/requires-recent-login')show('נדרשת כניסה מחדש — התנתק והתחבר שוב',false);
+    else show(fbErr(e.code),false);
+  }
+}
+
 // ══ CALENDAR ══
 function toggleCal(){
   const b=document.getElementById('cal-body'),a=document.getElementById('cal-arrow');

@@ -306,6 +306,37 @@
         </div>
         <button class="btnsave" onclick="saveSettings()" style="margin-top:8px">שמור הגדרות ✓</button>
       </div>
+
+      <!-- Account security -->
+      <div class="card" style="margin-top:16px">
+        <div class="ch-title">אבטחת חשבון</div>
+        <div class="ch-hint">שינוי מייל הכניסה או הסיסמה שלך</div>
+
+        <!-- Change password -->
+        <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:12px;text-align:right">שינוי סיסמה</div>
+          <div class="settings-row">
+            <div class="sf"><label>סיסמה נוכחית</label><input id="sec-cur-pass" type="password" placeholder="••••••••" dir="ltr" autocomplete="current-password"/></div>
+          </div>
+          <div class="settings-row">
+            <div class="sf"><label>סיסמה חדשה</label><input id="sec-new-pass" type="password" placeholder="••••••••" dir="ltr" autocomplete="new-password"/></div>
+            <div class="sf"><label>אימות סיסמה חדשה</label><input id="sec-conf-pass" type="password" placeholder="••••••••" dir="ltr" autocomplete="new-password"/></div>
+          </div>
+          <button class="btnsave" onclick="userChangePassword()" style="margin-top:8px">עדכן סיסמה</button>
+          <div id="sec-pass-status" style="font-size:12px;margin-top:8px;text-align:right;display:none"></div>
+        </div>
+
+        <!-- Change email -->
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:12px;text-align:right">שינוי מייל כניסה</div>
+          <div class="settings-row">
+            <div class="sf"><label>מייל חדש</label><input id="sec-new-email" type="email" placeholder="new@email.com" dir="ltr" autocomplete="email"/></div>
+            <div class="sf"><label>סיסמה לאימות</label><input id="sec-email-pass" type="password" placeholder="••••••••" dir="ltr" autocomplete="current-password"/></div>
+          </div>
+          <button class="btnsave" onclick="userChangeEmail()" style="margin-top:8px">עדכן מייל</button>
+          <div id="sec-email-status" style="font-size:12px;margin-top:8px;text-align:right;display:none"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ADMIN (only for info@tomani.co) -->
