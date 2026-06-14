@@ -1928,6 +1928,11 @@ async function exportPDF(){
   /* PROGRESS BAR in table */
   .pbar-pdf{display:inline-block;width:60px;height:6px;background:#e2e8f0;border-radius:3px;vertical-align:middle;margin-left:6px;}
   .pfill-pdf{height:100%;border-radius:3px;background:linear-gradient(90deg,#2dd4bf,#42ebd6);}
+  /* ADVISOR NOTES */
+  .note-item{padding:12px 14px;border-right:3px solid #42ebd6;margin-bottom:10px;background:#f8fafc;border-radius:0 8px 8px 0;}
+  .note-item:last-child{margin-bottom:0;}
+  .note-date{font-size:10px;color:#64748b;font-weight:700;margin-bottom:5px;}
+  .note-text{font-size:13px;color:#1e293b;line-height:1.7;white-space:pre-wrap;}
   /* FOOTER */
   .pdf-footer{margin-top:32px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#94a3b8;}
   .pdf-footer img{height:18px;opacity:.5;object-fit:contain;}
@@ -2022,6 +2027,15 @@ async function exportPDF(){
       <thead><tr><th>תקופה</th><th>שווי נטו</th><th>שינוי</th><th>חיסכון חודשי</th><th>פנסיה</th></tr></thead>
       <tbody>${histRows}</tbody>
     </table>
+  </div>`:''}
+
+  <!-- ADVISOR NOTES -->
+  ${(D.advisorNotes&&D.advisorNotes.length)?`<div class="section" style="break-inside:avoid">
+    <div class="section-title">הערות יועץ</div>
+    <div>${D.advisorNotes.map(n=>`<div class="note-item">
+      <div class="note-date">${fmtDate(n.date)}</div>
+      <div class="note-text">${esc(n.text)}</div>
+    </div>`).join('')}</div>
   </div>`:''}
 
 </div><!-- /pdf-body -->
@@ -2416,6 +2430,22 @@ async function renderAdmin(){
                 </div>`).join('')}
             </div>
           </div>`:''}
+          <!-- ADVISOR NOTES -->
+          <div id="notes-section-${u.uid}" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--t3);font-weight:700;margin-bottom:8px;text-align:right">📝 הערות יועץ</div>
+            <div id="notes-list-${u.uid}" style="margin-bottom:8px"></div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <textarea id="note-input-${u.uid}" placeholder="כתוב הערה עבור ${esc(u.name)}..." dir="rtl"
+                style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;
+                color:var(--white);font-family:var(--font);font-size:13px;resize:vertical;min-height:56px;outline:none"
+                onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+              <button onclick="event.stopPropagation();adminAddNote('${u.uid}')"
+                style="background:var(--teal);border:none;border-radius:8px;padding:8px 14px;color:#080c14;
+                font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
+                + הוסף
+              </button>
+            </div>
+          </div>
         </div>
         `).join('');
       lucide.createIcons();
@@ -2485,6 +2515,56 @@ function toggleAdminCard(uid){
   const open=det.style.display==='none';
   det.style.display=open?'block':'none';
   if(arr)arr.style.transform=open?'rotate(180deg)':'';
+  if(open)adminLoadUserNotes(uid);
+}
+async function adminLoadUserNotes(uid){
+  const listEl=document.getElementById('notes-list-'+uid);
+  if(!listEl)return;
+  try{
+    const snap=await db.collection('users').doc(uid).collection('data').doc('main').get();
+    const notes=(snap.exists?snap.data().advisorNotes:null)||[];
+    if(!notes.length){listEl.innerHTML='<div style="font-size:12px;color:var(--t3);text-align:right">אין הערות עדיין</div>';return;}
+    listEl.innerHTML=notes.map((n,idx)=>`
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--s2);
+        border-right:3px solid var(--teal-border);border-radius:0 8px 8px 0;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:3px">${fmtDate(n.date)}</div>
+          <div style="font-size:13px;color:var(--white);line-height:1.5;white-space:pre-wrap;text-align:right">${esc(n.text)}</div>
+        </div>
+        <button onclick="event.stopPropagation();adminDeleteNote('${uid}',${idx})"
+          style="background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0;flex-shrink:0;line-height:1"
+          title="מחק הערה">×</button>
+      </div>`).join('');
+  }catch(e){listEl.innerHTML='<div style="font-size:12px;color:var(--red)">שגיאה בטעינת הערות</div>';}
+}
+async function adminAddNote(uid){
+  const ta=document.getElementById('note-input-'+uid);
+  const text=(ta?.value||'').trim();
+  if(!text)return;
+  try{
+    const ref=db.collection('users').doc(uid).collection('data').doc('main');
+    const snap=await ref.get();
+    if(!snap.exists)return;
+    const data=snap.data();
+    if(!data.advisorNotes)data.advisorNotes=[];
+    data.advisorNotes.push({text,date:new Date().toISOString()});
+    await ref.set(data);
+    ta.value='';
+    adminLoadUserNotes(uid);
+    showToast('הערה נשמרה ✓');
+  }catch(e){alert('שגיאה: '+e.message);}
+}
+async function adminDeleteNote(uid,idx){
+  if(!confirm('למחוק הערה זו?'))return;
+  try{
+    const ref=db.collection('users').doc(uid).collection('data').doc('main');
+    const snap=await ref.get();
+    if(!snap.exists)return;
+    const data=snap.data();
+    (data.advisorNotes||[]).splice(idx,1);
+    await ref.set(data);
+    adminLoadUserNotes(uid);
+  }catch(e){alert('שגיאה: '+e.message);}
 }
 async function adminSendPasswordReset(email){
   if(!email)return;
