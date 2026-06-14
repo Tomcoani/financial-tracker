@@ -416,46 +416,92 @@ function switchGoalTab(tab){
 function renderGoals(){
   const hzEl=document.getElementById('goals-by-horizon');hzEl.innerHTML='';
   const active=(D.goals||[]).filter(g=>!g.done);
-  if(!active.length)
+  if(!active.length){
     hzEl.innerHTML=`<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">${g('לחץ','לחצי')} "הוספת מטרה חדשה" כדי להתחיל</p>`;
-  else
-    active.forEach(goal=>hzEl.appendChild(mkGoal(goal,(D.goals||[]).indexOf(goal))));
+  } else {
+    const ctrl=document.createElement('div');
+    ctrl.style.cssText='text-align:left;margin-bottom:10px';
+    ctrl.innerHTML=`<button onclick="toggleAllGoals()" style="background:none;border:none;color:var(--t2);font-family:var(--font);font-size:12px;cursor:pointer;padding:0">▾ קווץ / פרוש הכל</button>`;
+    hzEl.appendChild(ctrl);
+    const byH=[[],[],[],[]];const unset=[];
+    active.forEach(goal=>{
+      const idx=(D.goals||[]).indexOf(goal);
+      (goal.h>=0&&goal.h<=3)?byH[goal.h].push({goal,idx}):unset.push({goal,idx});
+    });
+    HZ.forEach((hz,hi)=>{
+      if(!byH[hi].length)return;
+      const grp=document.createElement('div');grp.className='hz-group';
+      grp.innerHTML=`<div class="hz-group-title">${hz}</div>`;
+      byH[hi].forEach(({goal,idx})=>grp.appendChild(mkGoal(goal,idx)));
+      hzEl.appendChild(grp);
+    });
+    if(unset.length){
+      const grp=document.createElement('div');grp.className='hz-group';
+      unset.forEach(({goal,idx})=>grp.appendChild(mkGoal(goal,idx)));
+      hzEl.appendChild(grp);
+    }
+  }
   const doneEl=document.getElementById('goals-done-list');doneEl.innerHTML='';
   const done=(D.goals||[]).filter(g=>g.done);
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
   done.forEach(g=>doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g))));
+}
+function toggleGoalCollapse(i){
+  const body=document.getElementById('goal-body-'+i);
+  const card=document.getElementById('goal-card-'+i);
+  if(!body)return;
+  const collapsed=body.style.display==='none';
+  body.style.display=collapsed?'':'none';
+  const btn=card&&card.querySelector('.goal-toggle');
+  if(btn)btn.textContent=collapsed?'▾':'▸';
+}
+function toggleAllGoals(){
+  const bodies=document.querySelectorAll('.goal-body');
+  const anyOpen=Array.from(bodies).some(b=>b.style.display!=='none');
+  bodies.forEach(b=>b.style.display=anyOpen?'none':'');
+  document.querySelectorAll('.goal-toggle').forEach(b=>b.textContent=anyOpen?'▸':'▾');
 }
 // Months per horizon index — matches HZ labels: 12m / 1-5y / 5-10y / 10+y
 const GOAL_HZ_MONTHS=[12,36,84,180];
 function mkGoal(g,i){
   const sv=parseFloat(g.saved)||0,nd=parseFloat(g.needed)||0;
   const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
-  const hi=g.h||0,isDone=g.done;
-  // Monthly savings hint
+  const hi=g.h>=0&&g.h<=3?g.h:null;
+  const isDone=g.done;
   const remaining=nd-sv;
-  const hzMonths=GOAL_HZ_MONTHS[hi];
-  const monthlyNeeded=(!isDone&&remaining>0&&nd>0)?Math.ceil(remaining/hzMonths):0;
+  const hzMonths=hi!==null?GOAL_HZ_MONTHS[hi]:GOAL_HZ_MONTHS[0];
+  const monthlyNeeded=(!isDone&&remaining>0&&nd>0&&hi!==null)?Math.ceil(remaining/hzMonths):0;
   const hzLabel=hi===0?'12 חודשים':hi===1?'3 שנים':hi===2?'7 שנים':'15 שנה';
   const d=document.createElement('div');
+  d.id='goal-card-'+i;
   d.className='goal-card'+(isDone?' completed':'');
+  const hzSel=!isDone
+    ?`<select class="htag ${hi!==null?HC[hi]:'htag-new'}" onchange="setH(${i},+this.value,this)">
+        <option value="-1"${hi===null?' selected':''} style="background:#1e2d45;color:#94a3b8">בחר טווח</option>
+        ${HZ.map((h,hi2)=>`<option value="${hi2}"${hi2===hi?' selected':''} style="background:#1e2d45;color:#e2e8f0">${h}</option>`).join('')}
+      </select>`
+    :'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>';
   d.innerHTML=`
     <div class="goal-top">
       <input class="nin" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)"/>
-      ${!isDone?`<select class="htag ${HC[hi]}" onchange="setH(${i},+this.value,this)">${HZ.map((h,hi2)=>`<option value="${hi2}"${hi2===hi?' selected':''} style="background:#1e2d45;color:var(--white)">${h}</option>`).join('')}</select>`:'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>'}
+      ${hzSel}
+      <button class="goal-toggle" onclick="toggleGoalCollapse(${i})" title="קווץ/הרחב">▾</button>
       <button class="htag" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10px" onclick="toggleDone(${i})">${isDone?'↩ פתח':'✓ סמן כהושלם'}</button>
       <button class="bdel" onclick="delGoal(${i})">×</button>
     </div>
-    <div class="gnums">
-      <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת? הכנס את הסכום הנוכחי בשקלים.</span></span>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
-      <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
-    </div>
-    <div class="mf" style="margin-bottom:9px"><label><span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span>איפה הכסף</label>
-      <input value="${esc(g.where)}" placeholder="עו\"ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
-        style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
-    </div>
-    <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
-    <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${isDone?' 🎉':''}</div>
-    ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>₪${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}`;
+    <div class="goal-body" id="goal-body-${i}">
+      <div class="gnums">
+        <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת? הכנס את הסכום הנוכחי בשקלים.</span></span>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
+        <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
+      </div>
+      <div class="mf" style="margin-bottom:9px"><label><span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span>איפה הכסף</label>
+        <input value="${esc(g.where)}" placeholder="עו&quot;ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
+          style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
+      </div>
+      <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
+      <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${isDone?' 🎉':''}</div>
+      ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>₪${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}
+    </div>`;
   return d;
 }
 function gu(el){
@@ -470,12 +516,7 @@ function gu(el){
   if(f==='saved'||f==='needed')touchSection('goals');
   markDirty();
 }
-function setH(i,h,sel){
-  D.goals[i].h=h;
-  HC.forEach(c=>sel.classList.remove(c));
-  sel.classList.add(HC[h]);
-  touchSection('goals');markDirty();
-}
+function setH(i,h,sel){D.goals[i].h=h;renderGoals();touchSection('goals');markDirty();}
 function toggleDone(i){// also refresh locations
 
   const gl=D.goals[i];
@@ -510,7 +551,11 @@ function showGoalError(i,msg){
     setTimeout(()=>err.remove(),4000);
   }
 }
-function addGoal(){D.goals.push({name:'',where:'',saved:'',needed:'',h:0,done:false});renderGoals();touchSection('goals');markDirty();}
+function addGoal(){
+  D.goals.push({name:'',where:'',saved:'',needed:'',h:-1,done:false});
+  renderGoals();touchSection('goals');markDirty();
+  setTimeout(()=>{const last=document.querySelector('#goals-by-horizon .goal-card:last-child');if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+}
 function delGoal(i){D.goals.splice(i,1);renderGoals();renderLocsAutoSummary();markDirty();}
 
 // ══ LOCATIONS ══
@@ -1660,7 +1705,7 @@ function renderDash(){
       </div>
       <div class="pbar" style="height:9px"><div class="pfill" style="width:${pct}%"></div></div>
       <div style="display:flex;justify-content:space-between;margin-top:3px">
-        <span style="font-size:10px;color:var(--t3)">${HZ[g.h||0]}</span>
+        <span style="font-size:10px;color:var(--t3)">${HZ[Math.max(0,g.h||0)]}</span>
         <span style="font-size:10px;color:var(--t2)">${pct}%</span>
       </div>
     </div>`;
@@ -1787,12 +1832,12 @@ async function exportPDF(){
   const goalRows=(D.goals||[]).filter(gl=>!gl.done).map(gl=>{
     const sv=parseFloat(gl.saved)||0,nd=parseFloat(gl.needed)||0;
     const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
-    const monthly=nd>sv&&nd>0?Math.ceil((nd-sv)/GOAL_HZ_MONTHS[gl.h||0]):0;
+    const monthly=nd>sv&&nd>0?Math.ceil((nd-sv)/GOAL_HZ_MONTHS[Math.max(0,gl.h||0)]):0;
     return `<tr>
       <td>${esc(gl.name)}</td>
       <td>${fmt(sv)}</td><td>${fmt(nd)}</td>
       <td><div class="pbar-pdf"><div class="pfill-pdf" style="width:${pct}%"></div></div><span>${pct}%</span></td>
-      <td>${HZ[gl.h||0]}</td>
+      <td>${HZ[Math.max(0,gl.h||0)]}</td>
       <td>${monthly?'₪'+fmt(monthly)+'/חודש':'—'}</td>
     </tr>`;
   }).join('');
@@ -2182,7 +2227,7 @@ function renderCalendar(){
   const el=document.getElementById('cal-items');if(!el)return;
   const items=[];
   (D.goals||[]).filter(g=>!g.done&&g.name).forEach(g=>{
-    const months=[6,30,90,180][g.h||0];
+    const months=[6,30,90,180][Math.max(0,g.h||0)];
     const d=new Date();d.setMonth(d.getMonth()+months);
     const sv=parseFloat(g.saved)||0,nd=parseFloat(g.needed)||0;
     if(nd>0)items.push({name:g.name,date:d,saved:sv,needed:nd});

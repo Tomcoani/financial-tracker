@@ -140,6 +140,10 @@ select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background
 .h1{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);font-size:12px;padding:4px 12px}
 .h2{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.3);font-size:12px;padding:4px 12px}
 .h3{background:rgba(139,92,246,.2);color:#c4b5fd;border:1px solid rgba(139,92,246,.3);font-size:12px;padding:4px 12px}
+.htag-new{background:rgba(148,163,184,.1);color:var(--t2);border:1px solid var(--border);font-size:12px;padding:4px 12px}
+.goal-toggle{background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:13px;padding:0 3px;flex-shrink:0;transition:color .15s;}
+.goal-toggle:hover{color:var(--white);}
+.goal-body{}
 .gnums{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
 .mf{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:9px 11px;}
 .mf label{font-size:10px;color:var(--t2);display:block;margin-bottom:3px;font-weight:700;text-transform:uppercase;text-align:right;}
