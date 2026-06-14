@@ -2080,6 +2080,27 @@ async function exportPDF(){
     </table>
   </div>`:''}
 
+  <!-- ASSETS INVENTORY -->
+  ${(()=>{
+    const assets=(D.locations||[]).filter(l=>!l._auto&&l.name);
+    if(!assets.length)return '';
+    const total=assets.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
+    const rows=assets.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">₪${fmt(parseFloat(l.amount)||0)}</td></tr>`).join('');
+    return `<div class="section"><div class="section-title">רשימת נכסים נוכחית</div>
+    <table><thead><tr><th>שם נכס</th><th>סכום</th></tr></thead>
+    <tbody>${rows}<tr style="font-weight:800;border-top:2px solid #e2e8f0"><td>סה"כ</td><td class="num">₪${fmt(total)}</td></tr></tbody></table></div>`;
+  })()}
+
+  <!-- TRANSFER PLAN -->
+  ${(()=>{
+    const transfers=(D.locations||[]).filter(l=>!l._auto&&l.name&&(l.whereTo||'').trim());
+    if(!transfers.length)return '';
+    const rows=transfers.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">₪${fmt(parseFloat(l.amount)||0)}</td><td>${esc(l.whereTo)}</td></tr>`).join('');
+    return `<div class="section"><div class="section-title">תכנית העברת כספים</div>
+    <table><thead><tr><th>נכס נוכחי</th><th>סכום</th><th>לאן מועבר</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  })()}
+
   <!-- PENSION -->
   ${penRows?`<div class="section">
     <div class="section-title">מוצרי פנסיה ואפיקי חיסכון</div>
