@@ -2400,14 +2400,10 @@ async function userChangeEmail(){
     const user=auth.currentUser;
     const cred=firebase.auth.EmailAuthProvider.credential(user.email,pass);
     await user.reauthenticateWithCredential(cred);
-    await user.updateEmail(newEmail);
-    if(D.settings)D.settings.email=newEmail;
-    await db.collection('users').doc(CU).update({email:newEmail});
-    await saveDataFS(CU,D);
-    show('מייל עודכן בהצלחה ✓',true);
+    await user.verifyBeforeUpdateEmail(newEmail);
+    show('נשלח אימות ל-'+newEmail+' — לחץ על הקישור בהודעה לאשר את השינוי',true);
     document.getElementById('sec-new-email').value='';
     document.getElementById('sec-email-pass').value='';
-    const setEl=document.getElementById('set-email');if(setEl)setEl.value=newEmail;
   }catch(e){
     if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')show('הסיסמה שגויה',false);
     else if(e.code==='auth/email-already-in-use')show('המייל הזה כבר בשימוש',false);
