@@ -1,7 +1,7 @@
 :root {
   --bg:#080c14; --s1:#0d1220; --s2:#111827; --s3:#1a2235; --border:#1e2d45;
   --teal:#42ebd6; --teal2:#2dd4bf; --teal-dim:rgba(66,235,214,.1); --teal-border:rgba(66,235,214,.22);
-  --white:#f1f5f9; --t2:#94a3b8; --t3:#475569;
+  --white:#f1f5f9; --t2:#94a3b8; --t3:#64748b;
   --red:#ef4444; --amber:#f59e0b; --blue:#3b82f6; --green:#10b981; --purple:#8b5cf6;
   --r:14px; --font:'Heebo',sans-serif;
 }
@@ -263,11 +263,11 @@ select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background
 /* Goal field tooltip */
 .q-tip{display:inline-flex;align-items:center;justify-content:center;
   width:15px;height:15px;border-radius:50%;border:1px solid var(--border);
-  background:var(--s2);color:var(--t3);font-size:9px;font-weight:700;
-  cursor:pointer;flex-shrink:0;vertical-align:middle;margin-right:3px;
+  background:var(--s2);color:var(--t2);font-size:9px;font-weight:700;
+  cursor:pointer;flex-shrink:0;vertical-align:middle;margin-right:0;margin-left:4px;
   position:relative;line-height:1;}
 .q-tip:hover{border-color:var(--teal);color:var(--teal);}
-.q-tip .q-popup{display:none;position:absolute;bottom:calc(100% + 6px);right:0;
+.q-tip .q-popup{display:none;position:absolute;bottom:calc(100% + 6px);left:0;
   min-width:180px;max-width:240px;background:var(--s1);border:1px solid var(--teal-border);
   border-radius:10px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.7;
   z-index:200;text-align:right;direction:rtl;white-space:normal;pointer-events:none;

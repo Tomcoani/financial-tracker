@@ -124,16 +124,16 @@
         <div class="hint">ענה על 3 שאלות פשוטות וקבל תשובה מיידית</div>
         <div class="cashflow-row">
           <div class="cf-field">
-            <label><span class="q-tip">?<span class="q-popup">הכנס את היתרה הנוכחית בחשבון העו"ש שלך נכון להיום.</span></span>כמה יש לך היום בעו"ש? (₪)</label>
+            <label>כמה יש לך היום בעו"ש? (₪)<span class="q-tip">?<span class="q-popup">הכנס את היתרה הנוכחית בחשבון העו"ש שלך נכון להיום.</span></span></label>
             <input type="number" id="cf-balance" placeholder="0" oninput="calcCashFlow()"/>
           </div>
           <div class="cf-field">
-            <label><span class="q-tip">?<span class="q-popup">האפס החדש הוא הסכום המינימלי שאתה רוצה לשמור בעו"ש כ"כרית ביטחון" — סכום שמתחתיו לא תגע.</span></span>מה ה"אפס החדש" שלך? (₪)</label>
+            <label>מה ה"אפס החדש" שלך? (₪)<span class="q-tip">?<span class="q-popup">האפס החדש הוא הסכום המינימלי שאתה רוצה לשמור בעו"ש כ"כרית ביטחון" — סכום שמתחתיו לא תגע.</span></span></label>
             <input type="number" id="cf-zero" placeholder="0" oninput="calcCashFlow()"/>
           </div>
         </div>
         <div class="cf-field" style="margin-bottom:12px">
-          <label><span class="q-tip">?<span class="q-popup">הוצאות קרובות שטרם נחויבו: שכ"ד, ביטוחים, מע"מ, ביטוח לאומי, הוצאות מיוחדות — כל מה שצפוי לצאת עד החיוב הבא.</span></span>הוצאות צפויות עד חיוב הבא? (₪)</label>
+          <label>הוצאות צפויות עד חיוב הבא? (₪)<span class="q-tip">?<span class="q-popup">הוצאות קרובות שטרם נחויבו: שכ"ד, ביטוחים, מע"מ, ביטוח לאומי, הוצאות מיוחדות — כל מה שצפוי לצאת עד החיוב הבא.</span></span></label>
           <input type="number" id="cf-expenses" placeholder="0" oninput="calcCashFlow()"/>
         </div>
         <div id="cf-result" class="cf-result" style="display:none"></div>

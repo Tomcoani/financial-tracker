@@ -498,10 +498,10 @@ function mkGoal(g,i){
     </div>
     <div class="goal-body" id="goal-body-${i}">
       <div class="gnums">
-        <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת? הכנס את הסכום הנוכחי בשקלים.</span></span>כמה חסכת</label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
-        <div class="mf"><label><span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span>סכום יעד</label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
+        <div class="mf"><label>כמה חסכת<span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת? הכנס את הסכום הנוכחי בשקלים.</span></span></label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
+        <div class="mf"><label>סכום יעד<span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span></label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
       </div>
-      <div class="mf" style="margin-bottom:9px"><label><span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span>איפה הכסף</label>
+      <div class="mf" style="margin-bottom:9px"><label>איפה הכסף<span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span></label>
         <input value="${esc(g.where)}" placeholder="עו&quot;ש / תיק..." data-i="${i}" data-f="where" oninput="gu(this)"
           placeholder="כאן להכניס את המיקום הספציפי שהכסף נמצא בו - עובר ושב / קרן כספית וכד׳"
           style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
