@@ -632,12 +632,12 @@ function mkPen(p,i){
     <div class="pr2">
       <div class="pf">
         <label>דמי ניהול מהפקדה <span style="color:var(--t3)">(יעד: עד ${feeDepTarget}%${isKeren?' — 0% לקרן השתלמות':''})</span></label>
-        <input type="number" value="${p.feesDeposit||''}" placeholder="%" data-i="${i}" data-f="feesDeposit" oninput="pu(this)"/>
+        <input type="number" value="${p.feesDeposit||''}" placeholder="%" data-i="${i}" data-f="feesDeposit" data-no-fmt oninput="pu(this)"/>
         ${feeDepHint?`<span class="fee-hint ${feeDepClass}">${feeDepHint}</span>`:''}
       </div>
       <div class="pf">
         <label>דמי ניהול מצבירה <span style="color:var(--t3)">(יעד: עד ${feeAccTarget}%)</span></label>
-        <input type="number" value="${p.feesAccum||''}" placeholder="%" data-i="${i}" data-f="feesAccum" oninput="pu(this)"/>
+        <input type="number" value="${p.feesAccum||''}" placeholder="%" data-i="${i}" data-f="feesAccum" data-no-fmt oninput="pu(this)"/>
         ${feeAccHint?`<span class="fee-hint ${feeAccClass}">${feeAccHint}</span>`:''}
       </div>
     </div>
@@ -2921,7 +2921,7 @@ function attachNumFormat(el){
 }
 
 function attachAllNumFormats(){
-  document.querySelectorAll('input[type="number"]').forEach(attachNumFormat);
+  document.querySelectorAll('input[type="number"]:not([data-no-fmt])').forEach(attachNumFormat);
 }
 
 // Auto-attach number formatting after renders
