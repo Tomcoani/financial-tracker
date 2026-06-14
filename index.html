@@ -304,6 +304,9 @@
             <button class="btnout" onclick="startTour()" style="width:100%">🗺️ הצג סיור מחדש</button>
           </div>
         </div>
+        <div id="settings-gender-hint" style="display:none;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);border-radius:10px;padding:12px 14px;margin-top:12px;font-size:13px;color:var(--t1);text-align:right">
+          👆 הגדר לשון פנייה מועדפת למעלה ולחץ "שמור הגדרות" כדי שנוכל לפנות אליך בצורה הנכונה.
+        </div>
         <button class="btnsave" onclick="saveSettings()" style="margin-top:8px">שמור הגדרות ✓</button>
       </div>
 
@@ -455,13 +458,18 @@
 <div class="overlay" id="welcome-modal" style="display:none">
   <div class="modal" style="text-align:right">
     <h2 style="margin-bottom:8px">👋 ברוך הבא!</h2>
-    <p style="color:var(--t2);font-size:13px;margin-bottom:20px">כדי שנוכל לפנות אליך בשמך, איך תרצה שנקרא לך?</p>
+    <p style="color:var(--t2);font-size:13px;margin-bottom:20px">כדי שנוכל לפנות אליך בשמך, נשמח לוודא את פרטייך.</p>
     <input id="welcome-name-input" type="text" placeholder="שם מלא" dir="rtl"
       style="width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;
-      color:var(--white);font-family:var(--font);font-size:15px;outline:none;text-align:right;margin-bottom:16px"
+      color:var(--white);font-family:var(--font);font-size:15px;outline:none;text-align:right;margin-bottom:12px"
+      onkeydown="if(event.key==='Enter')document.getElementById('welcome-email-input').focus()"/>
+    <input id="welcome-email-input" type="text" placeholder="כתובת מייל" dir="ltr"
+      style="width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;
+      color:var(--white);font-family:var(--font);font-size:15px;outline:none;text-align:left;margin-bottom:12px"
       onkeydown="if(event.key==='Enter')saveWelcomeName()"/>
+    <div id="welcome-err" style="display:none;color:var(--red);font-size:13px;margin-bottom:10px;text-align:right"></div>
     <div class="modal-btns">
-      <button class="btnsnap primary" onclick="saveWelcomeName()" style="flex:1">שמור והמשך →</button>
+      <button class="btnsnap primary" onclick="saveWelcomeName()" style="flex:1">המשך להגדרות →</button>
     </div>
   </div>
 </div>

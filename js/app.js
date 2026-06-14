@@ -161,18 +161,24 @@ auth.onAuthStateChanged(async user=>{
 
 async function saveWelcomeName(){
   const name=document.getElementById('welcome-name-input').value.trim();
-  if(!name){
-    document.getElementById('welcome-name-input').style.borderColor='var(--red)';
-    return;
+  const emailRaw=(document.getElementById('welcome-email-input')?.value||'').trim().replace(/[​-‏‪-‮⁦-⁩﻿]/g,'').toLowerCase();
+  const errEl=document.getElementById('welcome-err');
+  const showErr=msg=>{if(errEl){errEl.textContent=msg;errEl.style.display='block';}};
+  if(!name){document.getElementById('welcome-name-input').style.borderColor='var(--red)';showErr('נא להכניס שם');return;}
+  if(!emailRaw||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)){
+    const eEl=document.getElementById('welcome-email-input');
+    if(eEl)eEl.style.borderColor='var(--red)';
+    showErr('נא להכניס כתובת מייל תקינה');return;
   }
   D.settings.displayName=name;
-  D.settings.email=D.settings.email||auth.currentUser?.email||'';
+  D.settings.email=emailRaw;
   document.getElementById('uname').textContent=name;
   document.getElementById('welcome-modal').style.display='none';
   await auth.currentUser?.updateProfile({displayName:name});
   await saveDataFS(CU,D);
   markDirty();
-  if(!localStorage.getItem('tour_done_'+CU))setTimeout(()=>startTour(),500);
+  localStorage.setItem('onboarding_gender_'+CU,'1');
+  goTo('settings',document.getElementById('nav-settings'));
 }
 
 // ══ AUTH ACTIONS ══
@@ -445,6 +451,7 @@ function renderGoals(){
   const done=(D.goals||[]).filter(g=>g.done);
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
   done.forEach(g=>doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g))));
+  setTimeout(attachAllNumFormats,0);
 }
 function toggleGoalCollapse(i){
   const body=document.getElementById('goal-body-'+i);
@@ -2197,6 +2204,8 @@ function renderSettings(){
   });
   const gEl=document.getElementById('set-gender');
   if(gEl)gEl.value=s.gender||'male';
+  const hintEl=document.getElementById('settings-gender-hint');
+  if(hintEl)hintEl.style.display=(CU&&localStorage.getItem('onboarding_gender_'+CU))?'block':'none';
   renderCalendar();
 }
 async function saveSettings(){
@@ -2212,6 +2221,9 @@ async function saveSettings(){
   // Update header name immediately
   const unameEl=document.getElementById('uname');
   if(unameEl&&D.settings.displayName)unameEl.textContent=D.settings.displayName;
+  if(CU)localStorage.removeItem('onboarding_gender_'+CU);
+  const hintEl=document.getElementById('settings-gender-hint');
+  if(hintEl)hintEl.style.display='none';
   await saveDataFS(CU,D);
   showToast('הגדרות נשמרו ✓');
 }
@@ -2552,29 +2564,49 @@ service cloud.firestore {
 }
 */
 
+const _locExpanded={};
 function renderLocsAutoSummary(){
   const el=document.getElementById('locs-auto-summary');
   if(!el)return;
   const whereMap={};
-  (D.goals||[]).forEach(g=>{
+  (D.goals||[]).filter(g=>!g.done).forEach(g=>{
     if(!g.where||!g.saved)return;
-    const key=g.where.trim();
-    if(!key)return;
-    whereMap[key]=(whereMap[key]||0)+(parseFloat(g.saved)||0);
+    const key=g.where.trim();if(!key)return;
+    if(!whereMap[key])whereMap[key]={total:0,goals:[]};
+    const sv=parseFloat(g.saved)||0;
+    whereMap[key].total+=sv;
+    if(g.name)whereMap[key].goals.push({name:g.name,saved:sv});
   });
   if(!Object.keys(whereMap).length){el.innerHTML='';return;}
-  let html=`<div style="font-size:11px;color:var(--teal);margin-bottom:8px;font-weight:600">🔄 מחושב אוטומטית מהמטרות שלך:</div>`;
+  const keys=Object.keys(whereMap);
+  let html=`<div style="font-size:11px;color:var(--teal);margin-bottom:8px;font-weight:600">🔄 מחושב אוטומטית מהמטרות הפעילות שלך:</div>`;
   html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">`;
-  Object.entries(whereMap).forEach(([where,total])=>{
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
-      <span style="color:var(--t2)">${esc(where)}</span>
-      <span style="color:var(--teal);font-weight:700">${fmt(total)}</span>
+  keys.forEach((where,idx)=>{
+    const data=whereMap[where];
+    const isExp=!!_locExpanded[where];
+    const hasMore=idx<keys.length-1||isExp;
+    html+=`<div onclick="toggleLocRow('${where.replace(/'/g,"\\'")}')" style="display:flex;justify-content:space-between;align-items:center;
+      padding:10px 14px;${hasMore?'border-bottom:1px solid var(--border)':''}font-size:13px;cursor:pointer;user-select:none">
+      <span style="color:var(--t2);display:flex;align-items:center;gap:6px">
+        ${esc(where)} <span style="font-size:10px;color:var(--t3)">${isExp?'▲':'▼'}</span>
+      </span>
+      <span style="color:var(--teal);font-weight:700">${fmt(data.total)} ₪</span>
     </div>`;
+    if(isExp){
+      data.goals.forEach((gl,gi)=>{
+        const isLastSub=gi===data.goals.length-1&&idx===keys.length-1;
+        html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 22px;
+          ${!isLastSub?'border-bottom:1px solid var(--border)':''}background:rgba(0,0,0,.12)">
+          <span style="font-size:12px;color:var(--t3)">↳ ${esc(gl.name)}</span>
+          <span style="font-size:12px;color:var(--teal);font-weight:600">${fmt(gl.saved)} ₪</span>
+        </div>`;
+      });
+    }
   });
   html+=`</div>`;
   el.innerHTML=html;
-
 }
+function toggleLocRow(where){_locExpanded[where]=!_locExpanded[where];renderLocsAutoSummary();}
 
 // ══ HISTORY RESTORE + DELETE ══
 async function restoreSnap(i){
@@ -2831,6 +2863,10 @@ function attachNumFormat(el){
       el.style.fontWeight='700';
     }
   }
+}
+
+function attachAllNumFormats(){
+  document.querySelectorAll('input[type="number"]').forEach(attachNumFormat);
 }
 
 // Auto-attach number formatting after renders
