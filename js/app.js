@@ -2327,6 +2327,11 @@ async function renderAdmin(){
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                 <i data-lucide="key-round" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> שלח איפוס סיסמה
               </button>`:''}
+              ${u.email?`<button onclick="event.stopPropagation();adminChangeEmail('${u.uid}','${esc(u.email)}','${esc(u.name)}')"
+                style="margin-top:4px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:#a5b4fc;
+                border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                <i data-lucide="mail" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> שנה מייל
+              </button>`:''}
               <button onclick="event.stopPropagation();adminDeleteUser('${u.uid}','${esc(u.name)}')"
                 style="margin-top:4px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
@@ -2365,6 +2370,46 @@ async function adminDeleteUser(uid,name){
     renderAdmin();
   }catch(e){
     alert('שגיאה במחיקה: '+e.message);
+  }
+}
+async function adminChangeEmail(uid,oldEmail,name){
+  const newEmail=prompt(`שינוי מייל עבור ${name}\n\nמייל נוכחי: ${oldEmail}\n\nהכנס מייל חדש:`);
+  if(!newEmail||!newEmail.trim())return;
+  const cleaned=newEmail.trim().replace(/[​-‏‪-‮⁦-⁩﻿]/g,'').toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)){alert('כתובת מייל לא תקינה');return;}
+  if(cleaned===oldEmail.toLowerCase()){alert('המייל החדש זהה לישן');return;}
+  if(!confirm(`לשנות מייל של "${name}"?\n\n${oldEmail}  →  ${cleaned}\n\nכל הנתונים יועברו לחשבון החדש ויישלח איפוס סיסמה.`))return;
+  try{
+    // 1. Load existing Firestore data
+    const [parentSnap,dataSnap]=await Promise.all([
+      db.collection('users').doc(uid).get(),
+      db.collection('users').doc(uid).collection('data').doc('main').get()
+    ]);
+    if(!dataSnap.exists){alert('לא נמצאו נתונים עבור משתמש זה');return;}
+    const oldData=dataSnap.data();
+    const oldParent=parentSnap.data()||{};
+    // 2. Create new auth user with correct email (via secondary app)
+    const secondaryApp=firebase.apps.find(a=>a.name==='secondary')||firebase.initializeApp(firebase.app().options,'secondary');
+    const secondaryAuth=secondaryApp.auth();
+    const tempPass='TomAni'+Math.floor(Math.random()*9000+1000)+'!';
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(cleaned,tempPass);
+    const newUid=cred.user.uid;
+    await cred.user.updateProfile({displayName:oldParent.displayName||oldData.settings?.displayName||name});
+    // 3. Write data under new UID with updated email
+    const newData={...oldData,settings:{...(oldData.settings||{}),email:cleaned}};
+    await db.collection('users').doc(newUid).set({...oldParent,email:cleaned,displayName:oldParent.displayName||oldData.settings?.displayName||name});
+    await db.collection('users').doc(newUid).collection('data').doc('main').set(newData);
+    // 4. Send password reset to new email
+    await secondaryAuth.sendPasswordResetEmail(cleaned,{url:'https://tomcoani.github.io/financial-tracker/',handleCodeInApp:false});
+    await secondaryAuth.signOut();
+    // 5. Delete old Firestore data (Auth account stays but has no data)
+    await db.collection('users').doc(uid).collection('data').doc('main').delete();
+    await db.collection('users').doc(uid).delete();
+    showToast('מייל שונה ✓ — נשלח איפוס סיסמה ל-'+cleaned);
+    renderAdmin();
+  }catch(e){
+    if(e.code==='auth/email-already-in-use')alert('המייל '+cleaned+' כבר קיים במערכת');
+    else alert('שגיאה: '+fbErr(e.code||e.message));
   }
 }
 function toggleAdminCard(uid){
