@@ -414,22 +414,16 @@ function switchGoalTab(tab){
   document.getElementById('goals-done-list').style.display=tab==='done'?'block':'none';
 }
 function renderGoals(){
-  const byH=[[],[],[],[]];
-  (D.goals||[]).filter(g=>!g.done).forEach(g=>{byH[g.h||0].push({g,idx:(D.goals||[]).indexOf(g)});});
   const hzEl=document.getElementById('goals-by-horizon');hzEl.innerHTML='';
-  HZ.forEach((hz,hi)=>{
-    if(!byH[hi].length)return;
-    const grp=document.createElement('div');grp.className='hz-group';
-    grp.innerHTML=`<div class="hz-group-title">${hz} <span style="font-size:10px;color:var(--t2);font-weight:400">(${g('לחץ','לחצי')} על כפתור הטווח ↻ במטרה כדי לשנות)</span></div>`;
-    byH[hi].forEach(({g,idx})=>grp.appendChild(mkGoal(g,idx)));
-    hzEl.appendChild(grp);
-  });
-  if(!(D.goals||[]).filter(g=>!g.done).length)
+  const active=(D.goals||[]).filter(g=>!g.done);
+  if(!active.length)
     hzEl.innerHTML=`<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">${g('לחץ','לחצי')} "הוספת מטרה חדשה" כדי להתחיל</p>`;
+  else
+    active.forEach(goal=>hzEl.appendChild(mkGoal(goal,(D.goals||[]).indexOf(goal))));
   const doneEl=document.getElementById('goals-done-list');doneEl.innerHTML='';
   const done=(D.goals||[]).filter(g=>g.done);
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
-  done.forEach(g=>{doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g)));});
+  done.forEach(g=>doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g))));
 }
 // Months per horizon index — matches HZ labels: 12m / 1-5y / 5-10y / 10+y
 const GOAL_HZ_MONTHS=[12,36,84,180];
@@ -447,7 +441,7 @@ function mkGoal(g,i){
   d.innerHTML=`
     <div class="goal-top">
       <input class="nin" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)"/>
-      ${!isDone?`<button class="htag ${HC[hi]}" onclick="cycH(${i})" title="לחץ לשינוי טווח הזמן">${HZ[hi]} ↻</button>`:'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>'}
+      ${!isDone?`<select class="htag ${HC[hi]}" onchange="setH(${i},+this.value,this)">${HZ.map((h,hi2)=>`<option value="${hi2}"${hi2===hi?' selected':''} style="background:#1e2d45;color:var(--white)">${h}</option>`).join('')}</select>`:'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>'}
       <button class="htag" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10px" onclick="toggleDone(${i})">${isDone?'↩ פתח':'✓ סמן כהושלם'}</button>
       <button class="bdel" onclick="delGoal(${i})">×</button>
     </div>
@@ -476,7 +470,12 @@ function gu(el){
   if(f==='saved'||f==='needed')touchSection('goals');
   markDirty();
 }
-function cycH(i){D.goals[i].h=((D.goals[i].h||0)+1)%4;renderGoals();touchSection('goals');markDirty();}
+function setH(i,h,sel){
+  D.goals[i].h=h;
+  HC.forEach(c=>sel.classList.remove(c));
+  sel.classList.add(HC[h]);
+  touchSection('goals');markDirty();
+}
 function toggleDone(i){// also refresh locations
 
   const gl=D.goals[i];

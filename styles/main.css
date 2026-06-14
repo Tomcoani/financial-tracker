@@ -135,6 +135,7 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .nin::placeholder{color:var(--t3);}
 .htag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;cursor:pointer;border:none;font-family:var(--font);white-space:nowrap;transition:opacity .15s,transform .15s;}
 .htag:hover{opacity:.75;transform:scale(1.06);}
+select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='currentColor' opacity='.7'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 7px center;outline:none;}
 .h0{background:rgba(66,235,214,.2);color:var(--teal);border:1px solid var(--teal-border);font-size:12px;padding:4px 12px}
 .h1{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);font-size:12px;padding:4px 12px}
 .h2{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.3);font-size:12px;padding:4px 12px}
