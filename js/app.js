@@ -1066,17 +1066,16 @@ function nwPeriodBlur(el){
   const normalized=parsed?(parsed.m+'/'+parsed.y):raw;
   D.nwPeriods[i]=normalized;
   el.value=normalized;
-  // Auto-fill subsequent empty periods (monthly intervals) only from first field
+  // Auto-fill subsequent empty periods (6-month intervals) only from first field
   if(i===0&&normalized&&parsed){
     try{
       let {m,y}=parsed;
       const cnt=D.nwPeriodsCount||6;
       for(let j=1;j<cnt;j++){
-        m+=1;if(m>12){m=1;y++;}
+        m+=6;if(m>12){m-=12;y++;}
         if(!D.nwPeriods[j]||D.nwPeriods[j].includes('NaN')||D.nwPeriods[j]===''){
           D.nwPeriods[j]=m+'/'+y;
         }
-        // Note: if user already set a period manually, don't override it
       }
     }catch(e){}
   }
