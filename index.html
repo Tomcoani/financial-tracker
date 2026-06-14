@@ -153,13 +153,20 @@
         <div id="goals-done-list" style="display:none"></div>
         <button class="btnadd" onclick="addGoal()">+ הוספת מטרה חדשה</button>
       </div>
-      <!-- LOCATIONS (unified) -->
+      <!-- ASSETS INVENTORY -->
       <div class="card">
-        <div class="ch-title">כסף קיים — מאיפה ולאיפה</div>
-        <div class="ch-hint">רשום את כל מקומות הכסף שיש לך כרגע, ולאן תרצה להעביר כל סכום.</div>
+        <div class="ch-title">רשימת נכסים נוכחית</div>
+        <div class="ch-hint">רשום את כל הנכסים הפיננסיים של הלקוח — שם הנכס והסכום הנוכחי שיש בו.</div>
+        <div id="locs-inventory"></div>
+        <button class="btnadd" onclick="addLoc()">+ הוסף נכס</button>
+      </div>
+
+      <!-- TRANSFER PLAN -->
+      <div class="card">
+        <div class="ch-title">תכנית העברת כספים</div>
+        <div class="ch-hint">לאחר מילוי הנכסים — ציין לכל נכס לאן להעביר את הכסף.</div>
         <div id="locs-auto-summary" style="margin-bottom:10px"></div>
-        <div id="locs-list"></div>
-        <button class="btnadd" onclick="addLoc()">+ הוסף מיקום</button>
+        <div id="locs-transfer"></div>
       </div>
     </div>
 
