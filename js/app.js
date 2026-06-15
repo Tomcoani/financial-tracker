@@ -805,13 +805,6 @@ function syncNWFromPension(){
       }
     });
   });
-  // Sync emergency goal → savings
-  const emergGoal=(D.goals||[]).find(g=>g.name&&g.name.includes('חירום'));
-  if(emergGoal&&emergGoal.saved){
-    D.nwData.savings.rows.forEach(row=>{
-      if(row.name.includes('חירום')&&!row.vals[syncCol])row.vals[syncCol]=emergGoal.saved;
-    });
-  }
   // Sync locations → matching NW rows (half-auto: only fills empty cells)
   (D.locations||[]).forEach(loc=>{
     if(!loc.name||!loc.amount)return;
