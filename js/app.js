@@ -286,7 +286,7 @@ function renderAll(){
   document.getElementById('monthly').value=D.monthly||'';
   document.getElementById('pen-notes').value=D.penNotes||'';
   document.getElementById('gnotes').value=D.gnotes||'';
-  renderAccountSplit(parseFloat(D.monthly)||0);
+  renderAccountSplit(0);
   // Only render what's immediately needed
   renderSettings();
   renderDash();
@@ -639,6 +639,7 @@ function renderLocsTransfer(){
       </div>`;
     el.appendChild(row);
   });
+  updateLocFooter();
 }
 function updateLocFooter(){
   const el=document.getElementById('loc-footer');
@@ -649,14 +650,21 @@ function updateLocFooter(){
     total+=a;
     if((l.whereTo||'').trim())moving+=a;
   });
-  const staying=total-moving;
   if(!total){el.innerHTML='';return;}
-  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;padding:9px 0 2px;margin-top:2px">
-    <div style="display:flex;gap:16px;flex-wrap:wrap">
-      ${moving>0?`<span style="font-size:12px;color:var(--t2)">מועבר → <strong style="color:var(--teal)">${fmt(moving)} ₪</strong></span>`:''}
-      ${staying>0&&moving>0?`<span style="font-size:12px;color:var(--t2)">נשאר <strong style="color:var(--t3)">${fmt(staying)} ₪</strong></span>`:''}
+  const unallocated=total-moving;
+  el.innerHTML=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+    ${moving>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
+      <span style="color:var(--t2)">מועבר לייעוד חדש</span>
+      <span style="color:var(--teal);font-weight:700">${fmt(moving)} ₪</span>
+    </div>`:''}
+    ${unallocated>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
+      <span style="color:var(--amber)">⚠ טרם הוקצה</span>
+      <span style="color:var(--amber);font-weight:700">${fmt(unallocated)} ₪</span>
+    </div>`:'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה</div>'}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
+      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(total)} ₪</span>
     </div>
-    <span style="font-size:14px;font-weight:800;color:var(--teal)">סה"כ ${fmt(total)} ₪</span>
   </div>`;
 }
 function lu(el){
@@ -664,6 +672,7 @@ function lu(el){
   if(!D.locations[i])return;
   D.locations[i][f]=el.value;
   if(f==='amount')D.locations[i]._manual=true;
+  if(f==='whereTo')updateLocFooter();
   markDirty();
 }
 function addLoc(){D.locations.push({name:'',amount:'',whereTo:'',_manual:true});renderLocs();markDirty();}
