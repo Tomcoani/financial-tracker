@@ -633,10 +633,9 @@ function renderLocsTransfer(){
         border:1px solid ${hasTo?'var(--teal-border)':'var(--border)'};
         border-radius:10px 0 0 10px;border-left:none;
         padding:9px 12px;display:flex;flex-direction:column;justify-content:center">
-        <input value="${esc(l.whereTo||'')}" placeholder="לאן מועבר..." data-i="${ri}" data-f="whereTo" oninput="lu(this)"
+        <input value="${esc(l.whereTo||'')}" placeholder="לאן מועבר הכסף" data-i="${ri}" data-f="whereTo" oninput="lu(this)"
           style="background:transparent;border:none;outline:none;color:${hasTo?'var(--teal)':'var(--t2)'};
           font-family:var(--font);font-size:13px;font-weight:${hasTo?'600':'400'};text-align:right;width:100%"/>
-        ${!hasTo?`<div style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right">ריק = נשאר</div>`:''}
       </div>`;
     el.appendChild(row);
   });
