@@ -2074,14 +2074,15 @@ async function exportPDF(){
   // Goals rows with monthly calc
   const goalRows=(D.goals||[]).filter(gl=>!gl.done).map(gl=>{
     const sv=parseFloat(gl.saved)||0,nd=parseFloat(gl.needed)||0;
+    const svCur=gl.savedCurrency||'ILS',ndCur=gl.neededCurrency||'ILS';
     const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
     const monthly=nd>sv&&nd>0?Math.ceil((nd-sv)/GOAL_HZ_MONTHS[Math.max(0,gl.h||0)]):0;
     return `<tr>
       <td>${esc(gl.name)}</td>
-      <td>${fmt(sv)}</td><td>${fmt(nd)}</td>
+      <td>${fmtCur(sv,svCur)}</td><td>${fmtCur(nd,ndCur)}</td>
       <td><div class="pbar-pdf"><div class="pfill-pdf" style="width:${pct}%"></div></div><span>${pct}%</span></td>
       <td>${HZ[Math.max(0,gl.h||0)]}</td>
-      <td>${monthly?'₪'+fmt(monthly)+'/חודש':'—'}</td>
+      <td>${monthly?fmtCur(monthly,ndCur)+'/חודש':'—'}</td>
     </tr>`;
   }).join('');
 
@@ -2237,19 +2238,21 @@ async function exportPDF(){
   ${(()=>{
     const assets=(D.locations||[]).filter(l=>!l._auto&&l.name);
     if(!assets.length)return '';
-    const total=assets.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
-    const rows=assets.map(l=>{const cur=l.currency&&l.currency!=='ILS'?l.currency:'';return`<tr><td>${esc(l.name)}</td><td class="num">${cur?cur+' ':''}<span dir="ltr">${(parseFloat(l.amount)||0).toLocaleString('he-IL')}</span></td></tr>`;}).join('');
-    const totalILS=assets.reduce((s,l)=>s+toILS(parseFloat(l.amount)||0,l.currency||'ILS'),0);
+    const rows=assets.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">${fmtCur(parseFloat(l.amount)||0,l.currency||'ILS')}</td></tr>`).join('');
+    const totByCur={};
+    assets.forEach(l=>{const c=l.currency||'ILS',a=parseFloat(l.amount)||0;if(a)totByCur[c]=(totByCur[c]||0)+a;});
+    const totalRows=Object.entries(totByCur).map(([c,a])=>
+      `<tr style="font-weight:800;border-top:2px solid #e2e8f0"><td>סה"כ ${c==='ILS'?'שקל':c==='USD'?'דולר':'אירו'}</td><td class="num">${fmtCur(a,c)}</td></tr>`).join('');
     return `<div class="section"><div class="section-title">רשימת נכסים נוכחית</div>
     <table><thead><tr><th>שם נכס</th><th>סכום</th></tr></thead>
-    <tbody>${rows}<tr style="font-weight:800;border-top:2px solid #e2e8f0"><td>סה"כ (₪)</td><td class="num">${fmt(totalILS)}</td></tr></tbody></table></div>`;
+    <tbody>${rows}${totalRows}</tbody></table></div>`;
   })()}
 
   <!-- TRANSFER PLAN -->
   ${(()=>{
     const transfers=(D.locations||[]).filter(l=>!l._auto&&l.name&&(l.whereTo||'').trim());
     if(!transfers.length)return '';
-    const rows=transfers.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">₪${fmt(parseFloat(l.amount)||0)}</td><td>${esc(l.whereTo)}</td></tr>`).join('');
+    const rows=transfers.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">${fmtCur(parseFloat(l.amount)||0,l.currency||'ILS')}</td><td>${esc(l.whereTo)}</td></tr>`).join('');
     return `<div class="section"><div class="section-title">תכנית העברת כספים</div>
     <table><thead><tr><th>נכס נוכחי</th><th>סכום</th><th>לאן מועבר</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
