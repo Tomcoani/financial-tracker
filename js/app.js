@@ -677,11 +677,14 @@ function renderLocsTransfer(){
       <div style="background:${hasTo?'rgba(66,235,214,.06)':'transparent'};
         border:1px solid ${hasTo?'var(--teal-border)':'var(--border)'};
         border-radius:10px 0 0 10px;border-left:none;
-        padding:9px 12px;display:flex;flex-direction:column;justify-content:center">
-        <input value="${esc(l.whereTo||'')}" placeholder="לאן מועבר הכסף" data-i="${ri}" data-f="whereTo" oninput="lu(this)"
-          ondragstart="event.stopPropagation()"
-          style="background:transparent;border:none;outline:none;color:${hasTo?'var(--teal)':'var(--t2)'};
-          font-family:var(--font);font-size:13px;font-weight:${hasTo?'600':'400'};text-align:right;width:100%"/>
+        padding:9px 12px;display:flex;align-items:center">
+        <textarea placeholder="לאן מועבר הכסף" data-i="${ri}" data-f="whereTo"
+          oninput="lu(this);autoResize(this)" ondragstart="event.stopPropagation()"
+          rows="1"
+          style="background:transparent;border:none;outline:none;resize:none;overflow:hidden;
+            color:${hasTo?'var(--teal)':'var(--t2)'};font-family:var(--font);font-size:13px;
+            font-weight:${hasTo?'600':'400'};text-align:right;width:100%;line-height:1.55;
+            padding:0;min-height:1.55em;direction:rtl">${esc(l.whereTo||'')}</textarea>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;color:var(--t3);
         font-size:18px;cursor:grab;user-select:none;padding:0 2px" title="גרור לשינוי סדר">⠿</div>`;
@@ -720,6 +723,7 @@ function renderLocsTransfer(){
     });
     el.appendChild(row);
   });
+  setTimeout(()=>{el.querySelectorAll('textarea').forEach(autoResize);},0);
   updateLocFooter();
 }
 function updateLocFooter(){
@@ -3160,7 +3164,8 @@ function fmt(n){
   const s='₪'+a.toLocaleString('he-IL');
   return n<0?'('+s+')':s;
 }
-function esc(s){return(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}
 function v(id){return document.getElementById(id).value.trim();}
 function deltaBadge(d){
