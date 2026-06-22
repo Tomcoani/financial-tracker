@@ -638,14 +638,21 @@ function renderLocsInventory(){
       <button class="bdel" onclick="delLoc(${ri})" style="flex-shrink:0;width:28px">×</button>`;
     el.appendChild(row);
   });
-  // total
-  let total=0;
-  manualLocs.forEach(l=>{total+=parseFloat(l.amount)||0;});
-  if(total>0){
+  // total per currency
+  const totByCur={};
+  manualLocs.forEach(l=>{
+    const c=l.currency||'ILS',a=parseFloat(l.amount)||0;
+    if(a)totByCur[c]=(totByCur[c]||0)+a;
+  });
+  if(Object.keys(totByCur).length){
     const ftr=document.createElement('div');
-    ftr.style.cssText='display:flex;justify-content:space-between;padding:9px 0 2px;margin-top:2px';
-    ftr.innerHTML=`<span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
-      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(total)}</span>`;
+    ftr.style.cssText='padding:9px 0 2px;margin-top:2px;border-top:1px solid var(--border)';
+    const rows=Object.entries(totByCur).map(([c,a])=>
+      `<div style="display:flex;justify-content:space-between;padding:3px 0">
+        <span style="font-size:12px;color:var(--t3)">סה"כ ${c==='ILS'?'שקל':c==='USD'?'דולר':'אירו'}</span>
+        <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmtCur(a,c)}</span>
+      </div>`).join('');
+    ftr.innerHTML=rows;
     el.appendChild(ftr);
   }
   setTimeout(attachAllNumFormats,0);
