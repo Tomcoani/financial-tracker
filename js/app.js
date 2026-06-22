@@ -292,9 +292,10 @@ function renderAll(){
   document.getElementById('pen-notes').value=D.penNotes||'';
   document.getElementById('gnotes').value=D.gnotes||'';
   const cfZeroEl=document.getElementById('cf-zero');
-  if(cfZeroEl&&D.cfZero){
-    const n=parseFloat(String(D.cfZero).replace(/,/g,''));
+  if(cfZeroEl){
+    const n=D.cfZero?parseFloat(String(D.cfZero).replace(/,/g,'')):0;
     if(n){cfZeroEl.value=n;cfZeroEl.dataset.numRaw=String(n);}
+    else{cfZeroEl.value='';delete cfZeroEl.dataset.numRaw;}
   }
   const cfCurEl=document.getElementById('cf-currency');
   if(cfCurEl&&D.cfCurrency)cfCurEl.value=D.cfCurrency;
