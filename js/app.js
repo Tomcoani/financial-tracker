@@ -657,13 +657,15 @@ function renderLocsTransfer(){
   const withAmt=(D.locations||[]).filter(l=>!l._auto&&parseFloat(l.amount)>0);
   if(!withAmt.length){
     el.innerHTML='<div style="font-size:13px;color:var(--t3);text-align:right;padding:4px 0">מלא את רשימת הנכסים למעלה כדי לתכנן העברות.</div>';
-    return;
+    updateLocFooter();return;
   }
   withAmt.forEach(l=>{
     const ri=(D.locations||[]).indexOf(l);
     const hasTo=(l.whereTo||'').trim();
     const row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:1fr 32px 1fr;align-items:stretch;margin-bottom:8px';
+    row.style.cssText='display:grid;grid-template-columns:1fr 32px 1fr 26px;align-items:stretch;margin-bottom:8px;transition:opacity .15s';
+    row.setAttribute('draggable','true');
+    row.dataset.locIdx=ri;
     row.innerHTML=`
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:0 10px 10px 0;padding:9px 12px;text-align:right">
         <div style="font-size:13px;font-weight:600;color:var(--white)">${esc(l.name||'ללא שם')}</div>
@@ -677,9 +679,45 @@ function renderLocsTransfer(){
         border-radius:10px 0 0 10px;border-left:none;
         padding:9px 12px;display:flex;flex-direction:column;justify-content:center">
         <input value="${esc(l.whereTo||'')}" placeholder="לאן מועבר הכסף" data-i="${ri}" data-f="whereTo" oninput="lu(this)"
+          ondragstart="event.stopPropagation()"
           style="background:transparent;border:none;outline:none;color:${hasTo?'var(--teal)':'var(--t2)'};
           font-family:var(--font);font-size:13px;font-weight:${hasTo?'600':'400'};text-align:right;width:100%"/>
-      </div>`;
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;color:var(--t3);
+        font-size:18px;cursor:grab;user-select:none;padding:0 2px" title="גרור לשינוי סדר">⠿</div>`;
+    // Drag events
+    row.addEventListener('dragstart',e=>{
+      _dragLocIdx=ri;
+      e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>{row.style.opacity='0.35';},0);
+    });
+    row.addEventListener('dragend',()=>{
+      row.style.opacity='';
+      _dragLocIdx=null;
+      el.querySelectorAll('.loc-drop-target').forEach(r=>r.classList.remove('loc-drop-target'));
+    });
+    row.addEventListener('dragover',e=>{
+      if(_dragLocIdx===null||_dragLocIdx===ri)return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      el.querySelectorAll('.loc-drop-target').forEach(r=>r.classList.remove('loc-drop-target'));
+      row.classList.add('loc-drop-target');
+    });
+    row.addEventListener('dragleave',()=>{
+      row.classList.remove('loc-drop-target');
+    });
+    row.addEventListener('drop',e=>{
+      e.preventDefault();
+      const fromIdx=_dragLocIdx;
+      const toIdx=ri;
+      row.classList.remove('loc-drop-target');
+      if(fromIdx===null||fromIdx===toIdx)return;
+      const loc=D.locations.splice(fromIdx,1)[0];
+      D.locations.splice(fromIdx<toIdx?toIdx-1:toIdx,0,loc);
+      _dragLocIdx=null;
+      renderLocs();
+      markDirty();
+    });
     el.appendChild(row);
   });
   updateLocFooter();
@@ -2870,6 +2908,7 @@ service cloud.firestore {
 */
 
 const _locExpanded={};
+let _dragLocIdx=null;
 function renderLocsAutoSummary(){
   const el=document.getElementById('locs-auto-summary');
   if(!el)return;
