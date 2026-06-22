@@ -498,8 +498,26 @@ function mkGoal(g,i){
     </div>
     <div class="goal-body" id="goal-body-${i}">
       <div class="gnums">
-        <div class="mf"><label>כמה חסכת<span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת? הכנס את הסכום הנוכחי בשקלים.</span></span></label><input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)"/></div>
-        <div class="mf"><label>סכום יעד<span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span></label><input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)"/></div>
+        <div class="mf"><label>כמה חסכת<span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת?</span></span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select data-i="${i}" data-f="savedCurrency" onchange="gu(this)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:2px 4px;width:52px;flex-shrink:0">
+              <option value="ILS"${(g.savedCurrency||'ILS')==='ILS'?' selected':''}>₪</option>
+              <option value="USD"${g.savedCurrency==='USD'?' selected':''}>$</option>
+              <option value="EUR"${g.savedCurrency==='EUR'?' selected':''}>€</option>
+            </select>
+            <input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)" style="flex:1"/>
+          </div>
+        </div>
+        <div class="mf"><label>סכום יעד<span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select data-i="${i}" data-f="neededCurrency" onchange="gu(this)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:2px 4px;width:52px;flex-shrink:0">
+              <option value="ILS"${(g.neededCurrency||'ILS')==='ILS'?' selected':''}>₪</option>
+              <option value="USD"${g.neededCurrency==='USD'?' selected':''}>$</option>
+              <option value="EUR"${g.neededCurrency==='EUR'?' selected':''}>€</option>
+            </select>
+            <input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)" style="flex:1"/>
+          </div>
+        </div>
       </div>
       <div class="mf" style="margin-bottom:9px"><label>איפה הכסף<span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span></label>
         <input value="${esc(g.where)}" placeholder="כאן להכניס את המיקום הספציפי שהכסף נמצא בו - עובר ושב / קרן כספית וכד׳" data-i="${i}" data-f="where" oninput="gu(this)"
@@ -507,7 +525,7 @@ function mkGoal(g,i){
       </div>
       <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
       <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${isDone?' 🎉':''}</div>
-      ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>₪${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}
+      ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}
     </div>`;
   return d;
 }
@@ -520,7 +538,8 @@ function gu(el){
   const fill=card.querySelector('.pfill');if(fill)fill.style.width=pct+'%';
   const lbl=card.querySelector('.plbl');if(lbl)lbl.textContent=pct+'% הושג'+(nd>0?' · נשאר '+fmt(nd-sv):'');
   if(f==='where'||f==='saved')renderLocsAutoSummary();
-  if(f==='saved'||f==='needed')touchSection('goals');
+  if(f==='saved'){updateLocFooter();touchSection('goals');}
+  if(f==='needed')touchSection('goals');
   markDirty();
 }
 function setH(i,h,sel){D.goals[i].h=h;renderGoals();touchSection('goals');markDirty();}
@@ -587,11 +606,18 @@ function renderLocsInventory(){
     const ri=(D.locations||[]).indexOf(l);
     const row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid rgba(30,45,69,.5)';
+    const lc=l.currency||'ILS';
     row.innerHTML=`
       <input value="${esc(l.name)}" placeholder="שם הנכס..." data-i="${ri}" data-f="name" oninput="lu(this)"
         style="flex:1;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;font-weight:600;text-align:right"/>
+      <select data-i="${ri}" data-f="currency" onchange="lu(this);renderLocsInventory();renderLocsTransfer()"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:2px 4px;width:52px;flex-shrink:0">
+        <option value="ILS"${lc==='ILS'?' selected':''}>₪</option>
+        <option value="USD"${lc==='USD'?' selected':''}>$</option>
+        <option value="EUR"${lc==='EUR'?' selected':''}>€</option>
+      </select>
       <input type="number" value="${l.amount||''}" placeholder="0" data-i="${ri}" data-f="amount" oninput="lu(this);renderLocsTransfer()"
-        style="width:120px;background:transparent;border:none;outline:none;font-family:var(--font);font-size:14px;font-weight:800;color:var(--teal);text-align:right;direction:rtl"/>
+        style="width:110px;background:transparent;border:none;outline:none;font-family:var(--font);font-size:14px;font-weight:800;color:var(--teal);text-align:right;direction:rtl"/>
       <button class="bdel" onclick="delLoc(${ri})" style="flex-shrink:0;width:28px">×</button>`;
     el.appendChild(row);
   });
@@ -602,7 +628,7 @@ function renderLocsInventory(){
     const ftr=document.createElement('div');
     ftr.style.cssText='display:flex;justify-content:space-between;padding:9px 0 2px;margin-top:2px';
     ftr.innerHTML=`<span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
-      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(total)} ₪</span>`;
+      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(total)}</span>`;
     el.appendChild(ftr);
   }
   setTimeout(attachAllNumFormats,0);
@@ -644,26 +670,22 @@ function renderLocsTransfer(){
 function updateLocFooter(){
   const el=document.getElementById('loc-footer');
   if(!el)return;
-  let total=0,moving=0;
-  (D.locations||[]).filter(l=>!l._auto).forEach(l=>{
-    const a=parseFloat(l.amount)||0;
-    total+=a;
-    if((l.whereTo||'').trim())moving+=a;
-  });
+  const total=(D.locations||[]).filter(l=>!l._auto).reduce((s,l)=>s+toILS(parseFloat(l.amount)||0,l.currency||'ILS'),0);
+  const allocatedToGoals=(D.goals||[]).filter(g=>!g.done).reduce((s,g)=>s+toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS'),0);
   if(!total){el.innerHTML='';return;}
-  const unallocated=total-moving;
+  const unallocated=Math.max(0,total-allocatedToGoals);
   el.innerHTML=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-    ${moving>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
-      <span style="color:var(--t2)">מועבר לייעוד חדש</span>
-      <span style="color:var(--teal);font-weight:700">${fmt(moving)} ₪</span>
+    ${allocatedToGoals>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
+      <span style="color:var(--t2)">מוקצה למטרות</span>
+      <span style="color:var(--teal);font-weight:700">${fmt(allocatedToGoals)}</span>
     </div>`:''}
     ${unallocated>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
-      <span style="color:var(--amber)">⚠ טרם הוקצה</span>
-      <span style="color:var(--amber);font-weight:700">${fmt(unallocated)} ₪</span>
-    </div>`:'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה</div>'}
+      <span style="color:var(--amber)">⚠ טרם הוקצה למטרה</span>
+      <span style="color:var(--amber);font-weight:700">${fmt(unallocated)}</span>
+    </div>`:'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה למטרות</div>'}
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
       <span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
-      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(total)} ₪</span>
+      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(total)}</span>
     </div>
   </div>`;
 }
@@ -1391,23 +1413,52 @@ function delPortfolio(pi){
 function portUpdate(el){}
 function addPortfolioRow(){addPortItem(0);}
 function delPortRow(i){delPortItem(0,i);}
+let _selectedPortIdx=0;
+function renderPortfolioSelector(){
+  const el=document.getElementById('portfolio-selector');
+  if(!el)return;
+  const ports=D.portfolios||[];
+  if(ports.length<=1){el.innerHTML='';return;}
+  if(_selectedPortIdx>=ports.length)_selectedPortIdx=0;
+  el.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+    <span style="font-size:12px;color:var(--t3);align-self:center;margin-left:4px">תצוגה:</span>
+    ${ports.map((p,i)=>`<button onclick="selectPortfolio(${i})"
+      style="padding:6px 14px;border-radius:20px;border:1.5px solid ${i===_selectedPortIdx?'var(--teal)':'var(--border)'};
+      background:${i===_selectedPortIdx?'rgba(66,235,214,.12)':'transparent'};
+      color:${i===_selectedPortIdx?'var(--teal)':'var(--t2)'};
+      font-family:var(--font);font-size:13px;font-weight:${i===_selectedPortIdx?'700':'400'};cursor:pointer">
+      ${esc(p.brokerName||'תיק '+(i+1))}
+    </button>`).join('')}
+    <button onclick="selectPortfolio(-1)"
+      style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_selectedPortIdx===-1?'var(--teal)':'var(--border)'};
+      background:${_selectedPortIdx===-1?'rgba(66,235,214,.12)':'transparent'};
+      color:${_selectedPortIdx===-1?'var(--teal)':'var(--t2)'};
+      font-family:var(--font);font-size:13px;cursor:pointer">כל התיקים</button>
+  </div>`;
+}
+function selectPortfolio(idx){_selectedPortIdx=idx;renderPortfolioSelector();updatePortStats();}
 function updatePortStats(){
-  // Aggregate across all portfolios
-  const allItems=(D.portfolios||[]).flatMap(p=>p.items||[]);
-  const total=allItems.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-  const cats=new Set(allItems.filter(p=>p.value).map(p=>p.category));
+  renderPortfolioSelector();
+  const ports=D.portfolios||[];
+  const allItems=ports.flatMap(p=>p.items||[]);
+  // Use selected portfolio or all
+  const viewItems=(_selectedPortIdx>=0&&ports[_selectedPortIdx])
+    ?ports[_selectedPortIdx].items||[]
+    :allItems;
+  const total=viewItems.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  const cats=new Set(viewItems.filter(p=>p.value).map(p=>p.category));
   const el_total=document.getElementById('port-total');
   const el_count=document.getElementById('port-count');
   const el_cats=document.getElementById('port-cats');
   if(el_total)el_total.textContent=fmt(total);
-  if(el_count)el_count.textContent=allItems.filter(p=>p.value).length;
+  if(el_count)el_count.textContent=viewItems.filter(p=>p.value).length;
   if(el_cats)el_cats.textContent=cats.size;
-  renderPortfolioCharts();
-  renderRebalance(total);
+  renderPortfolioCharts(viewItems);
+  renderRebalance(total,viewItems);
 }
 let chPort=null;
-function renderPortfolioCharts(){
-  const items=(D.portfolio||[]).filter(p=>p.name&&parseFloat(p.value));
+function renderPortfolioCharts(viewItems){
+  const items=(viewItems||(D.portfolios||[]).flatMap(p=>p.items||[])).filter(p=>p.name&&parseFloat(p.value));
   if(chPort)chPort.destroy();
   const ctx=document.getElementById('ch-port');if(!ctx)return;
   const catMap={};
@@ -1421,8 +1472,9 @@ function renderPortfolioCharts(){
       cutout:'65%',maintainAspectRatio:false}
   });
 }
-function renderRebalance(total){
-  const items=(D.portfolios||[]).flatMap(p=>p.items||[]).filter(p=>p.name&&parseFloat(p.value)&&parseFloat(p.targetPct));
+function renderRebalance(total,viewItems){
+  const src=viewItems||(D.portfolios||[]).flatMap(p=>p.items||[]);
+  const items=src.filter(p=>p.name&&parseFloat(p.value)&&parseFloat(p.targetPct));
   const el=document.getElementById('rebalance-box');
   if(!items.length){
     el.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">הוסף השקעות עם אחוז יעד כדי לקבל המלצה</p>';
@@ -1433,11 +1485,19 @@ function renderRebalance(total){
     const cur=parseFloat(p.value)||0;
     const curPct=total>0?(cur/total*100):0;
     const targetPct=parseFloat(p.targetPct)||0;
-    const diff=(total*(targetPct/100))-cur;
-    return{...p,cur,curPct,targetPct,diff};
+    return{...p,cur,curPct,targetPct};
   });
-  const toBuy=enriched.filter(p=>p.diff>100).sort((a,b)=>a.diff-b.diff);
-  const balanced=enriched.filter(p=>Math.abs(p.diff)<=100);
+  // Correct "add-only" rebalance: solve for total X to add so underweight assets
+  // reach their target % of the NEW total (T+X), not just the current total.
+  // X = (T·S_u − C_u) / (1 − S_u)  where S_u=Σtarget_i, C_u=Σcurrent_i for underweight
+  const underweight=enriched.filter(p=>p.curPct<p.targetPct);
+  const S_u=underweight.reduce((s,p)=>s+p.targetPct/100,0);
+  const C_u=underweight.reduce((s,p)=>s+p.cur,0);
+  const X=S_u>0&&S_u<1?Math.max(0,(total*S_u-C_u)/(1-S_u)):0;
+  const newTotal=total+X;
+  const withDiff=enriched.map(p=>({...p,diff:p.curPct<p.targetPct?Math.max(0,p.targetPct/100*newTotal-p.cur):0}));
+  const toBuy=withDiff.filter(p=>p.diff>100).sort((a,b)=>a.diff-b.diff);
+  const balanced=withDiff.filter(p=>p.diff<=100);
   let html=`<div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:12px;text-align:right">🎯 סדר פעולות לאיזון (מהקל לקשה):</div>`;
   if(!toBuy.length){
     html+=`<div style="font-size:13px;color:var(--green);text-align:right;margin-bottom:10px">✅ התיק באיזון מלא</div>`;
@@ -2097,10 +2157,11 @@ async function exportPDF(){
     const assets=(D.locations||[]).filter(l=>!l._auto&&l.name);
     if(!assets.length)return '';
     const total=assets.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
-    const rows=assets.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">₪${fmt(parseFloat(l.amount)||0)}</td></tr>`).join('');
+    const rows=assets.map(l=>{const cur=l.currency&&l.currency!=='ILS'?l.currency:'';return`<tr><td>${esc(l.name)}</td><td class="num">${cur?cur+' ':''}<span dir="ltr">${(parseFloat(l.amount)||0).toLocaleString('he-IL')}</span></td></tr>`;}).join('');
+    const totalILS=assets.reduce((s,l)=>s+toILS(parseFloat(l.amount)||0,l.currency||'ILS'),0);
     return `<div class="section"><div class="section-title">רשימת נכסים נוכחית</div>
     <table><thead><tr><th>שם נכס</th><th>סכום</th></tr></thead>
-    <tbody>${rows}<tr style="font-weight:800;border-top:2px solid #e2e8f0"><td>סה"כ</td><td class="num">₪${fmt(total)}</td></tr></tbody></table></div>`;
+    <tbody>${rows}<tr style="font-weight:800;border-top:2px solid #e2e8f0"><td>סה"כ (₪)</td><td class="num">${fmt(totalILS)}</td></tr></tbody></table></div>`;
   })()}
 
   <!-- TRANSFER PLAN -->
@@ -2788,19 +2849,19 @@ function renderLocsAutoSummary(){
     const isExp=!!_locExpanded[where];
     const hasMore=idx<keys.length-1||isExp;
     html+=`<div onclick="toggleLocRow('${where.replace(/'/g,"\\'")}')" style="display:flex;justify-content:space-between;align-items:center;
-      padding:10px 14px;${hasMore?'border-bottom:1px solid var(--border)':''}font-size:13px;cursor:pointer;user-select:none">
+      min-height:44px;padding:10px 14px;${hasMore?'border-bottom:1px solid var(--border)':''}font-size:13px;cursor:pointer;user-select:none">
       <span style="color:var(--t2);display:flex;align-items:center;gap:6px">
         ${esc(where)} <span style="font-size:10px;color:var(--t3)">${isExp?'▲':'▼'}</span>
       </span>
-      <span style="color:var(--teal);font-weight:700">${fmt(data.total)} ₪</span>
+      <span style="color:var(--teal);font-weight:700">${fmt(data.total)}</span>
     </div>`;
     if(isExp){
       data.goals.forEach((gl,gi)=>{
         const isLastSub=gi===data.goals.length-1&&idx===keys.length-1;
-        html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 22px;
+        html+=`<div style="display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:6px 22px;
           ${!isLastSub?'border-bottom:1px solid var(--border)':''}background:rgba(0,0,0,.12)">
           <span style="font-size:12px;color:var(--t3)">↳ ${esc(gl.name)}</span>
-          <span style="font-size:12px;color:var(--teal);font-weight:600">${fmt(gl.saved)} ₪</span>
+          <span style="font-size:12px;color:var(--teal);font-weight:600">${fmt(gl.saved)}</span>
         </div>`;
       });
     }
