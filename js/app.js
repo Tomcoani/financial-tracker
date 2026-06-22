@@ -263,7 +263,10 @@ function collectAll(){
   D.penNotes=document.getElementById('pen-notes').value;
   D.gnotes=document.getElementById('gnotes').value;
   const cfZeroEl=document.getElementById('cf-zero');
-  if(cfZeroEl&&cfZeroEl.value)D.cfZero=cfZeroEl.value;
+  if(cfZeroEl){
+    const raw=(cfZeroEl.dataset.numRaw||cfZeroEl.value).replace(/,/g,'');
+    if(raw)D.cfZero=raw;
+  }
 }
 
 // ══ NAV ══
@@ -289,7 +292,10 @@ function renderAll(){
   document.getElementById('pen-notes').value=D.penNotes||'';
   document.getElementById('gnotes').value=D.gnotes||'';
   const cfZeroEl=document.getElementById('cf-zero');
-  if(cfZeroEl&&D.cfZero)cfZeroEl.value=D.cfZero;
+  if(cfZeroEl&&D.cfZero){
+    const n=parseFloat(String(D.cfZero).replace(/,/g,''));
+    if(n){cfZeroEl.value=n;cfZeroEl.dataset.numRaw=String(n);}
+  }
   const cfCurEl=document.getElementById('cf-currency');
   if(cfCurEl&&D.cfCurrency)cfCurEl.value=D.cfCurrency;
   renderAccountSplit(0);
@@ -661,7 +667,7 @@ function renderLocsTransfer(){
     row.innerHTML=`
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:0 10px 10px 0;padding:9px 12px;text-align:right">
         <div style="font-size:13px;font-weight:600;color:var(--white)">${esc(l.name||'ללא שם')}</div>
-        <div style="font-size:13px;font-weight:800;color:var(--teal);margin-top:2px">${fmt(parseFloat(l.amount)||0)} ₪</div>
+        <div style="font-size:13px;font-weight:800;color:var(--teal);margin-top:2px">${fmtCur(parseFloat(l.amount)||0,l.currency||'ILS')}</div>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;background:var(--s2);
         border-top:1px solid var(--border);border-bottom:1px solid var(--border);
@@ -681,28 +687,37 @@ function renderLocsTransfer(){
 function updateLocFooter(){
   const el=document.getElementById('loc-footer');
   if(!el)return;
-  const total=(D.locations||[]).filter(l=>!l._auto).reduce((s,l)=>s+toILS(parseFloat(l.amount)||0,l.currency||'ILS'),0);
-  const activeGoals=(D.goals||[]).filter(g=>!g.done);
-  const allocatedToGoals=activeGoals.reduce((s,g)=>s+toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS'),0);
-  if(!total){el.innerHTML='';return;}
-  const unallocated=Math.max(0,total-allocatedToGoals);
-  // Pick display currency from dominant savedCurrency among goals with saved amounts
-  const savedGoals=activeGoals.filter(g=>parseFloat(g.saved));
-  const curCount={};
-  savedGoals.forEach(g=>{const c=g.savedCurrency||'ILS';curCount[c]=(curCount[c]||0)+1;});
-  const displayCur=savedGoals.length?Object.entries(curCount).sort((a,b)=>b[1]-a[1])[0][0]:'ILS';
+  // Assets total per currency
+  const assetsByCur={};
+  (D.locations||[]).filter(l=>!l._auto).forEach(l=>{
+    const c=l.currency||'ILS',a=parseFloat(l.amount)||0;
+    if(a)assetsByCur[c]=(assetsByCur[c]||0)+a;
+  });
+  if(!Object.keys(assetsByCur).length){el.innerHTML='';return;}
+  const totalILS=Object.entries(assetsByCur).reduce((s,[c,a])=>s+toILS(a,c),0);
+  // Goals allocated per currency
+  const goalsByCur={};
+  (D.goals||[]).filter(g=>!g.done&&parseFloat(g.saved)).forEach(g=>{
+    const c=g.savedCurrency||'ILS';goalsByCur[c]=(goalsByCur[c]||0)+(parseFloat(g.saved)||0);
+  });
+  const allocatedILS=Object.entries(goalsByCur).reduce((s,[c,a])=>s+toILS(a,c),0);
+  const unallocatedILS=Math.max(0,totalILS-allocatedILS);
+  const fmtMulti=(byCur)=>Object.entries(byCur).map(([c,a])=>`<span style="margin-right:6px">${fmtCur(a,c)}</span>`).join('');
+  // Dominant goal currency for unallocated display
+  const goalCurList=Object.keys(goalsByCur);
+  const domGoalCur=goalCurList.length?goalCurList[0]:'ILS';
   el.innerHTML=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-    ${allocatedToGoals>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
+    ${allocatedILS>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;flex-wrap:wrap;gap:4px">
       <span style="color:var(--t2)">מוקצה למטרות</span>
-      <span style="color:var(--teal);font-weight:700">${fmtCur(fromILS(allocatedToGoals,displayCur),displayCur)}</span>
+      <span style="color:var(--teal);font-weight:700;direction:ltr">${fmtMulti(goalsByCur)}</span>
     </div>`:''}
-    ${unallocated>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
+    ${unallocatedILS>100?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
       <span style="color:var(--amber)">⚠ טרם הוקצה למטרה</span>
-      <span style="color:var(--amber);font-weight:700">${fmtCur(fromILS(unallocated,displayCur),displayCur)}</span>
-    </div>`:'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה למטרות</div>'}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
+      <span style="color:var(--amber);font-weight:700">${fmtCur(fromILS(unallocatedILS,domGoalCur),domGoalCur)}</span>
+    </div>`:(allocatedILS>0?'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה למטרות</div>':'')}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;margin-top:2px;border-top:1px solid var(--border);flex-wrap:wrap;gap:4px">
       <span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
-      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmtCur(fromILS(total,displayCur),displayCur)}</span>
+      <span style="font-size:14px;font-weight:800;color:var(--teal);direction:ltr">${fmtMulti(assetsByCur)}</span>
     </div>
   </div>`;
 }
