@@ -121,19 +121,30 @@
       <!-- CASH FLOW CALCULATOR -->
       <div class="cashflow-box">
         <h3><i data-lucide="coins" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> כמה יש לי להשקיע החודש?</h3>
-        <div class="hint">ענה על 3 שאלות פשוטות וקבל תשובה מיידית</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div class="hint" style="margin-bottom:0">ענה על 3 שאלות פשוטות וקבל תשובה מיידית</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--t3)">מטבע:</span>
+            <select id="cf-currency" onchange="D.cfCurrency=this.value;markDirty();calcCashFlow()"
+              style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:4px 8px">
+              <option value="ILS">₪ שקל</option>
+              <option value="USD">$ דולר</option>
+              <option value="EUR">€ אירו</option>
+            </select>
+          </div>
+        </div>
         <div class="cashflow-row">
           <div class="cf-field">
-            <label>כמה יש לך היום בעו"ש? (₪)<span class="q-tip">?<span class="q-popup">הכנס את היתרה הנוכחית בחשבון העו"ש שלך נכון להיום.</span></span></label>
+            <label>כמה יש לך היום בעו"ש?<span class="q-tip">?<span class="q-popup">הכנס את היתרה הנוכחית בחשבון העו"ש שלך נכון להיום.</span></span></label>
             <input type="number" id="cf-balance" placeholder="0" oninput="calcCashFlow()"/>
           </div>
           <div class="cf-field">
-            <label>מה ה"אפס החדש" שלך? (₪)<span class="q-tip">?<span class="q-popup">האפס החדש הוא הסכום המינימלי שאתה רוצה לשמור בעו"ש כ"כרית ביטחון" — סכום שמתחתיו לא תגע.</span></span></label>
+            <label>מה ה"אפס החדש" שלך?<span class="q-tip">?<span class="q-popup">האפס החדש הוא הסכום המינימלי שאתה רוצה לשמור בעו"ש כ"כרית ביטחון" — סכום שמתחתיו לא תגע.</span></span></label>
             <input type="number" id="cf-zero" placeholder="0" oninput="D.cfZero=this.value;markDirty();calcCashFlow()"/>
           </div>
         </div>
         <div class="cf-field" style="margin-bottom:12px">
-          <label>הוצאות צפויות עד חיוב הבא? (₪)<span class="q-tip">?<span class="q-popup">הוצאות קרובות שטרם נחויבו: שכ"ד, ביטוחים, מע"מ, ביטוח לאומי, הוצאות מיוחדות — כל מה שצפוי לצאת עד החיוב הבא.</span></span></label>
+          <label>הוצאות צפויות עד חיוב הבא?<span class="q-tip">?<span class="q-popup">הוצאות קרובות שטרם נחויבו: שכ"ד, ביטוחים, מע"מ, ביטוח לאומי, הוצאות מיוחדות — כל מה שצפוי לצאת עד החיוב הבא.</span></span></label>
           <input type="number" id="cf-expenses" placeholder="0" oninput="calcCashFlow()"/>
         </div>
         <div id="cf-result" class="cf-result" style="display:none"></div>

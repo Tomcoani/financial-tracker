@@ -34,7 +34,7 @@ function g(m,f){return D?.settings?.gender==='female'?f:m;}
 function nw6(n){return Array(n||D?.nwPeriodsCount||6).fill('');}
 function defData(){
   return {
-    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',
+    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
     goals:[{name:'קרן חירום',where:'עו"ש',saved:'',needed:'',h:0,done:false}],
@@ -290,6 +290,8 @@ function renderAll(){
   document.getElementById('gnotes').value=D.gnotes||'';
   const cfZeroEl=document.getElementById('cf-zero');
   if(cfZeroEl&&D.cfZero)cfZeroEl.value=D.cfZero;
+  const cfCurEl=document.getElementById('cf-currency');
+  if(cfCurEl&&D.cfCurrency)cfCurEl.value=D.cfCurrency;
   renderAccountSplit(0);
   // Only render what's immediately needed
   renderSettings();
@@ -315,30 +317,33 @@ function calcCashFlow(){
   const balance=parseFloat(document.getElementById('cf-balance').value.replace(/,/g,''))||0;
   const zero=parseFloat(document.getElementById('cf-zero').value.replace(/,/g,''))||0;
   const expenses=parseFloat(document.getElementById('cf-expenses').value.replace(/,/g,''))||0;
+  const cur=(document.getElementById('cf-currency')?.value)||D.cfCurrency||'ILS';
   const el=document.getElementById('cf-result');
   if(!balance&&!zero&&!expenses){el.style.display='none';return;}
   const available=balance-zero-expenses;
+  const availableILS=toILS(available,cur);
   el.style.display='block';
-  // Sync the available amount as "monthly savings" to D
   if(available>0){
-    D.monthly=String(available);
+    D.monthly=String(availableILS);
     const mi=document.getElementById('monthly');
-    if(mi)mi.value=available;
+    if(mi)mi.value=availableILS;
     el.className='cf-result good';
-    el.innerHTML=`מעולה! 🎉<br>יש לך <strong>${fmt(available)}</strong> ש${g('אתה יכול','את יכולה')} להשקיע החודש`;
-    renderAccountSplit(available);
+    el.innerHTML=`מעולה! 🎉<br>יש לך <strong>${fmtCur(available,cur)}</strong> ש${g('אתה יכול','את יכולה')} להשקיע החודש`;
+    renderAccountSplit(availableILS,cur);
   } else {
     D.monthly='0';
     const mi=document.getElementById('monthly');
     if(mi)mi.value=0;
     el.className='cf-result bad';
     el.innerHTML=`היי, החודש נראה שאין לך מספיק כדי להשקיע.<br>ממליץ לבדוק מה קרה החודש ולשפר לחודש הבא 💪`;
-    renderAccountSplit(0);
+    renderAccountSplit(0,cur);
   }
   markDirty();
 }
 
-function renderAccountSplit(available){
+function renderAccountSplit(available,cur){
+  cur=cur||D.cfCurrency||'ILS';
+  const availInCur=cur==='ILS'?available:fromILS(available,cur);
   const el=document.getElementById('cf-accounts');
   if(!el)return;
   if(available<=0){el.style.display='none';return;}
@@ -366,7 +371,7 @@ function renderAccountSplit(available){
     <div style="display:flex;flex-direction:column;gap:9px">`;
     for(let i=0;i<cnt;i++){
       const pct=as.pct[i]||0;
-      const amt=available*(pct/100);
+      const amt=availInCur*(pct/100);
       html+=`<div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:13px;color:var(--white);font-weight:600;width:95px;text-align:right;flex-shrink:0">${names[i]}</span>
         <input type="number" min="0" max="100" value="${pct}" data-acc="${i}" oninput="updateAccountPct(this)"
@@ -375,7 +380,7 @@ function renderAccountSplit(available){
           outline:none;text-align:center"
           onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"/>
         <span style="font-size:12px;color:var(--t2)">%</span>
-        <span id="acc-amt-${i}" style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(amt)} ₪</span>
+        <span id="acc-amt-${i}" style="font-size:14px;font-weight:800;color:var(--teal)">${fmtCur(amt,cur)}</span>
       </div>`;
     }
     html+=`</div>
@@ -398,11 +403,13 @@ function updateAccountPct(el){
   if(!D.accountSplit)return;
   const idx=+el.dataset.acc;
   D.accountSplit.pct[idx]=parseFloat(el.value)||0;
-  const available=parseFloat(D.monthly)||0;
+  const availableILS=parseFloat(D.monthly)||0;
+  const cur=D.cfCurrency||'ILS';
+  const availInCur=cur==='ILS'?availableILS:fromILS(availableILS,cur);
   const cnt=D.accountSplit.count;
   for(let i=0;i<cnt;i++){
     const amtEl=document.getElementById('acc-amt-'+i);
-    if(amtEl)amtEl.textContent=fmt(available*(D.accountSplit.pct[i]||0)/100)+' ₪';
+    if(amtEl)amtEl.textContent=fmtCur(availInCur*(D.accountSplit.pct[i]||0)/100,cur);
   }
   const totalPct=D.accountSplit.pct.slice(0,cnt).reduce((s,v)=>s+v,0);
   const warn=Math.abs(totalPct-100)>0.5;
