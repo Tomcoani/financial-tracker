@@ -34,7 +34,7 @@ function g(m,f){return D?.settings?.gender==='female'?f:m;}
 function nw6(n){return Array(n||D?.nwPeriodsCount||6).fill('');}
 function defData(){
   return {
-    monthly:'',future:'',penNotes:'',gnotes:'',
+    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
     goals:[{name:'קרן חירום',where:'עו"ש',saved:'',needed:'',h:0,done:false}],
@@ -262,6 +262,8 @@ function collectAll(){
   D.monthly=document.getElementById('monthly').value;
   D.penNotes=document.getElementById('pen-notes').value;
   D.gnotes=document.getElementById('gnotes').value;
+  const cfZeroEl=document.getElementById('cf-zero');
+  if(cfZeroEl&&cfZeroEl.value)D.cfZero=cfZeroEl.value;
 }
 
 // ══ NAV ══
@@ -286,6 +288,8 @@ function renderAll(){
   document.getElementById('monthly').value=D.monthly||'';
   document.getElementById('pen-notes').value=D.penNotes||'';
   document.getElementById('gnotes').value=D.gnotes||'';
+  const cfZeroEl=document.getElementById('cf-zero');
+  if(cfZeroEl&&D.cfZero)cfZeroEl.value=D.cfZero;
   renderAccountSplit(0);
   // Only render what's immediately needed
   renderSettings();
@@ -2259,6 +2263,16 @@ function toILS(amount,currency){
   const rate=(D.exchangeRates||{})[currency]||1;
   return (parseFloat(amount)||0)*rate;
 }
+function fromILS(amountILS,currency){
+  if(!currency||currency==='ILS')return amountILS;
+  const rate=(D.exchangeRates||{})[currency]||1;
+  return amountILS/rate;
+}
+function fmtCur(amount,currency){
+  const sym=getCurrSymbol(currency||'ILS');
+  const n=Math.abs(Math.round(amount));
+  return sym+(n.toLocaleString('he-IL'));
+}
 
 function nwRowName(el){
   const sec=el.dataset.sec,ri=+el.dataset.ri;
@@ -2832,13 +2846,18 @@ function renderLocsAutoSummary(){
   const el=document.getElementById('locs-auto-summary');
   if(!el)return;
   const whereMap={};
+  // Build a lookup: location name → currency
+  const locCurMap={};
+  (D.locations||[]).filter(l=>!l._auto&&l.name).forEach(l=>{locCurMap[l.name.trim()]=l.currency||'ILS';});
+
   (D.goals||[]).filter(g=>!g.done).forEach(g=>{
     if(!g.where||!g.saved)return;
     const key=g.where.trim();if(!key)return;
-    if(!whereMap[key])whereMap[key]={total:0,goals:[]};
-    const sv=parseFloat(g.saved)||0;
-    whereMap[key].total+=sv;
-    if(g.name)whereMap[key].goals.push({name:g.name,saved:sv});
+    const locCur=locCurMap[key]||'ILS';
+    if(!whereMap[key])whereMap[key]={totalILS:0,currency:locCur,goals:[]};
+    const svILS=toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS');
+    whereMap[key].totalILS+=svILS;
+    if(g.name)whereMap[key].goals.push({name:g.name,savedILS:svILS,savedCur:g.savedCurrency||'ILS',saved:parseFloat(g.saved)||0});
   });
   if(!Object.keys(whereMap).length){el.innerHTML='';return;}
   const keys=Object.keys(whereMap);
@@ -2846,6 +2865,8 @@ function renderLocsAutoSummary(){
   html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">`;
   keys.forEach((where,idx)=>{
     const data=whereMap[where];
+    const locCur=data.currency;
+    const displayTotal=fromILS(data.totalILS,locCur);
     const isExp=!!_locExpanded[where];
     const hasMore=idx<keys.length-1||isExp;
     html+=`<div onclick="toggleLocRow('${where.replace(/'/g,"\\'")}')" style="display:flex;justify-content:space-between;align-items:center;
@@ -2853,15 +2874,16 @@ function renderLocsAutoSummary(){
       <span style="color:var(--t2);display:flex;align-items:center;gap:6px">
         ${esc(where)} <span style="font-size:10px;color:var(--t3)">${isExp?'▲':'▼'}</span>
       </span>
-      <span style="color:var(--teal);font-weight:700">${fmt(data.total)}</span>
+      <span style="color:var(--teal);font-weight:700">${fmtCur(displayTotal,locCur)}</span>
     </div>`;
     if(isExp){
       data.goals.forEach((gl,gi)=>{
         const isLastSub=gi===data.goals.length-1&&idx===keys.length-1;
+        const glDisplay=fromILS(gl.savedILS,locCur);
         html+=`<div style="display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:6px 22px;
           ${!isLastSub?'border-bottom:1px solid var(--border)':''}background:rgba(0,0,0,.12)">
           <span style="font-size:12px;color:var(--t3)">↳ ${esc(gl.name)}</span>
-          <span style="font-size:12px;color:var(--teal);font-weight:600">${fmt(gl.saved)}</span>
+          <span style="font-size:12px;color:var(--teal);font-weight:600">${fmtCur(glDisplay,locCur)}</span>
         </div>`;
       });
     }

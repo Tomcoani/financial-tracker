@@ -129,7 +129,7 @@
           </div>
           <div class="cf-field">
             <label>מה ה"אפס החדש" שלך? (₪)<span class="q-tip">?<span class="q-popup">האפס החדש הוא הסכום המינימלי שאתה רוצה לשמור בעו"ש כ"כרית ביטחון" — סכום שמתחתיו לא תגע.</span></span></label>
-            <input type="number" id="cf-zero" placeholder="0" oninput="calcCashFlow()"/>
+            <input type="number" id="cf-zero" placeholder="0" oninput="D.cfZero=this.value;markDirty();calcCashFlow()"/>
           </div>
         </div>
         <div class="cf-field" style="margin-bottom:12px">
