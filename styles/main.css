@@ -166,6 +166,20 @@ select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background
 .bdel{background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 4px;transition:color .2s;flex-shrink:0;}
 .bdel:hover{color:var(--red);}
 
+/* ── GOALS PAGE SECTIONS ── */
+.g-section{border-radius:16px;padding:16px;margin-bottom:20px;}
+.g-section--cf{background:rgba(99,102,241,.06);border:1px solid rgba(129,140,248,.2);}
+.g-section--goals{background:rgba(66,235,214,.04);border:1px solid rgba(66,235,214,.15);}
+.g-section--assets{background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.2);}
+.g-section-hd{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;
+  border-bottom:1px solid rgba(255,255,255,.06);justify-content:flex-end;direction:rtl;}
+.g-section-title{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.g-section--cf .g-section-title{color:#a5b4fc;}
+.g-section--goals .g-section-title{color:var(--teal);}
+.g-section--assets .g-section-title{color:#fbbf24;}
+.g-section .cashflow-box{margin-bottom:0;}
+.g-section .card:last-child{margin-bottom:0;}
+
 /* ── CASH FLOW CALCULATOR ── */
 .cashflow-box{
   background:linear-gradient(135deg,rgba(66,235,214,.07),rgba(59,130,246,.04));
