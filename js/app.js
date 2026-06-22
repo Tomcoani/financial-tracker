@@ -682,21 +682,27 @@ function updateLocFooter(){
   const el=document.getElementById('loc-footer');
   if(!el)return;
   const total=(D.locations||[]).filter(l=>!l._auto).reduce((s,l)=>s+toILS(parseFloat(l.amount)||0,l.currency||'ILS'),0);
-  const allocatedToGoals=(D.goals||[]).filter(g=>!g.done).reduce((s,g)=>s+toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS'),0);
+  const activeGoals=(D.goals||[]).filter(g=>!g.done);
+  const allocatedToGoals=activeGoals.reduce((s,g)=>s+toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS'),0);
   if(!total){el.innerHTML='';return;}
   const unallocated=Math.max(0,total-allocatedToGoals);
+  // Pick display currency from dominant savedCurrency among goals with saved amounts
+  const savedGoals=activeGoals.filter(g=>parseFloat(g.saved));
+  const curCount={};
+  savedGoals.forEach(g=>{const c=g.savedCurrency||'ILS';curCount[c]=(curCount[c]||0)+1;});
+  const displayCur=savedGoals.length?Object.entries(curCount).sort((a,b)=>b[1]-a[1])[0][0]:'ILS';
   el.innerHTML=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
     ${allocatedToGoals>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
       <span style="color:var(--t2)">מוקצה למטרות</span>
-      <span style="color:var(--teal);font-weight:700">${fmt(allocatedToGoals)}</span>
+      <span style="color:var(--teal);font-weight:700">${fmtCur(fromILS(allocatedToGoals,displayCur),displayCur)}</span>
     </div>`:''}
     ${unallocated>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
       <span style="color:var(--amber)">⚠ טרם הוקצה למטרה</span>
-      <span style="color:var(--amber);font-weight:700">${fmt(unallocated)}</span>
+      <span style="color:var(--amber);font-weight:700">${fmtCur(fromILS(unallocated,displayCur),displayCur)}</span>
     </div>`:'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה למטרות</div>'}
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
       <span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
-      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmt(total)}</span>
+      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmtCur(fromILS(total,displayCur),displayCur)}</span>
     </div>
   </div>`;
 }
@@ -2853,18 +2859,20 @@ function renderLocsAutoSummary(){
   const el=document.getElementById('locs-auto-summary');
   if(!el)return;
   const whereMap={};
-  // Build a lookup: location name → currency
-  const locCurMap={};
-  (D.locations||[]).filter(l=>!l._auto&&l.name).forEach(l=>{locCurMap[l.name.trim()]=l.currency||'ILS';});
 
   (D.goals||[]).filter(g=>!g.done).forEach(g=>{
     if(!g.where||!g.saved)return;
     const key=g.where.trim();if(!key)return;
-    const locCur=locCurMap[key]||'ILS';
-    if(!whereMap[key])whereMap[key]={totalILS:0,currency:locCur,goals:[]};
-    const svILS=toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS');
+    const goalCur=g.savedCurrency||'ILS';
+    const svILS=toILS(parseFloat(g.saved)||0,goalCur);
+    if(!whereMap[key])whereMap[key]={totalILS:0,currency:goalCur,curCount:{},goals:[]};
+    whereMap[key].curCount[goalCur]=(whereMap[key].curCount[goalCur]||0)+1;
     whereMap[key].totalILS+=svILS;
-    if(g.name)whereMap[key].goals.push({name:g.name,savedILS:svILS,savedCur:g.savedCurrency||'ILS',saved:parseFloat(g.saved)||0});
+    if(g.name)whereMap[key].goals.push({name:g.name,saved:parseFloat(g.saved)||0,savedCur:goalCur});
+  });
+  // Set dominant goal currency per group
+  Object.values(whereMap).forEach(d=>{
+    d.currency=Object.entries(d.curCount).sort((a,b)=>b[1]-a[1])[0][0];
   });
   if(!Object.keys(whereMap).length){el.innerHTML='';return;}
   const keys=Object.keys(whereMap);
@@ -2872,8 +2880,8 @@ function renderLocsAutoSummary(){
   html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">`;
   keys.forEach((where,idx)=>{
     const data=whereMap[where];
-    const locCur=data.currency;
-    const displayTotal=fromILS(data.totalILS,locCur);
+    const groupCur=data.currency;
+    const displayTotal=fromILS(data.totalILS,groupCur);
     const isExp=!!_locExpanded[where];
     const hasMore=idx<keys.length-1||isExp;
     html+=`<div onclick="toggleLocRow('${where.replace(/'/g,"\\'")}')" style="display:flex;justify-content:space-between;align-items:center;
@@ -2881,16 +2889,15 @@ function renderLocsAutoSummary(){
       <span style="color:var(--t2);display:flex;align-items:center;gap:6px">
         ${esc(where)} <span style="font-size:10px;color:var(--t3)">${isExp?'▲':'▼'}</span>
       </span>
-      <span style="color:var(--teal);font-weight:700">${fmtCur(displayTotal,locCur)}</span>
+      <span style="color:var(--teal);font-weight:700">${fmtCur(displayTotal,groupCur)}</span>
     </div>`;
     if(isExp){
       data.goals.forEach((gl,gi)=>{
         const isLastSub=gi===data.goals.length-1&&idx===keys.length-1;
-        const glDisplay=fromILS(gl.savedILS,locCur);
         html+=`<div style="display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:6px 22px;
           ${!isLastSub?'border-bottom:1px solid var(--border)':''}background:rgba(0,0,0,.12)">
           <span style="font-size:12px;color:var(--t3)">↳ ${esc(gl.name)}</span>
-          <span style="font-size:12px;color:var(--teal);font-weight:600">${fmtCur(glDisplay,locCur)}</span>
+          <span style="font-size:12px;color:var(--teal);font-weight:600">${fmtCur(gl.saved,gl.savedCur)}</span>
         </div>`;
       });
     }

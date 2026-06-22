@@ -172,7 +172,7 @@ select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background
 .g-section--goals{background:rgba(20,184,166,.11);border-color:#2dd4bf;box-shadow:0 0 0 1px rgba(45,212,191,.22),inset 0 1px 0 rgba(255,255,255,.04);}
 .g-section--assets{background:rgba(217,119,6,.12);border-color:#f59e0b;box-shadow:0 0 0 1px rgba(245,158,11,.25),inset 0 1px 0 rgba(255,255,255,.04);}
 .g-section-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;
-  border-bottom:1px solid rgba(255,255,255,.09);justify-content:flex-end;direction:rtl;}
+  border-bottom:1px solid rgba(255,255,255,.09);justify-content:flex-start;direction:rtl;}
 .g-section-title{font-size:16px;font-weight:900;letter-spacing:-.4px;}
 .g-section--cf .g-section-title{color:#c7d2fe;}
 .g-section--goals .g-section-title{color:#5eead4;}
