@@ -150,8 +150,19 @@
             </div>
           </div>
           <div class="cf-field" style="margin-bottom:12px">
-            <label>הוצאות צפויות עד חיוב הבא?<span class="q-tip">?<span class="q-popup">הוצאות קרובות שטרם נחויבו: שכ"ד, ביטוחים, מע"מ, ביטוח לאומי, הוצאות מיוחדות — כל מה שצפוי לצאת עד החיוב הבא.</span></span></label>
-            <input type="number" id="cf-expenses" placeholder="0" oninput="calcCashFlow()"/>
+            <label>הוצאות קבועות<span class="q-tip">?<span class="q-popup">שכ"ד, ביטוחים, חשבונות — הוצאות חודשיות קבועות שנשמרות בין פגישות.</span></span></label>
+            <div id="cf-fixed-expenses"></div>
+            <button class="btnadd" onclick="addCfFixed()" style="font-size:12px;padding:4px 10px;margin-top:6px">+ הוסף הוצאה קבועה</button>
+          </div>
+          <div class="cashflow-row" style="margin-bottom:12px">
+            <div class="cf-field">
+              <label>הוצאות באשראי<span class="q-tip">?<span class="q-popup">סך כל החיובים הצפויים בכרטיס האשראי עד החיוב הקרוב.</span></span></label>
+              <input type="number" id="cf-credit" placeholder="0" oninput="D.cfCredit=this.value;markDirty();calcCashFlow()"/>
+            </div>
+            <div class="cf-field">
+              <label>הוצאות נוספות עד חיוב הבא<span class="q-tip">?<span class="q-popup">הוצאות חד-פעמיות שלא נכללות למעלה — מע"מ, ביטוח לאומי, הוצאות מיוחדות וכד'.</span></span></label>
+              <input type="number" id="cf-expenses" placeholder="0" oninput="calcCashFlow()"/>
+            </div>
           </div>
           <div id="cf-result" class="cf-result" style="display:none"></div>
           <div id="cf-accounts" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)"></div>

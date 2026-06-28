@@ -34,7 +34,7 @@ function g(m,f){return D?.settings?.gender==='female'?f:m;}
 function nw6(n){return Array(n||D?.nwPeriodsCount||6).fill('');}
 function defData(){
   return {
-    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',
+    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
     goals:[{name:'קרן חירום',where:'עו"ש',saved:'',needed:'',h:0,done:false}],
@@ -267,6 +267,11 @@ function collectAll(){
     const raw=(cfZeroEl.dataset.numRaw||cfZeroEl.value).replace(/,/g,'');
     if(raw)D.cfZero=raw;
   }
+  const cfCreditEl=document.getElementById('cf-credit');
+  if(cfCreditEl){
+    const raw=(cfCreditEl.dataset.numRaw||cfCreditEl.value).replace(/,/g,'');
+    D.cfCredit=raw||'';
+  }
 }
 
 // ══ NAV ══
@@ -299,6 +304,17 @@ function renderAll(){
   }
   const cfCurEl=document.getElementById('cf-currency');
   if(cfCurEl&&D.cfCurrency)cfCurEl.value=D.cfCurrency;
+  const cfCreditEl=document.getElementById('cf-credit');
+  if(cfCreditEl){
+    const n=D.cfCredit?parseFloat(String(D.cfCredit).replace(/,/g,'')):0;
+    if(n){cfCreditEl.value=n;cfCreditEl.dataset.numRaw=String(n);}
+    else{cfCreditEl.value='';delete cfCreditEl.dataset.numRaw;}
+  }
+  const cfBalEl=document.getElementById('cf-balance');
+  if(cfBalEl){cfBalEl.value='';delete cfBalEl.dataset.numRaw;}
+  const cfExpEl=document.getElementById('cf-expenses');
+  if(cfExpEl)cfExpEl.value='';
+  renderCfFixed();
   renderAccountSplit(0);
   // Only render what's immediately needed
   renderSettings();
@@ -321,9 +337,12 @@ function renderAll(){
 // ══ CASH FLOW CALCULATOR ══
 function calcCashFlow(){
   // Strip thousands commas so "10,000" parses as 10000 not 10
-  const balance=parseFloat(document.getElementById('cf-balance').value.replace(/,/g,''))||0;
-  const zero=parseFloat(document.getElementById('cf-zero').value.replace(/,/g,''))||0;
-  const expenses=parseFloat(document.getElementById('cf-expenses').value.replace(/,/g,''))||0;
+  const balance=parseFloat((document.getElementById('cf-balance')?.value||'').replace(/,/g,''))||0;
+  const zero=parseFloat((document.getElementById('cf-zero')?.value||'').replace(/,/g,''))||0;
+  const fixedTotal=(D.cfFixedExpenses||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
+  const credit=parseFloat((document.getElementById('cf-credit')?.value||'').replace(/,/g,''))||0;
+  const additional=parseFloat((document.getElementById('cf-expenses')?.value||'').replace(/,/g,''))||0;
+  const expenses=fixedTotal+credit+additional;
   const cur=(document.getElementById('cf-currency')?.value)||D.cfCurrency||'ILS';
   const el=document.getElementById('cf-result');
   if(!balance&&!zero&&!expenses){el.style.display='none';return;}
@@ -346,6 +365,59 @@ function calcCashFlow(){
     renderAccountSplit(0,cur);
   }
   markDirty();
+}
+
+function renderCfFixed(){
+  const el=document.getElementById('cf-fixed-expenses');
+  if(!el)return;
+  if(!D.cfFixedExpenses)D.cfFixedExpenses=[];
+  el.innerHTML='';
+  if(!D.cfFixedExpenses.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--t3);padding:3px 0">לא הוגדרו הוצאות קבועות עדיין</div>';
+    return;
+  }
+  D.cfFixedExpenses.forEach((row,i)=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px';
+    div.innerHTML=`
+      <input type="text" placeholder='שכ"ד, ביטוחים...'
+        value="${esc(row.name||'')}"
+        oninput="D.cfFixedExpenses[${i}].name=this.value;markDirty()"
+        style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:7px 10px;direction:rtl"/>
+      <input type="number" placeholder="0"
+        value="${row.amount||''}"
+        oninput="D.cfFixedExpenses[${i}].amount=this.value;markDirty();calcCashFlow()"
+        style="width:100px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:7px 10px"
+        data-no-fmt/>
+      <button onclick="removeCfFixed(${i})"
+        style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 2px;line-height:1;flex-shrink:0">×</button>`;
+    el.appendChild(div);
+  });
+  const total=D.cfFixedExpenses.reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
+  if(total>0){
+    const cur=D.cfCurrency||'ILS';
+    const tot=document.createElement('div');
+    tot.style.cssText='display:flex;justify-content:space-between;padding:6px 0 2px;border-top:1px solid var(--border);margin-top:2px';
+    tot.innerHTML=`<span style="font-size:12px;color:var(--t3)">סה"כ הוצאות קבועות</span><span style="font-size:13px;font-weight:800;color:var(--amber)">${fmtCur(total,cur)}</span>`;
+    el.appendChild(tot);
+  }
+}
+
+function addCfFixed(){
+  if(!D.cfFixedExpenses)D.cfFixedExpenses=[];
+  D.cfFixedExpenses.push({name:'',amount:''});
+  markDirty();
+  renderCfFixed();
+  const el=document.getElementById('cf-fixed-expenses');
+  if(el){const inputs=el.querySelectorAll('input[type="text"]');if(inputs.length)inputs[inputs.length-1].focus();}
+}
+
+function removeCfFixed(i){
+  if(!D.cfFixedExpenses)return;
+  D.cfFixedExpenses.splice(i,1);
+  markDirty();
+  renderCfFixed();
+  calcCashFlow();
 }
 
 function renderAccountSplit(available,cur){
@@ -1967,7 +2039,8 @@ const VALIDATION_RULES = {
   locAmount:    [0, 100000000, 'סכום מיקום'],
   cfBalance:    [-10000000, 100000000, 'יתרת עו"ש'],
   cfZero:       [0, 10000000, 'אפס חדש'],
-  cfExpenses:   [0, 10000000, 'הוצאות צפויות'],
+  cfExpenses:   [0, 10000000, 'הוצאות נוספות'],
+  cfCredit:     [0, 10000000, 'הוצאות באשראי'],
   nwCell:       [-100000000, 100000000, 'שווי'],
   portValue:    [0, 100000000, 'שווי השקעה'],
   portTarget:   [0, 100, 'אחוז יעד'],
