@@ -58,7 +58,6 @@ function defData(){
       {id:1,brokerName:'',items:[{name:'',category:'מניות חו"ל',value:'',targetPct:''}]}
     ],
     portfolio:[{name:'',category:'מניות חו"ל',value:'',targetPct:''}],
-    accountSplit:{count:1,pct:[100,0,0]},
     snapshots:[]
   };
 }
@@ -315,7 +314,6 @@ function renderAll(){
   const cfExpEl=document.getElementById('cf-expenses');
   if(cfExpEl)cfExpEl.value='';
   renderCfFixed();
-  renderAccountSplit(0);
   // Only render what's immediately needed
   renderSettings();
   renderDash();
@@ -355,14 +353,12 @@ function calcCashFlow(){
     if(mi)mi.value=availableILS;
     el.className='cf-result good';
     el.innerHTML=`מעולה! 🎉<br>יש לך <strong>${fmtCur(available,cur)}</strong> ש${g('אתה יכול','את יכולה')} להשקיע החודש`;
-    renderAccountSplit(availableILS,cur);
   } else {
     D.monthly='0';
     const mi=document.getElementById('monthly');
     if(mi)mi.value=0;
     el.className='cf-result bad';
     el.innerHTML=`היי, החודש נראה שאין לך מספיק כדי להשקיע.<br>ממליץ לבדוק מה קרה החודש ולשפר לחודש הבא 💪`;
-    renderAccountSplit(0,cur);
   }
   markDirty();
 }
@@ -420,85 +416,6 @@ function removeCfFixed(i){
   calcCashFlow();
 }
 
-function renderAccountSplit(available,cur){
-  cur=cur||D.cfCurrency||'ILS';
-  const availInCur=cur==='ILS'?available:fromILS(available,cur);
-  const el=document.getElementById('cf-accounts');
-  if(!el)return;
-  if(available<=0){el.style.display='none';return;}
-  if(!D.accountSplit)D.accountSplit={count:1,pct:[100,0,0]};
-  const as=D.accountSplit;
-  el.style.display='block';
-  const names=['בן זוג 1','בן זוג 2','חשבון משותף'];
-  const cnt=as.count;
-  let html=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <span style="font-size:13px;color:var(--t2);font-weight:600">חלוקה לחשבונות:</span>
-    ${[1,2,3].map(n=>`<button onclick="setAccountCount(${n})"
-      style="padding:4px 13px;border-radius:20px;border:1.5px solid ${n===cnt?'var(--teal)':'var(--border)'};
-      background:${n===cnt?'var(--teal)':'transparent'};color:${n===cnt?'#0d1b2a':'var(--t2)'};
-      font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">${n}</button>`).join('')}
-  </div>`;
-  if(cnt>=2){
-    const totalPct=as.pct.slice(0,cnt).reduce((s,v)=>s+v,0);
-    const warn=Math.abs(totalPct-100)>0.5;
-    html+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-      <span style="font-size:10px;color:var(--t3);font-weight:700;width:95px;text-align:right;flex-shrink:0">חשבון</span>
-      <span style="font-size:10px;color:var(--t3);font-weight:700;width:56px;text-align:center">% חלוקה</span>
-      <span style="font-size:10px;color:var(--t3);font-weight:700;width:12px"></span>
-      <span style="font-size:10px;color:var(--t3);font-weight:700">סכום לחיסכון החודש</span>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:9px">`;
-    for(let i=0;i<cnt;i++){
-      const pct=as.pct[i]||0;
-      const amt=availInCur*(pct/100);
-      html+=`<div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:13px;color:var(--white);font-weight:600;width:95px;text-align:right;flex-shrink:0">${names[i]}</span>
-        <input type="number" min="0" max="100" value="${pct}" data-acc="${i}" oninput="updateAccountPct(this)"
-          style="width:56px;background:var(--s2);border:1.5px solid var(--border);border-radius:8px;
-          padding:4px 8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;
-          outline:none;text-align:center"
-          onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"/>
-        <span style="font-size:12px;color:var(--t2)">%</span>
-        <span id="acc-amt-${i}" style="font-size:14px;font-weight:800;color:var(--teal)">${fmtCur(amt,cur)}</span>
-      </div>`;
-    }
-    html+=`</div>
-    <div id="acc-warn" style="font-size:11px;color:var(--amber);margin-top:8px;text-align:right;display:${warn?'block':'none'}">
-      ⚠️ סך האחוזים: ${totalPct.toFixed(0)}% (צריך להיות 100%)
-    </div>`;
-  }
-  el.innerHTML=html;
-}
-function setAccountCount(n){
-  if(!D.accountSplit)D.accountSplit={count:1,pct:[100,0,0]};
-  D.accountSplit.count=n;
-  if(n===1)D.accountSplit.pct=[100,0,0];
-  else if(n===2)D.accountSplit.pct=[50,50,0];
-  else D.accountSplit.pct=[34,33,33];
-  renderAccountSplit(parseFloat(D.monthly)||0);
-  markDirty();
-}
-function updateAccountPct(el){
-  if(!D.accountSplit)return;
-  const idx=+el.dataset.acc;
-  D.accountSplit.pct[idx]=parseFloat(el.value)||0;
-  const availableILS=parseFloat(D.monthly)||0;
-  const cur=D.cfCurrency||'ILS';
-  const availInCur=cur==='ILS'?availableILS:fromILS(availableILS,cur);
-  const cnt=D.accountSplit.count;
-  for(let i=0;i<cnt;i++){
-    const amtEl=document.getElementById('acc-amt-'+i);
-    if(amtEl)amtEl.textContent=fmtCur(availInCur*(D.accountSplit.pct[i]||0)/100,cur);
-  }
-  const totalPct=D.accountSplit.pct.slice(0,cnt).reduce((s,v)=>s+v,0);
-  const warn=Math.abs(totalPct-100)>0.5;
-  const warnEl=document.getElementById('acc-warn');
-  if(warnEl){
-    warnEl.style.display=warn?'block':'none';
-    if(warn)warnEl.textContent=`⚠️ סך האחוזים: ${totalPct.toFixed(0)}% (צריך להיות 100%)`;
-  }
-  markDirty();
-}
 
 // ══ GOALS ══
 let goalsTab='active';
