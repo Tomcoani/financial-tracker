@@ -76,6 +76,7 @@
     <button id="nav-portfolio" class="nbtn" onclick="goTo('portfolio',this)"><i data-lucide="briefcase" class="nav-icon"></i> תיק השקעות</button>
     <button id="nav-history" class="nbtn" onclick="goTo('history',this)"><i data-lucide="clock" class="nav-icon"></i> היסטוריה</button>
     <button id="nav-notes" class="nbtn" onclick="goTo('notes',this)"><i data-lucide="notebook-pen" class="nav-icon"></i> הערות</button>
+    <button id="nav-links" class="nbtn" onclick="goTo('links',this)"><i data-lucide="link" class="nav-icon"></i> כלים</button>
     <button id="nav-settings" class="nbtn" onclick="goTo('settings',this)"><i data-lucide="settings" class="nav-icon"></i> הגדרות</button>
     <button class="nbtn" id="admin-nav-btn" style="display:none;color:var(--purple)" onclick="goTo('admin',this)"><i data-lucide="shield" class="nav-icon"></i> ניהול</button>
   </div>
@@ -313,6 +314,62 @@
           border-radius:12px;padding:18px;color:var(--white);font-family:var(--font);font-size:15px;
           resize:vertical;outline:none;direction:rtl;line-height:1.9;text-align:right"
           placeholder="כל מה שעל הלב..." oninput="markDirty()"></textarea>
+      </div>
+    </div>
+
+    <!-- LINKS / TOOLS -->
+    <div class="panel" id="p-links">
+      <div class="card">
+        <div class="ch-title">כלים ומחשבונים</div>
+        <div class="ch-hint">מחשבונים שיעזרו לך לקבל החלטות פיננסיות — לחץ על כפתור הפתיחה לכניסה ישירה</div>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
+            <div style="text-align:right">
+              <div style="font-size:15px;font-weight:800;color:var(--t1);margin-bottom:4px">מחשבון ריבית דריבית</div>
+              <div style="font-size:13px;color:var(--t3)">כמה יגדל הכסף שלך לאורך זמן בהתחשב בתשואה וחיסכון חודשי</div>
+            </div>
+            <a href="https://www.tomani.co.il/calculator" target="_blank" rel="noopener"
+              style="flex-shrink:0;background:var(--teal);color:#0d1b2a;font-family:var(--font);font-size:13px;font-weight:800;padding:9px 18px;border-radius:10px;text-decoration:none;white-space:nowrap">פתח ↗</a>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
+            <div style="text-align:right">
+              <div style="font-size:15px;font-weight:800;color:var(--t1);margin-bottom:4px">השוואת בתי השקעות</div>
+              <div style="font-size:13px;color:var(--t3)">מה ההבדל בין בתי ההשקעות השונים — עמלות, מוצרים וביצועים</div>
+            </div>
+            <a href="https://www.tomani.co.il/compare-investment-house" target="_blank" rel="noopener"
+              style="flex-shrink:0;background:var(--teal);color:#0d1b2a;font-family:var(--font);font-size:13px;font-weight:800;padding:9px 18px;border-radius:10px;text-decoration:none;white-space:nowrap">פתח ↗</a>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
+            <div style="text-align:right">
+              <div style="font-size:15px;font-weight:800;color:var(--t1);margin-bottom:4px">חיפוש מדדים בשוק ההון</div>
+              <div style="font-size:13px;color:var(--t3)">השוואת תעודות סל ומדדים — ביצועים, דמי ניהול ופיזור</div>
+            </div>
+            <a href="https://www.tomani.co.il/compare-etfs" target="_blank" rel="noopener"
+              style="flex-shrink:0;background:var(--teal);color:#0d1b2a;font-family:var(--font);font-size:13px;font-weight:800;padding:9px 18px;border-radius:10px;text-decoration:none;white-space:nowrap">פתח ↗</a>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
+            <div style="text-align:right">
+              <div style="font-size:15px;font-weight:800;color:var(--t1);margin-bottom:4px">קופת גמל להשקעה מול תיק עצמאי</div>
+              <div style="font-size:13px;color:var(--t3)">האם עדיף לחסוך דרך קופת גמל או לנהל תיק השקעות בעצמך</div>
+            </div>
+            <a href="https://www.tomani.co.il/gemel-vs-individual" target="_blank" rel="noopener"
+              style="flex-shrink:0;background:var(--teal);color:#0d1b2a;font-family:var(--font);font-size:13px;font-weight:800;padding:9px 18px;border-radius:10px;text-decoration:none;white-space:nowrap">פתח ↗</a>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
+            <div style="text-align:right">
+              <div style="font-size:15px;font-weight:800;color:var(--t1);margin-bottom:4px">מחשבון פרישה מוקדמת</div>
+              <div style="font-size:13px;color:var(--t3)">מתי תוכל לפרוש? כמה צריך לחסוך כדי להיות חופשי כלכלית</div>
+            </div>
+            <a href="https://www.tomani.co.il/early-retirement" target="_blank" rel="noopener"
+              style="flex-shrink:0;background:var(--teal);color:#0d1b2a;font-family:var(--font);font-size:13px;font-weight:800;padding:9px 18px;border-radius:10px;text-decoration:none;white-space:nowrap">פתח ↗</a>
+          </div>
+
+        </div>
       </div>
     </div>
 
