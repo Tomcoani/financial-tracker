@@ -37,7 +37,7 @@ function defData(){
     monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
-    goals:[{name:'קרן חירום',where:'עו"ש',saved:'',needed:'',h:0,done:false}],
+    goals:[{name:'קרן חירום',where:'',saved:'',needed:'',h:0,done:false,goalLocs:[{where:'',amount:''},{where:'',amount:''}]}],
     locations:[{name:'עו"ש',amount:''},{name:'תיק השקעות',amount:''}],
     pension:[
       {name:'פנסיה משלימה',amount:'',date:'',house:'',feesDeposit:'',feesAccum:'',tracks:[{name:'',pct:''}]},
@@ -51,7 +51,7 @@ function defData(){
     nwData:{
       assets:{rows:[{name:'שווי בית',vals:nw6()},{name:'עו"ש ומזומן',vals:nw6()},{name:'רכב',vals:nw6()}]},
       investments:{rows:[{name:'תיק השקעות',vals:nw6()},{name:'פנסיה',vals:nw6()},{name:'קרן השתלמות',vals:nw6()}]},
-      savings:{rows:[{name:'קרן חירום',vals:nw6()},{name:'קרן כספית',vals:nw6()}]},
+      savings:{rows:[{name:'קרן חירום',vals:nw6()}]},
       debts:{rows:[{name:'משכנתא',vals:nw6()},{name:'הלוואה',vals:nw6()}]}
     },
     portfolios:[
@@ -320,6 +320,7 @@ function renderAll(){
   updateLastUpdatedBars();
   // Defer heavy renders to next tick
   setTimeout(()=>{
+    migrateGoalLocs();
     renderGoals();
     renderLocs();
     renderLocsAutoSummary();
@@ -426,6 +427,7 @@ function switchGoalTab(tab){
   document.getElementById('goals-by-horizon').style.display=tab==='active'?'block':'none';
   document.getElementById('goals-done-list').style.display=tab==='done'?'block':'none';
 }
+let _collapsedGoals=new Set();
 function renderGoals(){
   const hzEl=document.getElementById('goals-by-horizon');hzEl.innerHTML='';
   const active=(D.goals||[]).filter(g=>!g.done);
@@ -441,16 +443,26 @@ function renderGoals(){
       const idx=(D.goals||[]).indexOf(goal);
       (goal.h>=0&&goal.h<=3)?byH[goal.h].push({goal,idx}):unset.push({goal,idx});
     });
+    const appendGoal=({goal,idx},grp)=>{
+      const card=mkGoal(goal,idx);
+      grp.appendChild(card);
+      if(_collapsedGoals.has(idx)){
+        const body=card.querySelector('.goal-body');
+        if(body)body.style.display='none';
+        const btn=card.querySelector('.goal-toggle');
+        if(btn)btn.textContent='▸';
+      }
+    };
     HZ.forEach((hz,hi)=>{
       if(!byH[hi].length)return;
       const grp=document.createElement('div');grp.className='hz-group';
       grp.innerHTML=`<div class="hz-group-title">${hz}</div>`;
-      byH[hi].forEach(({goal,idx})=>grp.appendChild(mkGoal(goal,idx)));
+      byH[hi].forEach(item=>appendGoal(item,grp));
       hzEl.appendChild(grp);
     });
     if(unset.length){
       const grp=document.createElement('div');grp.className='hz-group';
-      unset.forEach(({goal,idx})=>grp.appendChild(mkGoal(goal,idx)));
+      unset.forEach(item=>appendGoal(item,grp));
       hzEl.appendChild(grp);
     }
   }
@@ -468,12 +480,19 @@ function toggleGoalCollapse(i){
   body.style.display=collapsed?'':'none';
   const btn=card&&card.querySelector('.goal-toggle');
   if(btn)btn.textContent=collapsed?'▾':'▸';
+  if(collapsed)_collapsedGoals.delete(i);
+  else _collapsedGoals.add(i);
 }
 function toggleAllGoals(){
   const bodies=document.querySelectorAll('.goal-body');
   const anyOpen=Array.from(bodies).some(b=>b.style.display!=='none');
   bodies.forEach(b=>b.style.display=anyOpen?'none':'');
   document.querySelectorAll('.goal-toggle').forEach(b=>b.textContent=anyOpen?'▸':'▾');
+  if(anyOpen){
+    bodies.forEach(b=>{const id=+b.id.replace('goal-body-','');_collapsedGoals.add(id);});
+  } else {
+    _collapsedGoals.clear();
+  }
 }
 // Months per horizon index — matches HZ labels: 12m / 1-5y / 5-10y / 10+y
 const GOAL_HZ_MONTHS=[12,36,84,180];
@@ -495,6 +514,58 @@ function mkGoal(g,i){
         ${HZ.map((h,hi2)=>`<option value="${hi2}"${hi2===hi?' selected':''} style="background:#1e2d45;color:#e2e8f0">${h}</option>`).join('')}
       </select>`
     :'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>';
+  const cur=g.savedCurrency||'ILS';
+  const inpStyle='background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:6px 10px;direction:rtl;width:100%';
+  const curSel=(field,val)=>`<select data-i="${i}" data-f="${field}" onchange="gu(this)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:2px 4px;width:52px;flex-shrink:0">
+    <option value="ILS"${(val||'ILS')==='ILS'?' selected':''}>₪</option>
+    <option value="USD"${val==='USD'?' selected':''}>$</option>
+    <option value="EUR"${val==='EUR'?' selected':''}>€</option>
+  </select>`;
+  const neededBlock=`<div class="mf"><label>סכום יעד<span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה?</span></span></label>
+    <div style="display:flex;gap:6px;align-items:center">
+      ${curSel('neededCurrency',g.neededCurrency)}
+      <input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)" style="flex:1"/>
+    </div>
+  </div>`;
+  let bodyContent;
+  if(g.goalLocs){
+    const locsTotal=g.goalLocs.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
+    const locsRows=g.goalLocs.map((loc,li)=>`
+      <div style="display:grid;grid-template-columns:1fr 110px 22px;gap:6px;align-items:center;margin-bottom:6px">
+        <input value="${esc(loc.where||'')}" placeholder='עו"ש, קרן כספית...'
+          oninput="updateGoalLoc(${i},${li},'where',this.value)"
+          style="${inpStyle}"/>
+        <input type="number" value="${loc.amount||''}" placeholder="0" data-no-fmt
+          oninput="updateGoalLoc(${i},${li},'amount',this.value)"
+          style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:6px 10px;width:100%"/>
+        ${li>=2?`<button onclick="removeGoalLoc(${i},${li})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0;line-height:1">×</button>`:'<div></div>'}
+      </div>`).join('');
+    bodyContent=`
+      <div class="mf" style="margin-bottom:10px">
+        <label>פיזור קרן החירום<span class="q-tip">?<span class="q-popup">פרט את המיקומים שבהם הכסף נמצא וכמה יש בכל אחד. הסכום הכולל הוא "כמה חסכת".</span></span></label>
+        <div id="goal-locs-${i}" style="margin-top:6px">${locsRows}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <button onclick="addGoalLoc(${i})" style="background:none;border:1px dashed var(--border);border-radius:8px;color:var(--t2);font-family:var(--font);font-size:12px;padding:4px 10px;cursor:pointer">+ הוסף מיקום</button>
+          <span class="goal-locs-total" style="font-size:13px;font-weight:800;color:var(--teal)">${fmtCur(locsTotal,cur)}</span>
+        </div>
+      </div>
+      <div class="gnums">${neededBlock}</div>`;
+  } else {
+    bodyContent=`
+      <div class="gnums">
+        <div class="mf"><label>כמה חסכת<span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת?</span></span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${curSel('savedCurrency',g.savedCurrency)}
+            <input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)" style="flex:1"/>
+          </div>
+        </div>
+        ${neededBlock}
+      </div>
+      <div class="mf" style="margin-bottom:9px"><label>איפה הכסף<span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית.</span></span></label>
+        <input value="${esc(g.where)}" placeholder="עובר ושב / קרן כספית וכד׳" data-i="${i}" data-f="where" oninput="gu(this)"
+          style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
+      </div>`;
+  }
   d.innerHTML=`
     <div class="goal-top">
       <input class="nin" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)"/>
@@ -504,34 +575,9 @@ function mkGoal(g,i){
       <button class="bdel" onclick="delGoal(${i})">×</button>
     </div>
     <div class="goal-body" id="goal-body-${i}">
-      <div class="gnums">
-        <div class="mf"><label>כמה חסכת<span class="q-tip">?<span class="q-popup">כמה כסף כבר חסכת עד היום למטרה הזאת?</span></span></label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <select data-i="${i}" data-f="savedCurrency" onchange="gu(this)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:2px 4px;width:52px;flex-shrink:0">
-              <option value="ILS"${(g.savedCurrency||'ILS')==='ILS'?' selected':''}>₪</option>
-              <option value="USD"${g.savedCurrency==='USD'?' selected':''}>$</option>
-              <option value="EUR"${g.savedCurrency==='EUR'?' selected':''}>€</option>
-            </select>
-            <input type="number" value="${g.saved||''}" placeholder="0" data-i="${i}" data-f="saved" oninput="gu(this)" onblur="validateNum(this.value,'goalSaved',this)" style="flex:1"/>
-          </div>
-        </div>
-        <div class="mf"><label>סכום יעד<span class="q-tip">?<span class="q-popup">כמה כסף סה"כ תצטרך כדי להשיג את המטרה? לדוגמה: עלות הדירה, הנסיעה, הרכב וכד'.</span></span></label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <select data-i="${i}" data-f="neededCurrency" onchange="gu(this)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:2px 4px;width:52px;flex-shrink:0">
-              <option value="ILS"${(g.neededCurrency||'ILS')==='ILS'?' selected':''}>₪</option>
-              <option value="USD"${g.neededCurrency==='USD'?' selected':''}>$</option>
-              <option value="EUR"${g.neededCurrency==='EUR'?' selected':''}>€</option>
-            </select>
-            <input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)" style="flex:1"/>
-          </div>
-        </div>
-      </div>
-      <div class="mf" style="margin-bottom:9px"><label>איפה הכסף<span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית. מסייע לחישוב תמונת המצב הכוללת.</span></span></label>
-        <input value="${esc(g.where)}" placeholder="כאן להכניס את המיקום הספציפי שהכסף נמצא בו - עובר ושב / קרן כספית וכד׳" data-i="${i}" data-f="where" oninput="gu(this)"
-          style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
-      </div>
+      ${bodyContent}
       <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
-      <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmt(nd-sv):''}${isDone?' 🎉':''}</div>
+      <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmtCur(nd-sv,g.neededCurrency||'ILS'):''}${isDone?' 🎉':''}</div>
       ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}
     </div>`;
   return d;
@@ -549,6 +595,56 @@ function gu(el){
   if(f==='needed')touchSection('goals');
   markDirty();
 }
+function updateGoalLoc(goalIdx,locIdx,field,val){
+  if(!D.goals[goalIdx].goalLocs)return;
+  D.goals[goalIdx].goalLocs[locIdx][field]=val;
+  if(field==='amount'){
+    const total=D.goals[goalIdx].goalLocs.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
+    D.goals[goalIdx].saved=String(total||'');
+    const card=document.getElementById('goal-card-'+goalIdx);
+    if(card){
+      const nd=parseFloat(D.goals[goalIdx].needed)||0;
+      const pct=nd>0?Math.min(100,Math.round(total/nd*100)):0;
+      const fill=card.querySelector('.pfill');if(fill)fill.style.width=pct+'%';
+      const lbl=card.querySelector('.plbl');if(lbl)lbl.textContent=pct+'% הושג'+(nd>0?' · נשאר '+fmtCur(nd-total,D.goals[goalIdx].neededCurrency||'ILS'):'');
+      const totEl=card.querySelector('.goal-locs-total');if(totEl)totEl.textContent=fmtCur(total,D.goals[goalIdx].savedCurrency||'ILS');
+    }
+    updateLocFooter();touchSection('goals');renderLocsAutoSummary();
+  }
+  markDirty();
+}
+function addGoalLoc(i){
+  if(!D.goals[i].goalLocs)D.goals[i].goalLocs=[];
+  D.goals[i].goalLocs.push({where:'',amount:''});
+  markDirty();
+  const el=document.getElementById('goal-locs-'+i);
+  if(!el)return;
+  const li=D.goals[i].goalLocs.length-1;
+  const inpStyle='background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:6px 10px;direction:rtl;width:100%';
+  const div=document.createElement('div');
+  div.style.cssText='display:grid;grid-template-columns:1fr 110px 22px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML=`<input value="" placeholder='עו"ש, קרן כספית...' oninput="updateGoalLoc(${i},${li},'where',this.value)" style="${inpStyle}"/>
+    <input type="number" value="" placeholder="0" data-no-fmt oninput="updateGoalLoc(${i},${li},'amount',this.value)" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:6px 10px;width:100%"/>
+    <button onclick="removeGoalLoc(${i},${li})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0;line-height:1">×</button>`;
+  el.appendChild(div);
+  div.querySelector('input').focus();
+}
+function removeGoalLoc(i,li){
+  if(!D.goals[i].goalLocs||D.goals[i].goalLocs.length<=2)return;
+  D.goals[i].goalLocs.splice(li,1);
+  const total=D.goals[i].goalLocs.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
+  D.goals[i].saved=String(total||'');
+  markDirty();
+  renderGoals();
+}
+function migrateGoalLocs(){
+  (D.goals||[]).forEach(g=>{
+    if(g.name==='קרן חירום'&&!g.goalLocs){
+      g.goalLocs=[{where:g.where||'',amount:g.saved||''},{where:'',amount:''}];
+      g.where='';
+    }
+  });
+}
 function setH(i,h,sel){D.goals[i].h=h;renderGoals();touchSection('goals');markDirty();}
 function toggleDone(i){// also refresh locations
 
@@ -559,7 +655,7 @@ function toggleDone(i){// also refresh locations
     if(!gl.name||!gl.name.trim())missing.push('שם המטרה');
     if(!gl.saved||parseFloat(gl.saved)<=0)missing.push('כמה חסכת');
     if(!gl.needed||parseFloat(gl.needed)<=0)missing.push('סכום יעד');
-    if(!gl.where||!gl.where.trim())missing.push('איפה הכסף');
+    if(!gl.goalLocs&&(!gl.where||!gl.where.trim()))missing.push('איפה הכסף');
     // h is always set (0-3), so horizon is always valid
     if(missing.length>0){
       showGoalError(i,'לא ניתן לסמן כהושלם — חסרים הפרטים הבאים: '+missing.join(', '));
@@ -883,6 +979,8 @@ function syncNWFromPension(){
   const cnt=D.nwPeriodsCount||6;
   let syncCol=0;
   for(let c=cnt-1;c>=0;c--){if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){syncCol=c;break;}}
+  // Don't auto-fill the current period — user should enter data manually
+  if(isCurrentPeriod(D.nwPeriods[syncCol]))return;
 
   // Sync portfolio total → תיק השקעות row in investments
   // Only fills empty cells — never overwrites a value the user entered manually.
@@ -935,6 +1033,13 @@ function getLatestNWCol(){
   for(let c=cnt-1;c>=0;c--)
     if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c]))return c;
   return 0;
+}
+function isCurrentPeriod(periodLabel){
+  if(!periodLabel)return false;
+  const parsed=parsePeriodDate(periodLabel);
+  if(!parsed)return false;
+  const now=new Date();
+  return parsed.m===now.getMonth()+1&&parsed.y===now.getFullYear();
 }
 function isFuturePeriod(periodLabel){
   if(!periodLabel)return false;
