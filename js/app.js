@@ -527,6 +527,12 @@ function mkGoal(g,i){
       <input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)" style="flex:1"/>
     </div>
   </div>`;
+  // Inline migration: if goal is קרן חירום without goalLocs, init now and save
+  if(g.name==='קרן חירום'&&!g.goalLocs){
+    g.goalLocs=[{where:g.where||'',amount:g.saved||''},{where:'',amount:''}];
+    g.where='';
+    setTimeout(markDirty,0);
+  }
   let bodyContent;
   if(g.goalLocs){
     const locsTotal=g.goalLocs.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
