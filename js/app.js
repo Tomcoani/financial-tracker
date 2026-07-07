@@ -37,7 +37,7 @@ function defData(){
     monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
-    goals:[{name:'קרן חירום',where:'',saved:'',needed:'',h:0,done:false,goalLocs:[{where:'',amount:''},{where:'',amount:''}]}],
+    goals:[{name:'קרן חירום',where:'',saved:'',needed:'',h:0,done:false,goalLocs:[]}],
     locations:[{name:'עו"ש',amount:''},{name:'תיק השקעות',amount:''}],
     pension:[
       {name:'פנסיה משלימה',amount:'',date:'',house:'',feesDeposit:'',feesAccum:'',tracks:[{name:'',pct:''}]},
@@ -529,12 +529,13 @@ function mkGoal(g,i){
   </div>`;
   // Inline migration: init goalLocs for any goal that doesn't have it yet
   if(!g.goalLocs){
-    g.goalLocs=[{where:g.where||'',amount:g.saved||''},{where:'',amount:''}];
+    const migratedWhere=g.where||'',migratedAmt=g.saved||'';
+    g.goalLocs=migratedWhere||migratedAmt?[{where:migratedWhere,amount:migratedAmt}]:[];
     g.where='';
     setTimeout(markDirty,0);
   }
   let bodyContent;
-  if(g.goalLocs){
+  if(Array.isArray(g.goalLocs)){
     const locsTotal=g.goalLocs.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
     const locsRows=g.goalLocs.map((loc,li)=>`
       <div style="display:grid;grid-template-columns:1fr 110px 22px;gap:6px;align-items:center;margin-bottom:6px">
@@ -544,15 +545,17 @@ function mkGoal(g,i){
         <input type="number" value="${loc.amount||''}" placeholder="0" data-no-fmt
           oninput="updateGoalLoc(${i},${li},'amount',this.value)"
           style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:6px 10px;width:100%"/>
-        ${li>=2?`<button onclick="removeGoalLoc(${i},${li})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0;line-height:1">×</button>`:'<div></div>'}
+        <button onclick="removeGoalLoc(${i},${li})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0;line-height:1">×</button>
       </div>`).join('');
+    const emptyHint=!g.goalLocs.length?`<div style="font-size:12px;color:var(--t3);padding:4px 0;text-align:right">לחץ + כדי לפרט איפה הכסף נמצא</div>`:'';
+    const totalDisplay=locsTotal>0?`<span class="goal-locs-total" style="font-size:13px;font-weight:800;color:var(--teal)">${fmtCur(locsTotal,cur)}</span>`:'';
     bodyContent=`
       <div class="mf" style="margin-bottom:10px">
-        <label>פיזור קרן החירום<span class="q-tip">?<span class="q-popup">פרט את המיקומים שבהם הכסף נמצא וכמה יש בכל אחד. הסכום הכולל הוא "כמה חסכת".</span></span></label>
-        <div id="goal-locs-${i}" style="margin-top:6px">${locsRows}</div>
+        <label>איפה הכסף נמצא?<span class="q-tip">?<span class="q-popup">פרט את המיקומים שבהם הכסף נמצא וכמה יש בכל אחד. הסכום הכולל הוא "כמה חסכת".</span></span></label>
+        <div id="goal-locs-${i}" style="margin-top:6px">${locsRows}${emptyHint}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <button onclick="addGoalLoc(${i})" style="background:none;border:1px dashed var(--border);border-radius:8px;color:var(--t2);font-family:var(--font);font-size:12px;padding:4px 10px;cursor:pointer">+ הוסף מיקום</button>
-          <span class="goal-locs-total" style="font-size:13px;font-weight:800;color:var(--teal)">${fmtCur(locsTotal,cur)}</span>
+          ${totalDisplay}
         </div>
       </div>
       <div class="gnums">${neededBlock}</div>`;
@@ -636,7 +639,7 @@ function addGoalLoc(i){
   div.querySelector('input').focus();
 }
 function removeGoalLoc(i,li){
-  if(!D.goals[i].goalLocs||D.goals[i].goalLocs.length<=2)return;
+  if(!D.goals[i].goalLocs)return;
   D.goals[i].goalLocs.splice(li,1);
   const total=D.goals[i].goalLocs.reduce((s,l)=>s+(parseFloat(l.amount)||0),0);
   D.goals[i].saved=String(total||'');
@@ -687,7 +690,7 @@ function showGoalError(i,msg){
   }
 }
 function addGoal(){
-  D.goals.push({name:'',where:'',saved:'',needed:'',h:-1,done:false,goalLocs:[{where:'',amount:''},{where:'',amount:''}]});
+  D.goals.push({name:'',where:'',saved:'',needed:'',h:-1,done:false,goalLocs:[]});
   renderGoals();touchSection('goals');markDirty();
   setTimeout(()=>{const last=document.querySelector('#goals-by-horizon .goal-card:last-child');if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
 }
