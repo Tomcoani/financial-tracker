@@ -982,39 +982,65 @@ function delPen(i){D.pension.splice(i,1);renderPension();markDirty();}
 
 // ══ NET WORTH ══
 function syncNWFromPension(){
-  const latestCol=getLatestNWCol();
-  // syncCol = rightmost non-future period (even if empty), so a freshly-added
-  // period column is used instead of the previous month's data column.
   const cnt=D.nwPeriodsCount||6;
   let syncCol=0;
   for(let c=cnt-1;c>=0;c--){if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){syncCol=c;break;}}
   // Don't auto-fill the current period — user should enter data manually
   if(isCurrentPeriod(D.nwPeriods[syncCol]))return;
 
-  // Sync portfolio total → תיק השקעות row in investments
+  // Find or create a named row in a section (only creates if no exact name match exists)
+  const findOrMakeRow=(sec,name)=>{
+    let row=D.nwData[sec].rows.find(r=>r.name===name);
+    if(!row){row={name,vals:Array(cnt).fill('')};D.nwData[sec].rows.push(row);}
+    return row;
+  };
+
+  // ── Portfolio(s) → תיק השקעות ──────────────────────────────────────────────
   // Only fills empty cells — never overwrites a value the user entered manually.
-  const portTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-  if(portTotal>0){
-    D.nwData.investments.rows.forEach(row=>{
-      if(row.name==='תיק השקעות'||row.name==='תיק'){
-        if(!D.nwPeriods.some(p=>p)){
-          if(!row.vals[0])row.vals[0]=String(portTotal);
-        } else if(!row.vals[syncCol]){
-          row.vals[syncCol]=String(portTotal);
+  const portfolios=D.portfolios||[];
+  const namedPorts=portfolios.filter(p=>(p.brokerName||'').trim());
+  if(namedPorts.length>1){
+    // Multiple named portfolios (e.g., couple with separate brokerage accounts): one NW row each
+    namedPorts.forEach(port=>{
+      const portVal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+      if(!portVal)return;
+      const row=findOrMakeRow('investments',port.brokerName.trim());
+      if(!row.vals[syncCol])row.vals[syncCol]=String(portVal);
+    });
+  } else {
+    // Single portfolio or unnamed: sum all into the generic "תיק השקעות" row
+    const portTotal=portfolios.flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+    if(portTotal>0){
+      D.nwData.investments.rows.forEach(row=>{
+        if(row.name==='תיק השקעות'||row.name==='תיק'){
+          if(!row.vals[syncCol])row.vals[syncCol]=String(portTotal);
         }
-      }
-    });
+      });
+    }
   }
-  // Sync pension → investments
-  (D.pension||[]).forEach(p=>{
-    if(!p.amount)return;
-    D.nwData.investments.rows.forEach(row=>{
-      if(row.name===p.name||(row.name.includes('פנסיה')&&p.name.includes('פנסי'))||(row.name.includes('השתלמות')&&p.name.includes('השתלמות'))){
-        if(!row.vals[syncCol])row.vals[syncCol]=p.amount;
+
+  // ── Pension & study funds → investments ────────────────────────────────────
+  // Matching strategy: exact name → generic type row (only when single of that
+  // type) → create a separate row per pension (handles couples with 2 pensions).
+  const activePensions=(D.pension||[]).filter(p=>p.amount);
+  activePensions.forEach(p=>{
+    // 1. Exact name match
+    let row=D.nwData.investments.rows.find(r=>r.name===p.name);
+    if(!row){
+      const isPen=p.name.includes('פנסי'),isHT=p.name.includes('השתלמות');
+      const sameType=activePensions.filter(pp=>isPen?pp.name.includes('פנסי'):isHT?pp.name.includes('השתלמות'):false);
+      if(sameType.length===1){
+        // 2. Only one active pension of this type → use any existing generic row of that type
+        const typeRows=D.nwData.investments.rows.filter(r=>isPen?r.name.includes('פנסי'):r.name.includes('השתלמות'));
+        if(typeRows.length===1)row=typeRows[0];
       }
-    });
+      // 3. Multiple of same type, or no generic row: find/create a row named after this pension
+      if(!row)row=findOrMakeRow('investments',p.name);
+    }
+    if(!row.vals[syncCol])row.vals[syncCol]=p.amount;
   });
-  // Sync locations → matching NW rows (half-auto: only fills empty cells)
+
+  // ── Locations → matching NW rows ───────────────────────────────────────────
   (D.locations||[]).forEach(loc=>{
     if(!loc.name||!loc.amount)return;
     ['assets','investments','savings'].forEach(sec=>{
