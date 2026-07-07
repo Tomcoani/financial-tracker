@@ -527,8 +527,8 @@ function mkGoal(g,i){
       <input type="number" value="${g.needed||''}" placeholder="0" data-i="${i}" data-f="needed" oninput="gu(this)" onblur="validateNum(this.value,'goalNeeded',this)" style="flex:1"/>
     </div>
   </div>`;
-  // Inline migration: if goal is קרן חירום without goalLocs, init now and save
-  if(g.name==='קרן חירום'&&!g.goalLocs){
+  // Inline migration: init goalLocs for any goal that doesn't have it yet
+  if(!g.goalLocs){
     g.goalLocs=[{where:g.where||'',amount:g.saved||''},{where:'',amount:''}];
     g.where='';
     setTimeout(markDirty,0);
@@ -687,7 +687,7 @@ function showGoalError(i,msg){
   }
 }
 function addGoal(){
-  D.goals.push({name:'',where:'',saved:'',needed:'',h:-1,done:false});
+  D.goals.push({name:'',where:'',saved:'',needed:'',h:-1,done:false,goalLocs:[{where:'',amount:''},{where:'',amount:''}]});
   renderGoals();touchSection('goals');markDirty();
   setTimeout(()=>{const last=document.querySelector('#goals-by-horizon .goal-card:last-child');if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
 }
