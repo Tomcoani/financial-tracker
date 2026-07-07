@@ -3034,14 +3034,18 @@ function renderLocsAutoSummary(){
   const whereMap={};
 
   (D.goals||[]).filter(g=>!g.done).forEach(g=>{
-    if(!g.where||!g.saved)return;
-    const key=g.where.trim();if(!key)return;
     const goalCur=g.savedCurrency||'ILS';
-    const svILS=toILS(parseFloat(g.saved)||0,goalCur);
-    if(!whereMap[key])whereMap[key]={totalILS:0,currency:goalCur,curCount:{},goals:[]};
-    whereMap[key].curCount[goalCur]=(whereMap[key].curCount[goalCur]||0)+1;
-    whereMap[key].totalILS+=svILS;
-    if(g.name)whereMap[key].goals.push({name:g.name,saved:parseFloat(g.saved)||0,savedCur:goalCur});
+    const locs=(g.goalLocs&&g.goalLocs.length)?g.goalLocs
+      :(g.where&&g.saved?[{where:g.where,amount:g.saved}]:[]);
+    locs.forEach(loc=>{
+      const key=(loc.where||'').trim();if(!key)return;
+      const amt=parseFloat(loc.amount)||0;if(!amt)return;
+      const locILS=toILS(amt,goalCur);
+      if(!whereMap[key])whereMap[key]={totalILS:0,currency:goalCur,curCount:{},goals:[]};
+      whereMap[key].curCount[goalCur]=(whereMap[key].curCount[goalCur]||0)+1;
+      whereMap[key].totalILS+=locILS;
+      if(g.name)whereMap[key].goals.push({name:g.name,saved:amt,savedCur:goalCur});
+    });
   });
   // Set dominant goal currency per group
   Object.values(whereMap).forEach(d=>{
