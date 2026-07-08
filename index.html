@@ -624,7 +624,16 @@
 
 <div class="toast" id="toast">נשמר ☁️</div>
 
-<script defer src="js/app.js"></script>
+<!-- Load order matters: plain scripts sharing globals, split from the old app.js -->
+<script defer src="js/core.js"></script>
+<script defer src="js/cashflow-goals.js"></script>
+<script defer src="js/pension.js"></script>
+<script defer src="js/networth.js"></script>
+<script defer src="js/portfolio.js"></script>
+<script defer src="js/dashboard.js"></script>
+<script defer src="js/settings.js"></script>
+<script defer src="js/admin.js"></script>
+<script defer src="js/misc.js"></script>
 <script defer src="js/monthly.js"></script>
 </body>
 </html>
