@@ -568,10 +568,73 @@ function addLoc(){D.locations.push({name:'',amount:'',whereTo:'',_manual:true});
 function delLoc(i){D.locations.splice(i,1);renderLocs();markDirty();}
 
 // ══ SMART TRANSFER PLAN ══
-// Computes how much to move from each asset to each destination, based on:
-// goal gaps (most urgent horizon first), the "אפס החדש" reserve for עו"ש
-// accounts, and money already sitting at a goal's location. Amounts in ₪.
+// Step 1: the user picks which goals participate and in what priority order.
+// Step 2: the plan allocates money only to the checked goals, in that order:
+// reserve the "אפס החדש" in עו"ש → checked goal gaps → remainder to portfolio.
+let _planPick=[];
 function buildTransferPlan(){
+  // Goals that still have a gap, ordered by saved preferences (fallback: horizon)
+  const candidates=(D.goals||[]).filter(gl=>!gl.done&&(gl.name||'').trim())
+    .map(gl=>({name:gl.name,h:gl.h||0,gap:toILS((parseFloat(gl.needed)||0)-(parseFloat(gl.saved)||0),gl.savedCurrency||'ILS')}))
+    .filter(t=>t.gap>0);
+  if(!candidates.length){
+    // No open goal gaps — build directly (everything free goes to the portfolio)
+    _planPick=[];
+    planPickBuild();
+    return;
+  }
+  const prefs=D.planPrefs||{order:[],excluded:[]};
+  candidates.sort((a,b)=>{
+    const ia=prefs.order.indexOf(a.name),ib=prefs.order.indexOf(b.name);
+    if(ia!==-1&&ib!==-1)return ia-ib;
+    if(ia!==-1)return -1;
+    if(ib!==-1)return 1;
+    return a.h-b.h;
+  });
+  _planPick=candidates.map(t=>({...t,use:!prefs.excluded.includes(t.name)}));
+  renderPlanPicker();
+}
+function renderPlanPicker(){
+  const el=document.getElementById('locs-plan');
+  if(!el)return;
+  let html=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:10px">
+    <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">לאילו מטרות להקצות כסף?</div>
+    <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.6">
+      סמן ✓ רק את המטרות שחשובות לך עכשיו, וסדר אותן לפי עדיפות עם החצים — הכסף יוקצה לפי הסדר הזה. מה שלא מסומן לא יקבל כסף, והעודף יעבור לתיק ההשקעות.</div>`;
+  _planPick.forEach((t,i)=>{
+    html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(30,45,69,.5);opacity:${t.use?1:.45}">
+      <input type="checkbox" ${t.use?'checked':''} onchange="planPickToggle(${i})"
+        style="width:17px;height:17px;accent-color:var(--teal);cursor:pointer;flex-shrink:0"/>
+      <span style="font-size:12px;color:var(--t3);width:16px;text-align:center;flex-shrink:0">${i+1}</span>
+      <span style="flex:1;font-size:13px;font-weight:600;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🎯 ${esc(t.name)}</span>
+      <span style="font-size:11.5px;color:var(--t3);white-space:nowrap">חסרים ${fmt(t.gap)}</span>
+      <span style="display:flex;flex-direction:column;flex-shrink:0">
+        <button onclick="planPickMove(${i},-1)" ${i===0?'disabled':''} style="background:none;border:none;color:${i===0?'var(--border)':'var(--teal)'};cursor:${i===0?'default':'pointer'};font-size:11px;padding:0 4px;line-height:1.2">▲</button>
+        <button onclick="planPickMove(${i},1)" ${i===_planPick.length-1?'disabled':''} style="background:none;border:none;color:${i===_planPick.length-1?'var(--border)':'var(--teal)'};cursor:${i===_planPick.length-1?'default':'pointer'};font-size:11px;padding:0 4px;line-height:1.2">▼</button>
+      </span>
+    </div>`;
+  });
+  html+=`<div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btnadd" style="flex:1;margin:0" onclick="planPickBuild()">בנה תוכנית לפי הסדר הזה ←</button>
+    <button onclick="document.getElementById('locs-plan').innerHTML='';renderTransferPlan()"
+      style="background:transparent;border:1px solid var(--border);color:var(--t3);border-radius:10px;padding:8px 16px;font-family:var(--font);font-size:12px;cursor:pointer">ביטול</button>
+  </div></div>`;
+  el.innerHTML=html;
+}
+function planPickToggle(i){
+  _planPick[i].use=!_planPick[i].use;
+  renderPlanPicker();
+}
+function planPickMove(i,dir){
+  const j=i+dir;
+  if(j<0||j>=_planPick.length)return;
+  [_planPick[i],_planPick[j]]=[_planPick[j],_planPick[i]];
+  renderPlanPicker();
+}
+function planPickBuild(){
+  // Remember the user's priorities for next time
+  D.planPrefs={order:_planPick.map(t=>t.name),excluded:_planPick.filter(t=>!t.use).map(t=>t.name)};
+  const targets=_planPick.filter(t=>t.use).map(t=>({...t}));
   const zero=parseFloat(String(D.cfZero||'0').replace(/,/g,''))||0;
   // Money already assigned to goals, keyed by the location it sits in — it stays put
   const goalsAt={};
@@ -581,10 +644,6 @@ function buildTransferPlan(){
       goalsAt[k]=(goalsAt[k]||0)+toILS(parseFloat(l.amount)||0,gl.savedCurrency||'ILS');
     });
   });
-  // Destinations: active goals that still have a gap, most urgent horizon first
-  const targets=(D.goals||[]).filter(gl=>!gl.done&&(gl.name||'').trim())
-    .map(gl=>({name:gl.name,h:gl.h||0,gap:toILS((parseFloat(gl.needed)||0)-(parseFloat(gl.saved)||0),gl.savedCurrency||'ILS')}))
-    .filter(t=>t.gap>0).sort((a,b)=>a.h-b.h);
   const plan=[];
   let zeroReserved=false;
   (D.locations||[]).filter(l=>!l._auto&&(l.name||'').trim()&&parseFloat(l.amount)>0).forEach(l=>{
@@ -616,8 +675,10 @@ function renderTransferPlan(){
   if(!el)return;
   const plan=D.transferPlan||[];
   if(!plan.length){el.innerHTML='';return;}
-  let html=`<div style="font-size:11px;color:var(--t3);margin:10px 0 8px;line-height:1.6">
-    מחושב לפי סדר דחיפות המטרות, ה"אפס החדש" מהתזרים, והכסף שכבר משויך למטרות. אפשר לערוך כל סכום או למחוק שורה.</div>`;
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:10px 0 8px">
+    <span style="font-size:11px;color:var(--t3);line-height:1.6">מחושב לפי סדר העדיפויות שבחרת, ה"אפס החדש" מהתזרים, והכסף שכבר משויך למטרות. אפשר לערוך כל סכום או למחוק שורה.</span>
+    <button onclick="buildTransferPlan()" style="background:transparent;border:1px solid var(--teal-border);color:var(--teal);border-radius:8px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">שנה עדיפויות</button>
+  </div>`;
   plan.forEach((p,i)=>{
     html+=`<div style="display:grid;grid-template-columns:1fr 22px 1fr 92px 24px;gap:6px;align-items:center;margin-bottom:6px">
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.from)}</div>
