@@ -1062,18 +1062,6 @@ function syncNWFromPension(includeCurrent){
   });
   return filled;
 }
-// Manual pull button in the NW tab — fills empty cells (incl. current month) and reports back
-function manualSyncNW(){
-  const filled=syncNWFromPension(true);
-  const msg=document.getElementById('nw-sync-msg');
-  if(filled>0){
-    renderNW();markDirty();
-    if(msg){msg.style.color='var(--teal)';msg.textContent=`✓ עודכנו ${filled} תאים מנתוני הפנסיה ותיק ההשקעות`;}
-  } else if(msg){
-    msg.style.color='var(--t3)';msg.textContent='אין נתונים חדשים למשוך — התאים בעמודה האחרונה כבר מלאים';
-  }
-  if(msg){clearTimeout(msg._t);msg._t=setTimeout(()=>{msg.textContent='';},6000);}
-}
 // Called when pension data changes — offer to sync locations
 function autoSyncLocations(){
   // Only re-render - don't push pension into D.locations (causes duplication)
@@ -1314,14 +1302,14 @@ function renderNWSummary(){
       <th class="th-label">קטגוריה</th>
       ${activePeriods.map(({p,i})=>{
         const fut=isFuturePeriod(p);
-        return `<th style="${fut?'color:rgba(71,85,105,.5);font-style:italic':''}>${p}</th>`;
+        return `<th style="${fut?'color:rgba(71,85,105,.5);font-style:italic':''}">${p}</th>`;
       }).join('')}
     </tr></thead><tbody>`;
     rows.forEach(({key,label,color})=>{
-      tableHtml+=`<tr><td class="td-label">${label}</td>
+      tableHtml+=`<tr><td class="td-label"><span style="color:${color}">●</span> ${label}</td>
         ${activePeriods.map(({i})=>{
           const v=totals[i][key];
-          return `<td style="color:${color}">${v>0?fmt(v):'—'}</td>`;
+          return `<td style="color:var(--white)">${v>0?fmt(v):'—'}</td>`;
         }).join('')}</tr>`;
     });
     // NW totals row
