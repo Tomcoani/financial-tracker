@@ -85,6 +85,10 @@
     <!-- DASHBOARD -->
     <div class="panel on" id="p-dash">
       <div id="snap-trigger-area"></div>
+      <button onclick="openMonthlyUpdate()"
+        style="width:100%;margin-bottom:10px;background:linear-gradient(135deg,rgba(66,235,214,.14),rgba(66,235,214,.05));border:1.5px solid rgba(66,235,214,.35);border-radius:12px;padding:13px 18px;color:var(--teal);font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        ⚡ עדכון חודשי — כל המספרים במקום אחד
+      </button>
       <div id="update-alerts" style="margin-bottom:8px"></div>
       <div id="cmp-area"></div>
       <div class="g4" style="margin-bottom:16px" id="dash-stats"></div>
@@ -243,6 +247,7 @@
         <div class="ch-hint">הכנס את התאריך הראשון — לדוגמה: <strong>9/2023</strong> (ספטמבר 2023). שאר העמודות יתמלאו אוטומטית.</div>
         <div class="g3" id="period-heads"></div>
       </div>
+      <div id="nw-mobile-toggle"></div>
       <div class="card"><div class="ch-title"><i data-lucide="home" class="tile-icon"></i> נכסים</div>
         <div class="ch-hint">שווי נכסים פיזיים — דירה, רכב, מזומן</div>
         <div class="nw-table-wrap"><div id="nw-assets"></div></div>
@@ -580,6 +585,15 @@
   </div>
 </div>
 
+<!-- MONTHLY UPDATE WIZARD -->
+<div class="overlay" id="monthly-modal" style="display:none">
+  <div class="modal" style="text-align:right;width:min(560px,94vw);max-height:88vh;display:flex;flex-direction:column">
+    <div id="monthly-head"></div>
+    <div id="monthly-body" style="overflow-y:auto;flex:1;min-height:0;padding-left:4px"></div>
+    <div class="modal-btns" id="monthly-btns" style="margin-top:14px"></div>
+  </div>
+</div>
+
 <!-- RESET MODAL -->
 <div class="overlay" id="reset-modal" style="display:none">
   <div class="modal">
@@ -611,5 +625,6 @@
 <div class="toast" id="toast">נשמר ☁️</div>
 
 <script defer src="js/app.js"></script>
+<script defer src="js/monthly.js"></script>
 </body>
 </html>

@@ -1097,7 +1097,33 @@ function isFuturePeriod(periodLabel){
   // Future = more than current month
   return periodDate > new Date(now.getFullYear(), now.getMonth(), 1);
 }
+// ── Mobile: show only the last 2 periods by default, with a toggle ──
+let nwMobileShowAll=false;
+function isMobileNW(){return window.innerWidth<=640;}
+function applyMobileNWCols(){
+  // Only when no manual column choices exist — a user's ▼/▶ clicks win
+  if(!isMobileNW()||nwMobileShowAll||Object.keys(nwColHidden).length)return;
+  const cnt=D.nwPeriodsCount||6;
+  const keep=[];
+  for(let c=cnt-1;c>=0&&keep.length<2;c--){
+    const p=D.nwPeriods[c];
+    if(p&&!isFuturePeriod(p))keep.push(c);
+  }
+  if(!keep.length)return;
+  for(let c=0;c<cnt;c++)if(!keep.includes(c))nwColHidden[c]=true;
+}
+function toggleNWMobileCols(){
+  nwMobileShowAll=!nwMobileShowAll;
+  nwColHidden={};
+  renderNW();
+}
 function renderNW(){
+  applyMobileNWCols();
+  const mt=document.getElementById('nw-mobile-toggle');
+  if(mt){
+    mt.innerHTML=isMobileNW()?`<button class="btnadd" style="width:100%;margin:0 0 10px" onclick="toggleNWMobileCols()">
+      ${nwMobileShowAll?'הצג רק את התקופות האחרונות':'הצג את כל התקופות'}</button>`:'';
+  }
   const ph=document.getElementById('period-heads');ph.innerHTML='';
   // Hint row above period inputs
   const hint=document.createElement('div');
@@ -1130,7 +1156,7 @@ function renderNW(){
 }
 // Build a grid-template-columns string respecting column collapse
 function nwGridCols(cnt){
-  const lbl='160px',del='24px';
+  const lbl=isMobileNW()?'104px':'160px',del='24px';
   const cols=Array.from({length:cnt},(_,i)=>nwColHidden[i]?'22px':'minmax(0,1fr)').join(' ');
   return `${lbl} ${cols} ${del}`;
 }
