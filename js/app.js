@@ -992,6 +992,9 @@ function syncNWFromPension(includeCurrent){
   if(!includeCurrent&&isCurrentPeriod(D.nwPeriods[syncCol]))return 0;
   let filled=0;
   const fill=(row,val)=>{if(!row.vals[syncCol]){row.vals[syncCol]=String(val);filled++;}};
+  // Generic rows locked against location-fill when their money already synced into named rows
+  // (prevents double-counting the same money in both a named row and the generic row)
+  const lockedRows=new Set();
 
   // Find or create a named row in a section (only creates if no exact name match exists)
   const findOrMakeRow=(sec,name)=>{
@@ -1006,6 +1009,7 @@ function syncNWFromPension(includeCurrent){
   const namedPorts=portfolios.filter(p=>(p.brokerName||'').trim());
   if(namedPorts.length>1){
     // Multiple named portfolios (e.g., couple with separate brokerage accounts): one NW row each
+    lockedRows.add('תיק השקעות');lockedRows.add('תיק');
     namedPorts.forEach(port=>{
       const portVal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
       if(!portVal)return;
@@ -1037,7 +1041,11 @@ function syncNWFromPension(includeCurrent){
         if(typeRows.length===1)row=typeRows[0];
       }
       // 3. Multiple of same type, or no generic row: find/create a row named after this pension
-      if(!row)row=findOrMakeRow('investments',p.name);
+      if(!row){
+        row=findOrMakeRow('investments',p.name);
+        if(isPen)lockedRows.add('פנסיה');
+        if(isHT)lockedRows.add('קרן השתלמות');
+      }
     }
     fill(row,p.amount);
   });
@@ -1047,6 +1055,7 @@ function syncNWFromPension(includeCurrent){
     if(!loc.name||!loc.amount)return;
     ['assets','investments','savings'].forEach(sec=>{
       D.nwData[sec].rows.forEach(row=>{
+        if(sec==='investments'&&lockedRows.has(row.name))return;
         if(row.name===loc.name)fill(row,loc.amount);
       });
     });
