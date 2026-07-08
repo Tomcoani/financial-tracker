@@ -981,12 +981,17 @@ function addPension(){D.pension.push({name:'',amount:'',date:'',house:'',feesDep
 function delPen(i){D.pension.splice(i,1);renderPension();markDirty();}
 
 // ══ NET WORTH ══
-function syncNWFromPension(){
+// includeCurrent=true → manual pull (button): also fills the current month's column.
+// includeCurrent=false → automatic sync (tab switch): skips the current period.
+// Returns the number of cells filled. Never overwrites user-entered values.
+function syncNWFromPension(includeCurrent){
   const cnt=D.nwPeriodsCount||6;
   let syncCol=0;
   for(let c=cnt-1;c>=0;c--){if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){syncCol=c;break;}}
   // Don't auto-fill the current period — user should enter data manually
-  if(isCurrentPeriod(D.nwPeriods[syncCol]))return;
+  if(!includeCurrent&&isCurrentPeriod(D.nwPeriods[syncCol]))return 0;
+  let filled=0;
+  const fill=(row,val)=>{if(!row.vals[syncCol]){row.vals[syncCol]=String(val);filled++;}};
 
   // Find or create a named row in a section (only creates if no exact name match exists)
   const findOrMakeRow=(sec,name)=>{
@@ -1004,17 +1009,14 @@ function syncNWFromPension(){
     namedPorts.forEach(port=>{
       const portVal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
       if(!portVal)return;
-      const row=findOrMakeRow('investments',port.brokerName.trim());
-      if(!row.vals[syncCol])row.vals[syncCol]=String(portVal);
+      fill(findOrMakeRow('investments',port.brokerName.trim()),portVal);
     });
   } else {
     // Single portfolio or unnamed: sum all into the generic "תיק השקעות" row
     const portTotal=portfolios.flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
     if(portTotal>0){
       D.nwData.investments.rows.forEach(row=>{
-        if(row.name==='תיק השקעות'||row.name==='תיק'){
-          if(!row.vals[syncCol])row.vals[syncCol]=String(portTotal);
-        }
+        if(row.name==='תיק השקעות'||row.name==='תיק')fill(row,portTotal);
       });
     }
   }
@@ -1037,7 +1039,7 @@ function syncNWFromPension(){
       // 3. Multiple of same type, or no generic row: find/create a row named after this pension
       if(!row)row=findOrMakeRow('investments',p.name);
     }
-    if(!row.vals[syncCol])row.vals[syncCol]=p.amount;
+    fill(row,p.amount);
   });
 
   // ── Locations → matching NW rows ───────────────────────────────────────────
@@ -1045,10 +1047,23 @@ function syncNWFromPension(){
     if(!loc.name||!loc.amount)return;
     ['assets','investments','savings'].forEach(sec=>{
       D.nwData[sec].rows.forEach(row=>{
-        if(row.name===loc.name&&!row.vals[syncCol])row.vals[syncCol]=loc.amount;
+        if(row.name===loc.name)fill(row,loc.amount);
       });
     });
   });
+  return filled;
+}
+// Manual pull button in the NW tab — fills empty cells (incl. current month) and reports back
+function manualSyncNW(){
+  const filled=syncNWFromPension(true);
+  const msg=document.getElementById('nw-sync-msg');
+  if(filled>0){
+    renderNW();markDirty();
+    if(msg){msg.style.color='var(--teal)';msg.textContent=`✓ עודכנו ${filled} תאים מנתוני הפנסיה ותיק ההשקעות`;}
+  } else if(msg){
+    msg.style.color='var(--t3)';msg.textContent='אין נתונים חדשים למשוך — התאים בעמודה האחרונה כבר מלאים';
+  }
+  if(msg){clearTimeout(msg._t);msg._t=setTimeout(()=>{msg.textContent='';},6000);}
 }
 // Called when pension data changes — offer to sync locations
 function autoSyncLocations(){
@@ -2805,6 +2820,18 @@ async function renderAdmin(){
               <div style="font-size:10px;color:var(--t3)">מטרות: ${u.goalsAge!==null?u.goalsAge+' ימים':'טרם'}</div>
               <div style="font-size:10px;color:var(--t3)">פנסיה: ${u.penAge!==null?u.penAge+' ימים':'טרם'}</div>
               <div style="font-size:10px;color:var(--t3)">שווי נטו: ${u.nwAge!==null?u.nwAge+' ימים':'טרם'}</div>
+              ${u.alerts.length>0?`<div style="display:flex;gap:6px;margin-top:4px">
+                <button onclick="event.stopPropagation();adminSendReminder('${esc(u.email)}','${esc(u.name)}','wa')"
+                  style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;
+                  border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                  <i data-lucide="message-circle" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת בוואטסאפ
+                </button>
+                ${u.email?`<button onclick="event.stopPropagation();adminSendReminder('${esc(u.email)}','${esc(u.name)}','mail')"
+                  style="background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:#5eead4;
+                  border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                  <i data-lucide="send" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת במייל
+                </button>`:''}
+              </div>`:''}
               ${u.email?`<button onclick="event.stopPropagation();adminSendPasswordReset('${u.email}')"
                 style="margin-top:4px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d;
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
@@ -2977,6 +3004,17 @@ async function adminSendPasswordReset(email){
     showToast('מייל איפוס נשלח ל-'+email+' ✓ — בדוק גם ספאם');
   }catch(e){
     alert('שגיאה: '+e.message);
+  }
+}
+
+// Open WhatsApp / email with a ready-made update reminder for the client
+function adminSendReminder(email,name,via){
+  const firstName=(name||'').split(' ')[0]||'';
+  const msg=`היי ${firstName}, מקווה שהכל טוב! 🙂\nעבר קצת זמן מאז העדכון האחרון במערכת המעקב הפיננסי, ושווה להיכנס לעדכן את הנתונים כדי שנשמור על תמונה מדויקת.\nזה לוקח כמה דקות: https://tomcoani.github.io/financial-tracker/\nאם משהו לא ברור או שצריך עזרה — אני כאן.`;
+  if(via==='wa'){
+    window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  } else {
+    window.open('mailto:'+email+'?subject='+encodeURIComponent('תזכורת קטנה — עדכון נתונים במערכת')+'&body='+encodeURIComponent(msg),'_blank');
   }
 }
 
