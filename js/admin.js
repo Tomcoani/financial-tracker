@@ -23,6 +23,7 @@ async function renderAdmin(){
         const freq=parseInt(d.settings?.freq||'30');
         const parentData=userDoc.data()||{};
         const email=d.settings?.email||parentData.email||'';
+        const phone=d.settings?.phone||'';
         const name=d.settings?.displayName||parentData.displayName||email||userDoc.id.substring(0,8);
         const alerts=[];
         const goalsAge=daysSince(lu.goals),penAge=daysSince(lu.pension),nwAge=daysSince(lu.nw);
@@ -30,7 +31,7 @@ async function renderAdmin(){
         if(penAge===null||penAge>180)alerts.push({label:'פנסיה',cls:'tag-urgent'});
         if(nwAge===null||nwAge>180)alerts.push({label:'שווי נטו',cls:'tag-urgent'});
         const lastSnap=(d.snapshots||[]).length>0?d.snapshots[d.snapshots.length-1]:null;
-        users.push({uid:userDoc.id,name,email,alerts,goalsAge,penAge,nwAge,
+        users.push({uid:userDoc.id,name,email,phone,alerts,goalsAge,penAge,nwAge,
           nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,
           snapshots:(d.snapshots||[]).map(s=>({label:s.label,date:s.date,netWorth:s.netWorth||0,penTotal:s.penTotal||0,goalsSaved:s.goalsSaved||0}))});
       }catch(e){}
@@ -69,7 +70,7 @@ async function renderAdmin(){
               <div style="font-size:10px;color:var(--t3)">פנסיה: ${u.penAge!==null?u.penAge+' ימים':'טרם'}</div>
               <div style="font-size:10px;color:var(--t3)">שווי נטו: ${u.nwAge!==null?u.nwAge+' ימים':'טרם'}</div>
               ${u.alerts.length>0?`<div style="display:flex;gap:6px;margin-top:4px">
-                <button onclick="event.stopPropagation();adminSendReminder('${esc(u.email)}','${esc(u.name)}','wa')"
+                <button onclick="event.stopPropagation();adminSendReminder('${esc(u.email)}','${esc(u.name)}','wa','${esc(u.phone)}')"
                   style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;
                   border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                   <i data-lucide="message-circle" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת בוואטסאפ
@@ -255,12 +256,17 @@ async function adminSendPasswordReset(email){
   }
 }
 
-// Open WhatsApp / email with a ready-made update reminder for the client
-function adminSendReminder(email,name,via){
+// Open WhatsApp / email with a ready-made update reminder for the client.
+// If the client saved a phone number in settings, WhatsApp opens their chat directly.
+function adminSendReminder(email,name,via,phone){
   const firstName=(name||'').split(' ')[0]||'';
   const msg=`היי ${firstName}, מקווה שהכל טוב! 🙂\nעבר קצת זמן מאז העדכון האחרון במערכת המעקב הפיננסי, ושווה להיכנס לעדכן את הנתונים כדי שנשמור על תמונה מדויקת.\nזה לוקח כמה דקות: https://tomcoani.github.io/financial-tracker/\nאם משהו לא ברור או שצריך עזרה — אני כאן.`;
   if(via==='wa'){
-    window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+    // Normalize Israeli numbers: 050-1234567 → 972501234567
+    let digits=(phone||'').replace(/\D/g,'');
+    if(digits.startsWith('0'))digits='972'+digits.slice(1);
+    const target=digits?'https://wa.me/'+digits+'?text=':'https://wa.me/?text=';
+    window.open(target+encodeURIComponent(msg),'_blank');
   } else {
     window.open('mailto:'+email+'?subject='+encodeURIComponent('תזכורת קטנה — עדכון נתונים במערכת')+'&body='+encodeURIComponent(msg),'_blank');
   }

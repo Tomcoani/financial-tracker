@@ -1,16 +1,16 @@
 
 // ══ NET WORTH ══
-// includeCurrent=true → manual pull (button): also fills the current month's column.
-// includeCurrent=false → automatic sync (tab switch): skips the current period.
-// Returns the number of cells filled. Never overwrites user-entered values.
-function syncNWFromPension(includeCurrent){
+// Portfolio rows mirror the portfolio tab automatically: always written to the
+// latest column, including the current month — the user never fills them by hand.
+// Pension/locations only fill empty cells in past periods — never overwrite
+// user-entered values. Returns the number of cells changed.
+function syncNWFromPension(){
   const cnt=D.nwPeriodsCount||6;
   let syncCol=0;
   for(let c=cnt-1;c>=0;c--){if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){syncCol=c;break;}}
-  // Don't auto-fill the current period — user should enter data manually
-  if(!includeCurrent&&isCurrentPeriod(D.nwPeriods[syncCol]))return 0;
   let filled=0;
   const fill=(row,val)=>{if(!row.vals[syncCol]){row.vals[syncCol]=String(val);filled++;}};
+  const overwrite=(row,val)=>{if(row.vals[syncCol]!==String(val)){row.vals[syncCol]=String(val);filled++;}};
   // Generic rows locked against location-fill when their money already synced into named rows
   // (prevents double-counting the same money in both a named row and the generic row)
   const lockedRows=new Set();
@@ -22,8 +22,7 @@ function syncNWFromPension(includeCurrent){
     return row;
   };
 
-  // ── Portfolio(s) → תיק השקעות ──────────────────────────────────────────────
-  // Only fills empty cells — never overwrites a value the user entered manually.
+  // ── Portfolio(s) → תיק השקעות: fully automatic mirror ─────────────────────
   const portfolios=D.portfolios||[];
   const namedPorts=portfolios.filter(p=>(p.brokerName||'').trim());
   if(namedPorts.length>1){
@@ -32,17 +31,21 @@ function syncNWFromPension(includeCurrent){
     namedPorts.forEach(port=>{
       const portVal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
       if(!portVal)return;
-      fill(findOrMakeRow('investments',port.brokerName.trim()),portVal);
+      overwrite(findOrMakeRow('investments',port.brokerName.trim()),portVal);
+      lockedRows.add(port.brokerName.trim());
     });
   } else {
     // Single portfolio or unnamed: sum all into the generic "תיק השקעות" row
     const portTotal=portfolios.flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
     if(portTotal>0){
       D.nwData.investments.rows.forEach(row=>{
-        if(row.name==='תיק השקעות'||row.name==='תיק')fill(row,portTotal);
+        if(row.name==='תיק השקעות'||row.name==='תיק'){overwrite(row,portTotal);lockedRows.add(row.name);}
       });
     }
   }
+
+  // Pension and locations never auto-fill the current period — those the user enters manually
+  if(isCurrentPeriod(D.nwPeriods[syncCol]))return filled;
 
   // ── Pension & study funds → investments ────────────────────────────────────
   // Matching strategy: exact name → generic type row (only when single of that

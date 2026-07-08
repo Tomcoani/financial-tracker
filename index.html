@@ -85,10 +85,6 @@
     <!-- DASHBOARD -->
     <div class="panel on" id="p-dash">
       <div id="snap-trigger-area"></div>
-      <button onclick="openMonthlyUpdate()"
-        style="width:100%;margin-bottom:10px;background:linear-gradient(135deg,rgba(66,235,214,.14),rgba(66,235,214,.05));border:1.5px solid rgba(66,235,214,.35);border-radius:12px;padding:13px 18px;color:var(--teal);font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        ⚡ עדכון חודשי — כל המספרים במקום אחד
-      </button>
       <div id="update-alerts" style="margin-bottom:8px"></div>
       <div id="cmp-area"></div>
       <div class="g4" style="margin-bottom:16px" id="dash-stats"></div>
@@ -132,10 +128,15 @@
         </div>
         <div class="cashflow-box">
           <h3><i data-lucide="coins" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> כמה יש לי להשקיע החודש?</h3>
-          <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:var(--t2);line-height:1.7">
-            <strong style="color:var(--teal)">איך זה עובד?</strong>
-            ממלאים כמה כסף יש היום בעו"ש, מה ה"אפס החדש" (הסכום שתמיד נשאר בעו"ש כרשת ביטחון), ואת ההוצאות שנשארו עד המשכורת הבאה.
-            המערכת מחשבת כמה כסף פנוי יש החודש — <strong>את הסכום הזה מעבירים לחיסכון או להשקעה לפי המטרות שלמטה.</strong>
+          <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;color:var(--t2);line-height:1.8">
+            <div style="margin-bottom:6px"><strong style="color:var(--teal)">מה עושים כאן?</strong>
+            פעם בחודש, אחרי שנכנסת המשכורת, בודקים כמה כסף <strong>באמת פנוי</strong> — ואת הסכום הזה מעבירים לחיסכון או להשקעה.</div>
+            <div style="margin-bottom:6px">
+              <strong style="color:var(--white)">1.</strong> כמה יש עכשיו בעו"ש &nbsp;
+              <strong style="color:var(--white)">2.</strong> מה ה"אפס החדש" (כרית הביטחון שתמיד נשארת בעו"ש) &nbsp;
+              <strong style="color:var(--white)">3.</strong> אילו הוצאות עוד צפויות עד המשכורת הבאה
+            </div>
+            <div style="font-size:11.5px;color:var(--t3)">לדוגמה: 20,000 בעו"ש − 10,000 אפס חדש − 6,000 הוצאות צפויות = <strong style="color:var(--teal)">4,000 ₪ פנויים להשקעה</strong></div>
           </div>
           <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <div style="display:flex;align-items:center;gap:8px">
@@ -214,6 +215,12 @@
           <div id="locs-auto-summary" style="margin-bottom:10px"></div>
           <div id="locs-transfer"></div>
           <div id="loc-footer"></div>
+          <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
+            <div class="ch-title" style="font-size:14px">✨ תוכנית מומלצת אוטומטית</div>
+            <div class="ch-hint">המערכת מחשבת לפי המטרות למעלה — כמה כסף להעביר מכל נכס לכל יעד: קודם משאירים את ה"אפס החדש" בעו"ש, אחר כך משלימים מטרות לפי דחיפות, והעודף עובר לתיק ההשקעות.</div>
+            <button class="btnadd" onclick="buildTransferPlan()">✨ חשב תוכנית מומלצת</button>
+            <div id="locs-plan"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -405,6 +412,10 @@
           </div>
         </div>
         <div class="settings-row">
+          <div class="sf"><label>טלפון נייד (לתזכורות בוואטסאפ)</label><input id="set-phone" type="tel" placeholder="050-1234567" dir="ltr" style="text-align:right" oninput="markDirty()"/></div>
+          <div class="sf"></div>
+        </div>
+        <div class="settings-row">
           <div class="sf"><label>לשון פנייה מועדפת</label>
             <select id="set-gender" oninput="markDirty()">
               <option value="male">זכר — "לחץ", "בדוק", "אתה"</option>
@@ -585,15 +596,6 @@
   </div>
 </div>
 
-<!-- MONTHLY UPDATE WIZARD -->
-<div class="overlay" id="monthly-modal" style="display:none">
-  <div class="modal" style="text-align:right;width:min(560px,94vw);max-height:88vh;display:flex;flex-direction:column">
-    <div id="monthly-head"></div>
-    <div id="monthly-body" style="overflow-y:auto;flex:1;min-height:0;padding-left:4px"></div>
-    <div class="modal-btns" id="monthly-btns" style="margin-top:14px"></div>
-  </div>
-</div>
-
 <!-- RESET MODAL -->
 <div class="overlay" id="reset-modal" style="display:none">
   <div class="modal">
@@ -634,6 +636,5 @@
 <script defer src="js/settings.js"></script>
 <script defer src="js/admin.js"></script>
 <script defer src="js/misc.js"></script>
-<script defer src="js/monthly.js"></script>
 </body>
 </html>

@@ -166,13 +166,14 @@ function goToTab(id){
 function renderSettings(){
   if(!D.settings)D.settings={displayName:'',email:'',age:'',freq:'30',gender:'male'};
   const s=D.settings;
-  ['set-name','set-age','set-email','set-freq'].forEach(id=>{
+  ['set-name','set-age','set-email','set-freq','set-phone'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
     if(id==='set-name')el.value=s.displayName||'';
     if(id==='set-age')el.value=s.age||'';
     if(id==='set-email')el.value=s.email||'';
     if(id==='set-freq')el.value=s.freq||'30';
+    if(id==='set-phone')el.value=s.phone||'';
   });
   const gEl=document.getElementById('set-gender');
   if(gEl)gEl.value=s.gender||'male';
@@ -187,6 +188,7 @@ async function saveSettings(){
   D.settings.age=document.getElementById('set-age').value||'';
   D.settings.email=document.getElementById('set-email').value||'';
   D.settings.freq=document.getElementById('set-freq').value||'30';
+  D.settings.phone=document.getElementById('set-phone')?.value||'';
   D.settings.gender=document.getElementById('set-gender')?.value||'male';
   if(!D.settings.notifyEmail)D.settings.notifyEmail=D.settings.email;
   D.lastSaved=new Date().toISOString();

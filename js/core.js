@@ -324,6 +324,7 @@ function renderAll(){
     renderGoals();
     renderLocs();
     renderLocsAutoSummary();
+    renderTransferPlan();
   },50);
   setTimeout(()=>{
     renderPension();

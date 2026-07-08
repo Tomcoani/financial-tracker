@@ -19,7 +19,7 @@ function calcCashFlow(){
     const mi=document.getElementById('monthly');
     if(mi)mi.value=availableILS;
     el.className='cf-result good';
-    el.innerHTML=`מעולה! 🎉<br>יש לך <strong>${fmtCur(available,cur)}</strong> ש${g('אתה יכול','את יכולה')} להשקיע החודש`;
+    el.innerHTML=`מעולה! 🎉<br>יש לך <strong>${fmtCur(available,cur)}</strong> ש${g('אתה יכול','את יכולה')} להשקיע החודש`+cfAllocationHint();
   } else {
     D.monthly='0';
     const mi=document.getElementById('monthly');
@@ -28,6 +28,31 @@ function calcCashFlow(){
     el.innerHTML=`היי, החודש נראה שאין לך מספיק כדי להשקיע.<br>ממליץ לבדוק מה קרה החודש ולשפר לחודש הבא 💪`;
   }
   markDirty();
+}
+
+// "Where should the free money go?" — urgent goals first, otherwise the portfolio.
+// The portfolio is treated as an ongoing, no-target destination for free money.
+function cfAllocationHint(){
+  const urgent=(D.goals||[]).filter(gl=>!gl.done&&(gl.name||'').trim()&&(gl.h||0)===0)
+    .map(gl=>({name:gl.name,gap:(parseFloat(gl.needed)||0)-(parseFloat(gl.saved)||0)}))
+    .filter(x=>x.gap>0);
+  const portTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  let html='<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.2);text-align:right;font-size:12.5px;font-weight:400;line-height:1.7">';
+  html+='<div style="font-weight:800;margin-bottom:4px">לאן להעביר את הכסף? 🤔</div>';
+  if(urgent.length){
+    html+='יש לך מטרות דחופות (טווח עד 12 חודשים) שעוד חסר בהן כסף — מומלץ להשלים אותן קודם:';
+    html+='<div style="margin:6px 0">'+urgent.map(u=>
+      `<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0">
+        <span>🎯 ${esc(u.name)}</span><span style="font-weight:700;white-space:nowrap">חסרים ${fmt(u.gap)}</span>
+      </div>`).join('')+'</div>';
+    html+='<div style="font-size:11.5px;opacity:.85">נשאר עודף אחרי השלמת המטרות? הוא עובר לתיק ההשקעות 📈</div>';
+  } else {
+    html+='אין כרגע מטרות דחופות שחסר בהן כסף — הכסף הפנוי עובר לתיק ההשקעות 📈';
+    html+='<div style="font-size:11.5px;opacity:.85;margin-top:2px">תיק ההשקעות הוא "מטרה שוטפת" — אין לו סכום יעד, פשוט מפקידים אליו את מה שפנוי כל חודש.</div>';
+  }
+  if(portTotal>0)html+=`<div style="margin-top:8px">💼 בתיק ההשקעות שלך יש כרגע <strong>${fmt(portTotal)}</strong></div>`;
+  html+='</div>';
+  return html;
 }
 
 function renderCfFixed(){
@@ -541,3 +566,77 @@ function lu(el){
 }
 function addLoc(){D.locations.push({name:'',amount:'',whereTo:'',_manual:true});renderLocs();markDirty();}
 function delLoc(i){D.locations.splice(i,1);renderLocs();markDirty();}
+
+// ══ SMART TRANSFER PLAN ══
+// Computes how much to move from each asset to each destination, based on:
+// goal gaps (most urgent horizon first), the "אפס החדש" reserve for עו"ש
+// accounts, and money already sitting at a goal's location. Amounts in ₪.
+function buildTransferPlan(){
+  const zero=parseFloat(String(D.cfZero||'0').replace(/,/g,''))||0;
+  // Money already assigned to goals, keyed by the location it sits in — it stays put
+  const goalsAt={};
+  (D.goals||[]).filter(gl=>!gl.done).forEach(gl=>{
+    (gl.goalLocs||[]).forEach(l=>{
+      const k=(l.where||'').trim();if(!k)return;
+      goalsAt[k]=(goalsAt[k]||0)+toILS(parseFloat(l.amount)||0,gl.savedCurrency||'ILS');
+    });
+  });
+  // Destinations: active goals that still have a gap, most urgent horizon first
+  const targets=(D.goals||[]).filter(gl=>!gl.done&&(gl.name||'').trim())
+    .map(gl=>({name:gl.name,h:gl.h||0,gap:toILS((parseFloat(gl.needed)||0)-(parseFloat(gl.saved)||0),gl.savedCurrency||'ILS')}))
+    .filter(t=>t.gap>0).sort((a,b)=>a.h-b.h);
+  const plan=[];
+  let zeroReserved=false;
+  (D.locations||[]).filter(l=>!l._auto&&(l.name||'').trim()&&parseFloat(l.amount)>0).forEach(l=>{
+    let avail=toILS(parseFloat(l.amount)||0,l.currency||'ILS');
+    const parked=goalsAt[(l.name||'').trim()]||0;
+    if(parked>0)avail-=parked; // goal money already there doesn't move
+    if(avail<=0)return;
+    // Reserve the "new zero" in the first עו"ש account
+    if(!zeroReserved&&l.name.includes('עו"ש')&&zero>0){
+      const stay=Math.min(zero,avail);
+      avail-=stay;zeroReserved=true;
+      plan.push({from:l.name,to:'נשאר בעו"ש — האפס החדש',amount:Math.round(stay),keep:true});
+    }
+    targets.forEach(t=>{
+      if(avail<=0||t.gap<=0)return;
+      const mv=Math.min(avail,t.gap);
+      plan.push({from:l.name,to:t.name,amount:Math.round(mv)});
+      avail-=mv;t.gap-=mv;
+    });
+    if(avail>=100)plan.push({from:l.name,to:'תיק השקעות',amount:Math.round(avail)});
+  });
+  if(!plan.length){showToast('אין נכסים פנויים לתכנון — מלא את רשימת הנכסים והמטרות');return;}
+  D.transferPlan=plan;
+  renderTransferPlan();
+  markDirty();
+}
+function renderTransferPlan(){
+  const el=document.getElementById('locs-plan');
+  if(!el)return;
+  const plan=D.transferPlan||[];
+  if(!plan.length){el.innerHTML='';return;}
+  let html=`<div style="font-size:11px;color:var(--t3);margin:10px 0 8px;line-height:1.6">
+    מחושב לפי סדר דחיפות המטרות, ה"אפס החדש" מהתזרים, והכסף שכבר משויך למטרות. אפשר לערוך כל סכום או למחוק שורה.</div>`;
+  plan.forEach((p,i)=>{
+    html+=`<div style="display:grid;grid-template-columns:1fr 22px 1fr 92px 24px;gap:6px;align-items:center;margin-bottom:6px">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.from)}</div>
+      <div style="text-align:center;color:${p.keep?'var(--amber)':'var(--teal)'};font-size:15px">⟵</div>
+      <div style="background:${p.keep?'rgba(245,158,11,.07)':'rgba(66,235,214,.06)'};border:1px solid ${p.keep?'rgba(245,158,11,.3)':'var(--teal-border)'};border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:${p.keep?'var(--amber)':'var(--teal)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.keep?'🏦 ':'🎯 '}${esc(p.to)}</div>
+      <input type="number" value="${p.amount||''}" data-no-fmt
+        oninput="D.transferPlan[${i}].amount=parseFloat(this.value)||0;markDirty();updatePlanTotal()"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 8px;color:var(--white);font-family:var(--font);font-size:12px;font-weight:700;text-align:right;width:100%"/>
+      <button class="bdel" onclick="D.transferPlan.splice(${i},1);renderTransferPlan();markDirty()">×</button>
+    </div>`;
+  });
+  html+=`<div id="plan-total" style="display:flex;justify-content:space-between;padding:8px 0 2px;margin-top:4px;border-top:1px solid var(--border);font-size:12px">
+    <span style="color:var(--t3)">סה"כ מועבר</span>
+    <span style="font-weight:800;color:var(--teal)">${fmt(planMovedTotal())}</span>
+  </div>`;
+  el.innerHTML=html;
+}
+function planMovedTotal(){return (D.transferPlan||[]).filter(p=>!p.keep).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);}
+function updatePlanTotal(){
+  const el=document.querySelector('#plan-total span:last-child');
+  if(el)el.textContent=fmt(planMovedTotal());
+}
