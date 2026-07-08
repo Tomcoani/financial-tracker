@@ -697,6 +697,14 @@ function renderTransferPlan(){
   el.innerHTML=html;
 }
 function planMovedTotal(){return (D.transferPlan||[]).filter(p=>!p.keep).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);}
+// Clears all plan rows (keeps the saved goal priorities for next time)
+function resetTransferPlan(){
+  const had=(D.transferPlan||[]).length;
+  D.transferPlan=[];
+  const el=document.getElementById('locs-plan');
+  if(el)el.innerHTML='';
+  if(had){markDirty();showToast('התוכנית אופסה ↺');}
+}
 function updatePlanTotal(){
   const el=document.querySelector('#plan-total span:last-child');
   if(el)el.textContent=fmt(planMovedTotal());

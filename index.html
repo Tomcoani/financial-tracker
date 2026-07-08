@@ -218,7 +218,11 @@
           <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
             <div class="ch-title" style="font-size:14px">✨ תוכנית מומלצת אוטומטית</div>
             <div class="ch-hint">המערכת מחשבת לפי המטרות למעלה — כמה כסף להעביר מכל נכס לכל יעד: קודם משאירים את ה"אפס החדש" בעו"ש, אחר כך משלימים מטרות לפי דחיפות, והעודף עובר לתיק ההשקעות.</div>
-            <button class="btnadd" onclick="buildTransferPlan()">✨ חשב תוכנית מומלצת</button>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btnadd" style="margin:0" onclick="buildTransferPlan()">✨ חשב תוכנית מומלצת</button>
+              <button onclick="resetTransferPlan()"
+                style="background:transparent;border:1.5px dashed rgba(239,68,68,.4);color:var(--red);border-radius:10px;padding:8px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">↺ איפוס תוכנית</button>
+            </div>
             <div id="locs-plan"></div>
           </div>
         </div>
