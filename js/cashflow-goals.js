@@ -161,7 +161,35 @@ function renderGoals(){
   const done=(D.goals||[]).filter(g=>g.done);
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
   done.forEach(g=>doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g))));
+  renderPortfolioGoalCard();
   setTimeout(attachAllNumFormats,0);
+}
+// ══ PORTFOLIO REMINDER CARD ══
+// The portfolio is an ongoing "goal" with no target amount — free money left
+// after the important goals goes there. Shown at the bottom of the goals list
+// so clients see it as a destination next to their regular goals.
+function renderPortfolioGoalCard(){
+  const el=document.getElementById('portfolio-goal-card');
+  if(!el)return;
+  const total=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  el.innerHTML=`
+  <div style="margin-top:14px;background:linear-gradient(135deg,rgba(66,235,214,.10),rgba(66,235,214,.03));border:1.5px solid rgba(66,235,214,.35);border-radius:14px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+      <div style="min-width:0;flex:1">
+        <div style="font-size:14px;font-weight:800;color:var(--teal)">📈 תיק השקעות — מטרה שוטפת</div>
+        <div style="font-size:11.5px;color:var(--t2);margin-top:3px;line-height:1.6">
+          לתיק אין סכום יעד — הוא המקום שאליו עובר הכסף הפנוי שנשאר אחרי המטרות החשובות, כל חודש.</div>
+      </div>
+      ${total>0?`<div style="text-align:left;flex-shrink:0">
+        <div style="font-size:18px;font-weight:800;color:var(--teal)">${fmt(total)}</div>
+        <div style="font-size:10px;color:var(--t3)">שווי נוכחי</div>
+      </div>`:''}
+    </div>
+    <button onclick="goToTab('portfolio')"
+      style="margin-top:10px;background:rgba(66,235,214,.12);border:1px solid var(--teal-border);color:var(--teal);border-radius:9px;padding:7px 14px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">
+      💰 הפקדתי כסף לתיק — לעדכון השווי ←
+    </button>
+  </div>`;
 }
 function toggleGoalCollapse(i){
   const body=document.getElementById('goal-body-'+i);

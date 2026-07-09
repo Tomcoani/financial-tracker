@@ -139,6 +139,7 @@ function updatePortStats(){
   if(el_cats)el_cats.textContent=cats.size;
   renderPortfolioCharts(viewItems);
   renderRebalance(total,viewItems);
+  renderPortfolioGoalCard(); // keep the goals-tab portfolio card in sync
 }
 let chPort=null;
 function renderPortfolioCharts(viewItems){

@@ -1,9 +1,9 @@
 
 // ══ NET WORTH ══
-// Portfolio rows mirror the portfolio tab automatically: always written to the
-// latest column, including the current month — the user never fills them by hand.
-// Pension/locations only fill empty cells in past periods — never overwrite
-// user-entered values. Returns the number of cells changed.
+// The NW tab is last in the flow (pension → portfolio → net worth) and pulls
+// from both: portfolio rows mirror the portfolio tab (always overwritten,
+// incl. the current month); pension/locations fill empty cells only — never
+// overwriting user-entered values. Returns the number of cells changed.
 function syncNWFromPension(){
   const cnt=D.nwPeriodsCount||6;
   let syncCol=0;
@@ -43,9 +43,6 @@ function syncNWFromPension(){
       });
     }
   }
-
-  // Pension and locations never auto-fill the current period — those the user enters manually
-  if(isCurrentPeriod(D.nwPeriods[syncCol]))return filled;
 
   // ── Pension & study funds → investments ────────────────────────────────────
   // Matching strategy: exact name → generic type row (only when single of that
@@ -102,13 +99,6 @@ function getLatestNWCol(){
   for(let c=cnt-1;c>=0;c--)
     if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c]))return c;
   return 0;
-}
-function isCurrentPeriod(periodLabel){
-  if(!periodLabel)return false;
-  const parsed=parsePeriodDate(periodLabel);
-  if(!parsed)return false;
-  const now=new Date();
-  return parsed.m===now.getMonth()+1&&parsed.y===now.getFullYear();
 }
 function isFuturePeriod(periodLabel){
   if(!periodLabel)return false;
