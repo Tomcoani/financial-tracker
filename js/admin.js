@@ -14,6 +14,7 @@ async function renderAdmin(){
   try{
     const usersSnap=await db.collection('users').get();
     const users=[];
+    const allFeedback=[];
     for(const userDoc of usersSnap.docs){
       try{
         const dataSnap=await db.collection('users').doc(userDoc.id).collection('data').doc('main').get();
@@ -25,6 +26,9 @@ async function renderAdmin(){
         const email=d.settings?.email||parentData.email||'';
         const phone=d.settings?.phone||'';
         const name=d.settings?.displayName||parentData.displayName||email||userDoc.id.substring(0,8);
+        (d.feedback||[]).forEach(f=>{
+          if(f&&f.message)allFeedback.push({uid:userDoc.id,name,email,message:f.message,date:f.date||''});
+        });
         const alerts=[];
         const goalsAge=daysSince(lu.goals),penAge=daysSince(lu.pension),nwAge=daysSince(lu.nw);
         if(goalsAge===null||goalsAge>freq)alerts.push({label:'מטרות',cls:'tag-urgent'});
@@ -36,6 +40,7 @@ async function renderAdmin(){
           snapshots:(d.snapshots||[]).map(s=>({label:s.label,date:s.date,netWorth:s.netWorth||0,penTotal:s.penTotal||0,goalsSaved:s.goalsSaved||0}))});
       }catch(e){}
     }
+    renderAdminFeedback(allFeedback);
     const totalUsers=users.length,needUpdate=users.filter(u=>u.alerts.length>0).length;
     if(statsEl)statsEl.innerHTML=`
       <div class="stat"><label>סה"כ לקוחות</label><div class="val vt">${totalUsers}</div></div>
@@ -270,6 +275,44 @@ function adminSendReminder(email,name,via,phone){
   } else {
     window.open('mailto:'+email+'?subject='+encodeURIComponent('תזכורת קטנה — עדכון נתונים במערכת')+'&body='+encodeURIComponent(msg),'_blank');
   }
+}
+
+// Render the admin feedback inbox (newest first), each entry naming its sender.
+function renderAdminFeedback(list){
+  const el=document.getElementById('admin-feedback');
+  const countEl=document.getElementById('admin-feedback-count');
+  if(!el)return;
+  if(!list.length){
+    el.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">אין הודעות משוב עדיין</p>';
+    if(countEl)countEl.textContent='';
+    return;
+  }
+  list.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  if(countEl)countEl.innerHTML=`<span style="background:var(--teal);color:#080c14;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:800;margin-right:4px">${list.length}</span>`;
+  el.innerHTML=list.map(f=>`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--s1);text-align:right">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:var(--teal)">${esc(f.name)}</span>
+        <span style="font-size:11px;color:var(--t3)">${esc(f.email)}${f.date?' · '+fmtDate(f.date):''}</span>
+      </div>
+      <div style="font-size:13px;color:var(--white);line-height:1.6;white-space:pre-wrap">${esc(f.message)}</div>
+      <button onclick="adminDeleteFeedback('${f.uid}','${esc(f.date)}')"
+        style="margin-top:8px;background:transparent;border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:7px;padding:3px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">
+        <i data-lucide="check" style="width:11px;height:11px;vertical-align:middle;margin-left:2px"></i> טופל — הסר
+      </button>
+    </div>`).join('');
+  if(window.lucide)lucide.createIcons();
+}
+// Remove one feedback entry from a client's data doc (admin marks it handled).
+async function adminDeleteFeedback(uid,dateIso){
+  try{
+    const ref=db.collection('users').doc(uid).collection('data').doc('main');
+    const snap=await ref.get();
+    if(!snap.exists)return;
+    const fb=(snap.data().feedback||[]).filter(f=>String(f.date)!==String(dateIso));
+    await ref.update({feedback:fb});
+    renderAdmin();
+  }catch(e){alert('שגיאה במחיקת המשוב: '+e.message);}
 }
 
 async function adminCreateUser(){

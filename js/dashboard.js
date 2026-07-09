@@ -1,5 +1,21 @@
 // ══ DASHBOARD ══
 let chAlloc=null,chAlloc2=null,chNW=null;
+// Client feedback → saved into the user's own data doc as D.feedback[].
+// The admin reads every user's data doc, so it surfaces in the admin inbox.
+async function submitFeedback(){
+  const el=document.getElementById('feedback-input');
+  if(!el)return;
+  const msg=(el.value||'').trim();
+  const status=document.getElementById('feedback-status');
+  if(!msg){el.focus();return;}
+  if(!Array.isArray(D.feedback))D.feedback=[];
+  D.feedback.push({message:msg,date:new Date().toISOString(),status:'new'});
+  el.value='';
+  if(status){status.style.display='inline';status.style.color='var(--teal)';status.textContent='תודה! ההודעה נשלחה לתום ✓';}
+  markDirty();
+  try{await manualSave();}catch(e){}
+  setTimeout(()=>{if(status){status.textContent='';status.style.display='none';}},5000);
+}
 function renderDash(){
   collectAll();
   const cur=calcCurrent(),snaps=D.snapshots||[],prev=snaps.length?snaps[snaps.length-1]:null;

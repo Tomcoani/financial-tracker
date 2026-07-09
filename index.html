@@ -117,12 +117,13 @@
       <!-- FEEDBACK -->
       <div class="card" style="text-align:right;background:linear-gradient(135deg,rgba(66,235,214,.08),rgba(66,235,214,.02));border:1px solid rgba(66,235,214,.3)">
         <div style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:4px">💡 מצאתם טעות במחשבון? רוצים שאוסיף משהו?</div>
-        <div style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:12px">אשמח לשמוע — כל הערה, רעיון או תקלה עוזרים לי לשפר את המערכת עבורכם.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a href="mailto:info@tomani.co?subject=משוב על המערכת הפיננסית&body=היי תום, יש לי משוב על המערכת:%0D%0A%0D%0A"
-            style="display:inline-flex;align-items:center;gap:6px;background:var(--teal);color:#080c14;border-radius:10px;padding:9px 16px;font-family:var(--font);font-size:13px;font-weight:700;text-decoration:none">
-            <i data-lucide="mail" style="width:15px;height:15px"></i> שליחת משוב לתום
-          </a>
+        <div style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:12px">כתבו לי כאן — ההודעה מגיעה ישירות אליי (תום), ורק אני רואה אותה. כל הערה, רעיון או תקלה עוזרים לי לשפר את המערכת עבורכם.</div>
+        <textarea id="feedback-input" placeholder="כתבו כאן את ההערה, הרעיון או התקלה..." dir="rtl"
+          style="width:100%;min-height:82px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--white);font-family:var(--font);font-size:13px;line-height:1.6;resize:vertical;outline:none;margin-bottom:10px"
+          onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="submitFeedback()" class="btnsave" style="padding:9px 22px">שליחה לתום ←</button>
+          <span id="feedback-status" style="font-size:13px;font-weight:700;color:var(--teal);display:none"></span>
         </div>
       </div>
     </div>
@@ -483,6 +484,11 @@
     <!-- ADMIN (only for info@tomani.co) -->
     <div class="panel" id="p-admin">
       <div class="admin-banner"><i data-lucide="shield-check" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> לוח ניהול — גישה מוגבלת לתום אני בלבד</div>
+      <div class="card" style="border-color:rgba(66,235,214,.35)">
+        <div class="ch-title"><i data-lucide="inbox" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> תיבת משוב מלקוחות <span id="admin-feedback-count"></span></div>
+        <div class="ch-hint">הערות, רעיונות ותקלות שלקוחות שלחו דרך הדשבורד — עם שם השולח</div>
+        <div id="admin-feedback"><p style="color:var(--t3);font-size:13px;text-align:right">טוען...</p></div>
+      </div>
       <div class="card" style="border-color:rgba(66,235,214,.25)">
         <div class="ch-title"><i data-lucide="user-plus" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> יצירת משתמש חדש</div>
         <div class="ch-hint">צור חשבון ללקוח חדש — הם יקבלו מייל עם סיסמה זמנית וישנו אותה בכניסה הראשונה</div>
@@ -644,14 +650,14 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=5"></script>
-<script defer src="js/cashflow-goals.js?v=5"></script>
-<script defer src="js/pension.js?v=5"></script>
-<script defer src="js/networth.js?v=5"></script>
-<script defer src="js/portfolio.js?v=5"></script>
-<script defer src="js/dashboard.js?v=5"></script>
-<script defer src="js/settings.js?v=5"></script>
-<script defer src="js/admin.js?v=5"></script>
-<script defer src="js/misc.js?v=5"></script>
+<script defer src="js/core.js?v=6"></script>
+<script defer src="js/cashflow-goals.js?v=6"></script>
+<script defer src="js/pension.js?v=6"></script>
+<script defer src="js/networth.js?v=6"></script>
+<script defer src="js/portfolio.js?v=6"></script>
+<script defer src="js/dashboard.js?v=6"></script>
+<script defer src="js/settings.js?v=6"></script>
+<script defer src="js/admin.js?v=6"></script>
+<script defer src="js/misc.js?v=6"></script>
 </body>
 </html>
