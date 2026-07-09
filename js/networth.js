@@ -9,8 +9,11 @@ function syncNWFromPension(){
   let syncCol=0;
   for(let c=cnt-1;c>=0;c--){if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){syncCol=c;break;}}
   let filled=0;
-  const fill=(row,val)=>{if(!row.vals[syncCol]){row.vals[syncCol]=String(val);filled++;}};
-  const overwrite=(row,val)=>{if(row.vals[syncCol]!==String(val)){row.vals[syncCol]=String(val);filled++;}};
+  // Record where an auto-filled cell's value came from, so the UI can show a "?"
+  // marker naming the source (row.autoSrc[col] = label).
+  const markSrc=(row,src)=>{if(src){if(!row.autoSrc)row.autoSrc={};row.autoSrc[syncCol]=src;}};
+  const fill=(row,val,src)=>{if(!row.vals[syncCol]){row.vals[syncCol]=String(val);markSrc(row,src);filled++;}};
+  const overwrite=(row,val,src)=>{if(row.vals[syncCol]!==String(val)){row.vals[syncCol]=String(val);filled++;}markSrc(row,src);};
   // Generic rows locked against location-fill when their money already synced into named rows
   // (prevents double-counting the same money in both a named row and the generic row)
   const lockedRows=new Set();
@@ -31,7 +34,7 @@ function syncNWFromPension(){
     namedPorts.forEach(port=>{
       const portVal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
       if(!portVal)return;
-      overwrite(findOrMakeRow('investments',port.brokerName.trim()),portVal);
+      overwrite(findOrMakeRow('investments',port.brokerName.trim()),portVal,'טאב תיק השקעות');
       lockedRows.add(port.brokerName.trim());
     });
   } else {
@@ -39,7 +42,7 @@ function syncNWFromPension(){
     const portTotal=portfolios.flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
     if(portTotal>0){
       D.nwData.investments.rows.forEach(row=>{
-        if(row.name==='תיק השקעות'||row.name==='תיק'){overwrite(row,portTotal);lockedRows.add(row.name);}
+        if(row.name==='תיק השקעות'||row.name==='תיק'){overwrite(row,portTotal,'טאב תיק השקעות');lockedRows.add(row.name);}
       });
     }
   }
@@ -66,7 +69,7 @@ function syncNWFromPension(){
         if(isHT)lockedRows.add('קרן השתלמות');
       }
     }
-    fill(row,p.amount);
+    fill(row,p.amount,'טאב פנסיה');
   });
 
   // ── Locations → matching NW rows ───────────────────────────────────────────
@@ -75,7 +78,7 @@ function syncNWFromPension(){
     ['assets','investments','savings'].forEach(sec=>{
       D.nwData[sec].rows.forEach(row=>{
         if(sec==='investments'&&lockedRows.has(row.name))return;
-        if(row.name===loc.name)fill(row,loc.amount);
+        if(row.name===loc.name)fill(row,loc.amount,'רשימת הנכסים');
       });
     });
   });
@@ -239,11 +242,16 @@ function renderNWSection(elId,sec){
           }
         }
         const carried=dispVal?null:carriedCellILS(row,ci);
+        const autoSrc=(dispVal&&row.autoSrc)?row.autoSrc[ci]:null;
+        const qTip=autoSrc
+          ? 'ערך זה נלקח אוטומטית מ'+autoSrc+'. אם אינו נכון — הקלד/י כאן את הערך הנכון.'
+          : (carried!=null?'ערך שנשמר מתקופה קודמת — נכלל בסך הכל. הקלד/י ערך חדש כדי לעדכן.':'');
         const inputType=dispVal?'text':'number';
         const cellColor=isForex?'var(--amber)':'var(--teal)';
         return `<div class="nwcell-wrap" style="position:relative;min-width:0;">
           <input class="nwcell" type="${inputType}" value="${dispVal||''}" placeholder="${carried!=null?'':(getCurrSymbol(cellCur)||'₪')}" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-raw="${val||''}" oninput="nwCellUpdate(this)" onfocus="nwCellFocus(this)" onblur="nwCellBlur(this)" style="color:${cellColor};font-weight:700;width:100%;font-size:10px;" />
-          ${carried!=null?`<div class="nw-carried" title="ערך שנשמר מתקופה קודמת — נכלל בסך הכל. הקלד ערך חדש כדי לעדכן.">${carried.toLocaleString('he-IL')}</div>`:''}
+          ${qTip?`<div class="nw-src-q" title="${esc(qTip)}">?</div>`:''}
+          ${carried!=null?`<div class="nw-carried">${carried.toLocaleString('he-IL')}</div>`:''}
           <select class="nwcell-curr" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" onchange="nwCellCurrency(this)"
             style="position:absolute;bottom:1px;left:1px;background:transparent;border:none;outline:none;font-family:var(--font);font-size:9px;color:${isForex?'var(--amber)':'rgba(66,235,214,0.4)'};cursor:pointer;padding:0;appearance:none;-webkit-appearance:none;width:auto;z-index:2;">
             ${buildCurrOptions(cellCur)}
@@ -476,9 +484,15 @@ function nwCellUpdate(el){
   // Strip commas in case user pasted formatted number
   const v=el.value.replace(/,/g,'').trim();
   el.dataset.raw=v;
-  D.nwData[sec].rows[ri].vals[ci]=v;
+  const row=D.nwData[sec].rows[ri];
+  row.vals[ci]=v;
+  // A manual edit takes over from an auto-synced value: drop the "?" source marker
+  if(v&&row.autoSrc&&row.autoSrc[ci]!==undefined)delete row.autoSrc[ci];
   const wrap=el.closest('.nwcell-wrap');
-  if(wrap){const cr=wrap.querySelector('.nw-carried');if(cr)cr.style.display=v?'none':'';}
+  if(wrap){
+    const cr=wrap.querySelector('.nw-carried');if(cr)cr.style.display=v?'none':'';
+    const q=wrap.querySelector('.nw-src-q');if(q&&v)q.style.display='none';
+  }
   touchSection('nw');
   liveUpdateNWSec(sec);
   renderNWSummary();markDirty();
