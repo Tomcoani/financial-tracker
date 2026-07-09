@@ -66,36 +66,16 @@ function sumSec(sec,col){
     return s+toILS(raw,cur);
   },0);
 }
-// Best-estimate sum for a section: each row uses its MOST RECENT non-empty, non-future value.
-// This means NW tiles show the correct total even when different sections were updated at
-// different times (e.g. house = 9/2023, investments = 1/2026).
+// Net worth is literal: a value counts only in the period column where it was
+// entered — no carry-forward. All views (tiles, donuts, table) read the latest
+// period column that actually has data.
 function rowLatestILS(row){
-  const cnt=D.nwPeriodsCount||6;
-  for(let c=cnt-1;c>=0;c--){
-    const p=D.nwPeriods[c]||'';
-    if(p&&isFuturePeriod(p))continue;
-    const raw=parseFloat(row.vals[c])||0;
-    if(raw!==0)return toILS(raw,getCellCurrency(row,c));
-  }
-  return 0;
+  const c=getLatestNWCol();
+  const raw=parseFloat(row.vals[c])||0;
+  return raw?toILS(raw,getCellCurrency(row,c)):0;
 }
 function sumSecBest(sec){
-  return(D.nwData[sec].rows||[]).reduce((total,row)=>total+rowLatestILS(row),0);
-}
-// rowBestAtCol: like rowLatestILS but capped at column maxCol (for history table "running best estimate")
-// Each period shows the best-known value for each row UP TO that period, so carried-forward values
-// prevent the history table from showing misleading 0s for sections not updated every period.
-function rowBestAtCol(row,maxCol){
-  for(let c=maxCol;c>=0;c--){
-    const p=D.nwPeriods[c]||'';
-    if(p&&isFuturePeriod(p))continue;
-    const raw=parseFloat(row.vals[c])||0;
-    if(raw!==0)return toILS(raw,getCellCurrency(row,c));
-  }
-  return 0;
-}
-function sumSecBestAtCol(sec,maxCol){
-  return(D.nwData[sec].rows||[]).reduce((total,row)=>total+rowBestAtCol(row,maxCol),0);
+  return sumSec(sec,getLatestNWCol());
 }
 
 function touchSection(sec){

@@ -234,17 +234,11 @@ select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background
   text-align:center;direction:ltr;transition:border-color .2s;min-width:0;overflow:hidden;box-sizing:border-box;}
 .nwcell:focus{border-color:var(--teal);}
 .nwcell.auto{background:rgba(66,235,214,.06);border-color:var(--teal-border);}
-/* Faint value carried forward from a previous period into an empty cell —
-   explains why the section total is larger than the visible numbers. */
-.nw-carried{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  pointer-events:none;color:rgba(148,163,184,.5);font-size:10px;font-style:italic;font-weight:600;
-  direction:ltr;overflow:hidden;}
-.nwcell:focus ~ .nw-carried{display:none;}
-/* Small "?" marker on values pulled from another tab / a previous period.
-   Hover shows where the value came from so the user can spot and fix mistakes. */
-.nw-src-q{position:absolute;top:0;right:0;min-width:12px;height:12px;padding:0 2px;border-radius:0 6px 0 6px;
-  background:rgba(66,235,214,.20);color:var(--teal);font-size:9px;font-weight:800;line-height:12px;
-  text-align:center;cursor:help;z-index:3;}
+/* Small "?" marker on values pulled from another tab. Tap/hover explains the
+   source so the user can spot and fix a wrong auto-filled value. */
+.nw-src-q{position:absolute;top:0;right:0;min-width:14px;height:14px;padding:0 2px;border-radius:0 6px 0 6px;
+  background:rgba(66,235,214,.22);color:var(--teal);font-size:10px;font-weight:800;line-height:14px;
+  text-align:center;cursor:pointer;z-index:3;}
 .nwcell:focus ~ .nw-src-q{display:none;}
 .period-date-input{background:var(--s2);border:1px solid var(--border);border-radius:8px;
   padding:7px 8px;color:var(--teal);font-family:var(--font);font-size:12px;

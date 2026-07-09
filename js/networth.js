@@ -25,26 +25,14 @@ function syncNWFromPension(){
     return row;
   };
 
-  // ── Portfolio(s) → תיק השקעות: fully automatic mirror ─────────────────────
-  const portfolios=D.portfolios||[];
-  const namedPorts=portfolios.filter(p=>(p.brokerName||'').trim());
-  if(namedPorts.length>1){
-    // Multiple named portfolios (e.g., couple with separate brokerage accounts): one NW row each
-    lockedRows.add('תיק השקעות');lockedRows.add('תיק');
-    namedPorts.forEach(port=>{
-      const portVal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-      if(!portVal)return;
-      overwrite(findOrMakeRow('investments',port.brokerName.trim()),portVal,'טאב תיק השקעות');
-      lockedRows.add(port.brokerName.trim());
-    });
-  } else {
-    // Single portfolio or unnamed: sum all into the generic "תיק השקעות" row
-    const portTotal=portfolios.flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-    if(portTotal>0){
-      D.nwData.investments.rows.forEach(row=>{
-        if(row.name==='תיק השקעות'||row.name==='תיק'){overwrite(row,portTotal,'טאב תיק השקעות');lockedRows.add(row.name);}
-      });
-    }
+  // ── Portfolios → תיק השקעות: fully automatic mirror ───────────────────────
+  // ALL portfolios (one or many) are summed into a single "תיק השקעות" row.
+  const portTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  if(portTotal>0){
+    let portRow=D.nwData.investments.rows.find(r=>r.name==='תיק השקעות'||r.name==='תיק');
+    if(!portRow)portRow=findOrMakeRow('investments','תיק השקעות');
+    overwrite(portRow,portTotal,'טאב תיק השקעות');
+    lockedRows.add(portRow.name);
   }
 
   // ── Pension & study funds → investments ────────────────────────────────────
@@ -175,18 +163,10 @@ function nwGridCols(cnt){
   const cols=Array.from({length:cnt},(_,i)=>nwColHidden[i]?'22px':'minmax(0,1fr)').join(' ');
   return `${lbl} ${cols} ${del}`;
 }
-// For an empty cell, the value carried forward from the most recent earlier
-// period (matches the section total's best-estimate logic). Returns rounded
-// ILS, or null when the cell has its own value or there is nothing to carry.
-function carriedCellILS(row,ci){
-  if((parseFloat(row.vals[ci])||0)!==0)return null;
-  for(let c=ci-1;c>=0;c--){
-    const p=D.nwPeriods[c]||'';
-    if(p&&isFuturePeriod(p))continue;
-    const raw=parseFloat(row.vals[c])||0;
-    if(raw!==0)return Math.round(toILS(raw,getCellCurrency(row,c)));
-  }
-  return null;
+// Show the source of an auto-filled value on click (works on mobile, unlike title).
+function nwSrcInfo(ev,src){
+  if(ev)ev.stopPropagation();
+  showToast('ערך זה נלקח אוטומטית מ'+src+'. אם אינו נכון — הקלד/י כאן את הערך הנכון.');
 }
 function renderNWSection(elId,sec){
   const el=document.getElementById(elId);el.innerHTML='';
@@ -241,17 +221,12 @@ function renderNWSection(elId,sec){
             dispVal=n.toLocaleString('he-IL');
           }
         }
-        const carried=dispVal?null:carriedCellILS(row,ci);
         const autoSrc=(dispVal&&row.autoSrc)?row.autoSrc[ci]:null;
-        const qTip=autoSrc
-          ? 'ערך זה נלקח אוטומטית מ'+autoSrc+'. אם אינו נכון — הקלד/י כאן את הערך הנכון.'
-          : (carried!=null?'ערך שנשמר מתקופה קודמת — נכלל בסך הכל. הקלד/י ערך חדש כדי לעדכן.':'');
         const inputType=dispVal?'text':'number';
         const cellColor=isForex?'var(--amber)':'var(--teal)';
         return `<div class="nwcell-wrap" style="position:relative;min-width:0;">
-          <input class="nwcell" type="${inputType}" value="${dispVal||''}" placeholder="${carried!=null?'':(getCurrSymbol(cellCur)||'₪')}" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-raw="${val||''}" oninput="nwCellUpdate(this)" onfocus="nwCellFocus(this)" onblur="nwCellBlur(this)" style="color:${cellColor};font-weight:700;width:100%;font-size:10px;" />
-          ${qTip?`<div class="nw-src-q" title="${esc(qTip)}">?</div>`:''}
-          ${carried!=null?`<div class="nw-carried">${carried.toLocaleString('he-IL')}</div>`:''}
+          <input class="nwcell" type="${inputType}" value="${dispVal||''}" placeholder="${getCurrSymbol(cellCur)||'₪'}" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-raw="${val||''}" oninput="nwCellUpdate(this)" onfocus="nwCellFocus(this)" onblur="nwCellBlur(this)" style="color:${cellColor};font-weight:700;width:100%;font-size:10px;text-align:center;" />
+          ${autoSrc?`<div class="nw-src-q" title="${esc('ערך זה נלקח אוטומטית מ'+autoSrc)}" onclick="nwSrcInfo(event,'${esc(autoSrc)}')">?</div>`:''}
           <select class="nwcell-curr" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" onchange="nwCellCurrency(this)"
             style="position:absolute;bottom:1px;left:1px;background:transparent;border:none;outline:none;font-family:var(--font);font-size:9px;color:${isForex?'var(--amber)':'rgba(66,235,214,0.4)'};cursor:pointer;padding:0;appearance:none;-webkit-appearance:none;width:auto;z-index:2;">
             ${buildCurrOptions(cellCur)}
@@ -264,9 +239,8 @@ function renderNWSection(elId,sec){
   // ── Section total row ──
   const totalRow=document.createElement('div');
   totalRow.className='nwrow nw-total-row';totalRow.style.gridTemplateColumns=tpl;
-  // Use running best-estimate per column so sections with infrequent updates
-  // don't show "—" in periods where the value simply wasn't re-entered.
-  const prevColTotals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSecBestAtCol(sec,c));
+  // Literal per-column sum: counts only values actually entered in that period.
+  const prevColTotals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSec(sec,c));
   totalRow.innerHTML=`
     <div class="nw-total-lbl">${secLabels[sec]||'סה"כ'}</div>
     ${prevColTotals.map((sum,c)=>{
@@ -307,7 +281,7 @@ function renderNWSection(elId,sec){
 }
 function liveUpdateNWSec(sec){
   const cnt=D.nwPeriodsCount||6;
-  const totals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSecBestAtCol(sec,c));
+  const totals=D.nwPeriods.slice(0,cnt).map((_,c)=>sumSec(sec,c));
   totals.forEach((sum,c)=>{
     const p=D.nwPeriods[c]||'';
     const totEl=document.getElementById('nwtot-'+sec+'-'+c);
@@ -333,12 +307,10 @@ function liveUpdateNWSec(sec){
 }
 function renderNWSummary(){
   const cnt=D.nwPeriodsCount||D.nwPeriods.length||6;
-  // Running best-estimate per column: each row carries forward its last known value.
-  // This keeps the history table and KPI tiles consistent (no false drops when only
-  // one section was updated in a period).
+  // Literal per-column sums: each period reflects only values entered in it.
   const totals=D.nwPeriods.slice(0,cnt).map((_,c)=>{
-    const a=sumSecBestAtCol('assets',c),iv=sumSecBestAtCol('investments',c);
-    const sv=sumSecBestAtCol('savings',c),d=sumSecBestAtCol('debts',c);
+    const a=sumSec('assets',c),iv=sumSec('investments',c);
+    const sv=sumSec('savings',c),d=sumSec('debts',c);
     return {a,iv,sv,d,nw:a+iv+sv-d};
   });
   // KPI summary tiles removed from NW tab — calculation lives on Dashboard only.
@@ -490,7 +462,6 @@ function nwCellUpdate(el){
   if(v&&row.autoSrc&&row.autoSrc[ci]!==undefined)delete row.autoSrc[ci];
   const wrap=el.closest('.nwcell-wrap');
   if(wrap){
-    const cr=wrap.querySelector('.nw-carried');if(cr)cr.style.display=v?'none':'';
     const q=wrap.querySelector('.nw-src-q');if(q&&v)q.style.display='none';
   }
   touchSection('nw');

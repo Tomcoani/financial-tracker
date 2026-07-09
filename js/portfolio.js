@@ -39,6 +39,14 @@ function renderPortfolio(){
         <button class="bdel" onclick="delPortItem(${pi},${ii})">×</button>
       </div>`;
     });
+    // Total row for this portfolio
+    html+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 40px;gap:8px;align-items:center;
+      margin-top:4px;padding-top:9px;border-top:1px solid var(--teal-border)">
+      <div style="font-size:12px;font-weight:800;color:var(--t2);text-align:right">סה"כ שווי נוכחי</div>
+      <div></div>
+      <div id="port-sum-${pi}" style="font-size:14px;font-weight:800;color:var(--teal);text-align:center">${portTotal>0?fmt(portTotal):'—'}</div>
+      <div></div><div></div><div></div>
+    </div>`;
     html+=`<button class="btnadd" onclick="addPortItem(${pi})" style="margin-top:6px">+ הוספת נייר ערך</button>`;
     card.innerHTML=html;
     container.appendChild(card);
@@ -59,6 +67,8 @@ function portItemUpdate(el){
   const portTotal=(D.portfolios[pi].items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   const headerEl=document.getElementById('port-card-total-'+pi);
   if(headerEl)headerEl.textContent=portTotal>0?fmt(portTotal):'';
+  const sumEl=document.getElementById('port-sum-'+pi);
+  if(sumEl)sumEl.textContent=portTotal>0?fmt(portTotal):'—';
   (D.portfolios[pi].items||[]).forEach((_,idx)=>{
     const pctEl=document.getElementById(`pct-${pi}-${idx}`);
     if(pctEl){const v=parseFloat(D.portfolios[pi].items[idx].value)||0;pctEl.textContent=portTotal>0&&v?(v/portTotal*100).toFixed(1)+'%':'—%';}
