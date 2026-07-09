@@ -50,7 +50,7 @@ function defData(){
     nwPeriodsCount:6,
     nwData:{
       assets:{rows:[{name:'שווי בית',vals:nw6()},{name:'עו"ש ומזומן',vals:nw6()},{name:'רכב',vals:nw6()}]},
-      investments:{rows:[{name:'תיק השקעות',vals:nw6()},{name:'פנסיה',vals:nw6()},{name:'קרן השתלמות',vals:nw6()}]},
+      investments:{rows:[{name:'שוק ההון',vals:nw6()},{name:'פנסיה',vals:nw6()},{name:'קרן השתלמות',vals:nw6()}]},
       savings:{rows:[{name:'קרן חירום',vals:nw6()}]},
       debts:{rows:[{name:'משכנתא',vals:nw6()},{name:'הלוואה',vals:nw6()}]}
     },

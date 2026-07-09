@@ -25,14 +25,22 @@ function syncNWFromPension(){
     return row;
   };
 
-  // ── Portfolios → תיק השקעות: fully automatic mirror ───────────────────────
-  // ALL portfolios (one or many) are summed into a single "תיק השקעות" row.
+  // ── Portfolios → "שוק ההון": fully automatic mirror ───────────────────────
+  // ALL portfolios (one or many) are summed into a single "שוק ההון" row.
   const portTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   if(portTotal>0){
-    let portRow=D.nwData.investments.rows.find(r=>r.name==='תיק השקעות'||r.name==='תיק');
-    if(!portRow)portRow=findOrMakeRow('investments','תיק השקעות');
+    // Migration: remove leftover per-broker rows the old sync auto-created
+    const brokerNames=new Set((D.portfolios||[]).map(p=>(p.brokerName||'').trim()).filter(Boolean));
+    D.nwData.investments.rows=D.nwData.investments.rows.filter(r=>!brokerNames.has(r.name));
+    // Find the target row: "שוק ההון", or rename the legacy "תיק השקעות"/"תיק" row (keeps its history)
+    let portRow=D.nwData.investments.rows.find(r=>r.name==='שוק ההון');
+    if(!portRow){
+      portRow=D.nwData.investments.rows.find(r=>r.name==='תיק השקעות'||r.name==='תיק');
+      if(portRow)portRow.name='שוק ההון';
+    }
+    if(!portRow)portRow=findOrMakeRow('investments','שוק ההון');
     overwrite(portRow,portTotal,'טאב תיק השקעות');
-    lockedRows.add(portRow.name);
+    lockedRows.add('שוק ההון');lockedRows.add('תיק השקעות');lockedRows.add('תיק');
   }
 
   // ── Pension & study funds → investments ────────────────────────────────────
