@@ -172,6 +172,19 @@ function nwGridCols(cnt){
   const cols=Array.from({length:cnt},(_,i)=>nwColHidden[i]?'22px':'minmax(0,1fr)').join(' ');
   return `${lbl} ${cols} ${del}`;
 }
+// For an empty cell, the value carried forward from the most recent earlier
+// period (matches the section total's best-estimate logic). Returns rounded
+// ILS, or null when the cell has its own value or there is nothing to carry.
+function carriedCellILS(row,ci){
+  if((parseFloat(row.vals[ci])||0)!==0)return null;
+  for(let c=ci-1;c>=0;c--){
+    const p=D.nwPeriods[c]||'';
+    if(p&&isFuturePeriod(p))continue;
+    const raw=parseFloat(row.vals[c])||0;
+    if(raw!==0)return Math.round(toILS(raw,getCellCurrency(row,c)));
+  }
+  return null;
+}
 function renderNWSection(elId,sec){
   const el=document.getElementById(elId);el.innerHTML='';
   const cnt=D.nwPeriodsCount||6;
@@ -225,10 +238,12 @@ function renderNWSection(elId,sec){
             dispVal=n.toLocaleString('he-IL');
           }
         }
+        const carried=dispVal?null:carriedCellILS(row,ci);
         const inputType=dispVal?'text':'number';
         const cellColor=isForex?'var(--amber)':'var(--teal)';
         return `<div class="nwcell-wrap" style="position:relative;min-width:0;">
-          <input class="nwcell" type="${inputType}" value="${dispVal||''}" placeholder="${getCurrSymbol(cellCur)||'₪'}" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-raw="${val||''}" oninput="nwCellUpdate(this)" onfocus="nwCellFocus(this)" onblur="nwCellBlur(this)" style="color:${cellColor};font-weight:700;width:100%;font-size:10px;" />
+          <input class="nwcell" type="${inputType}" value="${dispVal||''}" placeholder="${carried!=null?'':(getCurrSymbol(cellCur)||'₪')}" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" data-raw="${val||''}" oninput="nwCellUpdate(this)" onfocus="nwCellFocus(this)" onblur="nwCellBlur(this)" style="color:${cellColor};font-weight:700;width:100%;font-size:10px;" />
+          ${carried!=null?`<div class="nw-carried" title="ערך שנשמר מתקופה קודמת — נכלל בסך הכל. הקלד ערך חדש כדי לעדכן.">${carried.toLocaleString('he-IL')}</div>`:''}
           <select class="nwcell-curr" data-sec="${sec}" data-ri="${ri}" data-ci="${ci}" onchange="nwCellCurrency(this)"
             style="position:absolute;bottom:1px;left:1px;background:transparent;border:none;outline:none;font-family:var(--font);font-size:9px;color:${isForex?'var(--amber)':'rgba(66,235,214,0.4)'};cursor:pointer;padding:0;appearance:none;-webkit-appearance:none;width:auto;z-index:2;">
             ${buildCurrOptions(cellCur)}
@@ -462,6 +477,8 @@ function nwCellUpdate(el){
   const v=el.value.replace(/,/g,'').trim();
   el.dataset.raw=v;
   D.nwData[sec].rows[ri].vals[ci]=v;
+  const wrap=el.closest('.nwcell-wrap');
+  if(wrap){const cr=wrap.querySelector('.nw-carried');if(cr)cr.style.display=v?'none':'';}
   touchSection('nw');
   liveUpdateNWSec(sec);
   renderNWSummary();markDirty();
