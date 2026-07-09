@@ -210,12 +210,14 @@
         </div>
       </div>
 
-      <!-- SECTION 3: נכסים ותכנית העברה -->
+      <!-- SECTION 3: נכסים ותכנית העברה — meeting content, collapsible -->
       <div class="g-section g-section--assets">
-        <div class="g-section-hd">
-          <span class="g-section-title">נכסים ותכנית העברה</span>
-          <span style="font-size:17px">📋</span>
-        </div>
+        <button type="button" onclick="toggleMeetingSection()" id="meeting-toggle-btn"
+          style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;font-family:var(--font);text-align:right">
+          <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:var(--white)">🤝 דברים שעשיתם בפגישה עם תום</span>
+          <span id="meeting-toggle-arrow" style="color:var(--teal);font-size:15px;font-weight:800">▸</span>
+        </button>
+        <div id="meeting-section-body" style="display:none;margin-top:12px">
         <div class="card">
           <div class="ch-title">רשימת נכסים נוכחית</div>
           <div class="ch-hint">טבלה של כל הנכסים הפיננסים שלך לפני התוכנית הפיננסית — הטבלה הזאת רלוונטית רק לפגישה החד פעמית עם תום.</div>
@@ -238,6 +240,7 @@
             </div>
             <div id="locs-plan"></div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -650,14 +653,14 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=6"></script>
-<script defer src="js/cashflow-goals.js?v=6"></script>
-<script defer src="js/pension.js?v=6"></script>
-<script defer src="js/networth.js?v=6"></script>
-<script defer src="js/portfolio.js?v=6"></script>
-<script defer src="js/dashboard.js?v=6"></script>
-<script defer src="js/settings.js?v=6"></script>
-<script defer src="js/admin.js?v=6"></script>
-<script defer src="js/misc.js?v=6"></script>
+<script defer src="js/core.js?v=7"></script>
+<script defer src="js/cashflow-goals.js?v=7"></script>
+<script defer src="js/pension.js?v=7"></script>
+<script defer src="js/networth.js?v=7"></script>
+<script defer src="js/portfolio.js?v=7"></script>
+<script defer src="js/dashboard.js?v=7"></script>
+<script defer src="js/settings.js?v=7"></script>
+<script defer src="js/admin.js?v=7"></script>
+<script defer src="js/misc.js?v=7"></script>
 </body>
 </html>

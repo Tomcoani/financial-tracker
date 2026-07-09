@@ -595,6 +595,17 @@ function lu(el){
 function addLoc(){D.locations.push({name:'',amount:'',whereTo:'',_manual:true});renderLocs();markDirty();}
 function delLoc(i){D.locations.splice(i,1);renderLocs();markDirty();}
 
+// Collapse/expand the "דברים שעשיתם בפגישה עם תום" block (assets + transfer plan).
+// Collapsed by default — it's one-time meeting content, not part of the monthly routine.
+function toggleMeetingSection(){
+  const body=document.getElementById('meeting-section-body');
+  const arrow=document.getElementById('meeting-toggle-arrow');
+  if(!body)return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  if(arrow)arrow.textContent=open?'▸':'▾';
+}
+
 // ══ SMART TRANSFER PLAN ══
 // Step 1: the user picks which goals participate and in what priority order.
 // Step 2: the plan allocates money only to the checked goals, in that order:
