@@ -12,7 +12,12 @@ function syncNWFromPension(){
   // Record where an auto-filled cell's value came from, so the UI can show a "?"
   // marker naming the source (row.autoSrc[col] = label).
   const markSrc=(row,src)=>{if(src){if(!row.autoSrc)row.autoSrc={};row.autoSrc[syncCol]=src;}};
-  const fill=(row,val,src)=>{if(!row.vals[syncCol]){row.vals[syncCol]=String(val);markSrc(row,src);filled++;}};
+  const fill=(row,val,src)=>{
+    if(!row.vals[syncCol]){row.vals[syncCol]=String(val);markSrc(row,src);filled++;}
+    // Cell already holds exactly the source's value (e.g. synced before markers
+    // existed) — mark it too, so the "?" badge shows where it came from.
+    else if(String(row.vals[syncCol])===String(val))markSrc(row,src);
+  };
   const overwrite=(row,val,src)=>{if(row.vals[syncCol]!==String(val)){row.vals[syncCol]=String(val);filled++;}markSrc(row,src);};
   // Generic rows locked against location-fill when their money already synced into named rows
   // (prevents double-counting the same money in both a named row and the generic row)
