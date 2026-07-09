@@ -1,5 +1,12 @@
 // ══ PORTFOLIO ══
 // ══ PORTFOLIO RENDER (multi-portfolio) ══
+// Collapsed portfolio indices (session-only, like goals collapse)
+let _collapsedPorts=new Set();
+function togglePortCollapse(pi){
+  if(_collapsedPorts.has(pi))_collapsedPorts.delete(pi);
+  else _collapsedPorts.add(pi);
+  renderPortfolio();
+}
 function renderPortfolio(){
   const container=document.getElementById('portfolios-container');
   if(!container)return;
@@ -9,8 +16,11 @@ function renderPortfolio(){
   }
   D.portfolios.forEach((port,pi)=>{
     const portTotal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+    const collapsed=_collapsedPorts.has(pi);
     const card=document.createElement('div');card.className='card';card.style.marginBottom='16px';
-    let html=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+    let html=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:${collapsed?'0':'16px'};flex-wrap:wrap">
+      <button onclick="togglePortCollapse(${pi})" title="${collapsed?'פרוש תיק':'קבץ תיק לשורה'}"
+        style="background:none;border:none;color:var(--teal);font-size:15px;cursor:pointer;padding:0 2px;flex-shrink:0">${collapsed?'▸':'▾'}</button>
       <div style="font-size:16px;font-weight:700;color:var(--white)">תיק השקעות ${D.portfolios.length>1?pi+1:''}</div>
       <input value="${esc(port.brokerName||'')}" placeholder="שם בית ההשקעות (IBI, מיטב, קסם...)"
         data-pi="${pi}" oninput="portBrokerUpdate(this)"
@@ -21,6 +31,8 @@ function renderPortfolio(){
       <div id="port-card-total-${pi}" style="font-size:16px;font-weight:800;color:var(--teal)">${portTotal>0?fmt(portTotal):''}</div>
       ${D.portfolios.length>1?`<button class="bdel" onclick="delPortfolio(${pi})" style="font-size:20px" title="מחק תיק">×</button>`:''}
     </div>`;
+    // Body (hidden when the portfolio is collapsed to a single row)
+    html+=`<div id="port-body-${pi}" style="display:${collapsed?'none':'block'}">`;
     // Column headers
     html+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 40px;gap:8px;
       font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;margin-bottom:8px;text-align:right">
@@ -48,6 +60,7 @@ function renderPortfolio(){
       <div></div><div></div><div></div>
     </div>`;
     html+=`<button class="btnadd" onclick="addPortItem(${pi})" style="margin-top:6px">+ הוספת נייר ערך</button>`;
+    html+=`</div>`; // close port-body
     card.innerHTML=html;
     container.appendChild(card);
   });
@@ -101,6 +114,7 @@ function delPortfolio(pi){
   D.portfolios.splice(pi,1);
   if(!D.portfolios.length)D.portfolios=[{id:Date.now(),brokerName:'',items:[]}];
   D.portfolio=D.portfolios.flatMap(p=>p.items||[]);
+  _collapsedPorts.clear(); // indices shifted — reset collapse state
   renderPortfolio();markDirty();
 }
 // Legacy stubs for backward compat

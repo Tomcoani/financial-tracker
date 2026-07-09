@@ -6,8 +6,13 @@
 // overwriting user-entered values. Returns the number of cells changed.
 function syncNWFromPension(){
   const cnt=D.nwPeriodsCount||6;
-  let syncCol=0;
-  for(let c=cnt-1;c>=0;c--){if(D.nwPeriods[c]&&!isFuturePeriod(D.nwPeriods[c])){syncCol=c;break;}}
+  // Sync writes ONLY into the column whose date matches the current month.
+  // Older columns are frozen history — pension/portfolio edits never touch them.
+  // (e.g. updating pension in July 2026 fills the 7/2026 column; the previous
+  // column keeps whatever it had, as if nothing happened there.)
+  let syncCol=-1;
+  for(let c=cnt-1;c>=0;c--){if(isCurrentPeriod(D.nwPeriods[c])){syncCol=c;break;}}
+  if(syncCol<0)return 0;
   let filled=0;
   // Record where an auto-filled cell's value came from, so the UI can show a "?"
   // marker naming the source (row.autoSrc[col] = label).
@@ -112,6 +117,13 @@ function isFuturePeriod(periodLabel){
   const periodDate=new Date(parsed.y, parsed.m-1, 1);
   // Future = more than current month
   return periodDate > new Date(now.getFullYear(), now.getMonth(), 1);
+}
+function isCurrentPeriod(periodLabel){
+  if(!periodLabel)return false;
+  const parsed=parsePeriodDate(periodLabel);
+  if(!parsed)return false;
+  const now=new Date();
+  return parsed.m===now.getMonth()+1&&parsed.y===now.getFullYear();
 }
 // ── Mobile: show only the last 2 periods by default, with a toggle ──
 let nwMobileShowAll=false;
