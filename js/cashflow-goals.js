@@ -117,6 +117,50 @@ function switchGoalTab(tab){
   document.getElementById('gt-done').classList.toggle('on',tab==='done');
   document.getElementById('goals-by-horizon').style.display=tab==='active'?'block':'none';
   document.getElementById('goals-done-list').style.display=tab==='done'?'block':'none';
+  const sum=document.getElementById('goals-hz-summary');
+  if(sum)sum.style.display=tab==='active'?'block':'none';
+}
+// Summary of total amount NEEDED per time horizon (active goals), converted to ₪.
+function renderGoalsHzSummary(){
+  const el=document.getElementById('goals-hz-summary');
+  if(!el)return;
+  const active=(D.goals||[]).filter(g=>!g.done);
+  const buckets={};
+  active.forEach(g=>{
+    const hi=(g.h>=0&&g.h<=3)?g.h:'x';
+    if(!buckets[hi])buckets[hi]={need:0,save:0,count:0};
+    buckets[hi].need+=toILS(parseFloat(g.needed)||0,g.neededCurrency||'ILS');
+    buckets[hi].save+=toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS');
+    buckets[hi].count++;
+  });
+  const order=[0,1,2,3,'x'];
+  const labels={0:'12 חודשים קרובים',1:'1–5 שנים',2:'5–10 שנים',3:'10+ שנים',x:'ללא טווח'};
+  const icons={0:'⚡',1:'📅',2:'🌱',3:'🌳',x:'❓'};
+  const keys=order.filter(k=>buckets[k]);
+  if(!keys.length){el.innerHTML='';return;}
+  let totNeed=0,totSave=0,rows='';
+  keys.forEach(k=>{
+    const b=buckets[k];totNeed+=b.need;totSave+=b.save;
+    const gap=Math.max(0,b.need-b.save);
+    rows+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,45,69,.5)">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--white)">${icons[k]} ${labels[k]}</div>
+        <div style="font-size:10.5px;color:var(--t3)">${b.count} ${b.count===1?'מטרה':'מטרות'}${b.save>0?' · נצבר '+fmt(b.save):''}${gap>0?' · נשאר '+fmt(gap):''}</div>
+      </div>
+      <div style="font-size:15px;font-weight:800;color:var(--teal);white-space:nowrap">${fmt(b.need)}</div>
+    </div>`;
+  });
+  const totGap=Math.max(0,totNeed-totSave);
+  el.innerHTML=`
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:2px">📊 סיכום לפי טווחי זמן</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:6px">כמה כסף צריך בסך הכל לכל טווח (סכום היעד של המטרות)</div>
+    ${rows}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:800;color:var(--t2)">סה"כ כל המטרות${totGap>0?' · נשאר '+fmt(totGap):''}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--teal)">${fmt(totNeed)}</div>
+    </div>
+  </div>`;
 }
 let _collapsedGoals=new Set();
 function renderGoals(){
@@ -161,6 +205,7 @@ function renderGoals(){
   const done=(D.goals||[]).filter(g=>g.done);
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
   done.forEach(g=>doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g))));
+  renderGoalsHzSummary();
   renderPortfolioGoalCard();
   setTimeout(attachAllNumFormats,0);
 }
