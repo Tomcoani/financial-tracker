@@ -1,5 +1,14 @@
 // ══ DASHBOARD ══
 let chAlloc=null,chAlloc2=null,chNW=null;
+// Small "last updated" line for a dashboard tile — shows the most recent
+// update date among the given lastUpdated keys (or "טרם עודכן").
+function tileUpdatedLine(keys){
+  const lu=D.lastUpdated||{};
+  let latest=null;
+  keys.forEach(k=>{if(lu[k]&&(!latest||new Date(lu[k])>new Date(latest)))latest=lu[k];});
+  const txt=latest?('עודכן '+fmtDate(latest)):'טרם עודכן';
+  return `<div style="font-size:9px;color:var(--t3);margin-top:4px;opacity:.85">🕒 ${txt}</div>`;
+}
 // Client feedback → saved into the user's own data doc as D.feedback[].
 // The admin reads every user's data doc, so it surfaces in the admin inbox.
 async function submitFeedback(){
@@ -91,6 +100,7 @@ function renderDash(){
         נכסים ${fmt(nwAssets)} + השקעות ${fmt(nwInvest+nwSavings)} − חובות ${fmt(nwDebts)}
       </div>
       <div class="sub">${prev&&(nwTotal-prev.netWorth)!==0?deltaBadge(nwTotal-prev.netWorth):''}</div>
+      ${tileUpdatedLine(['nw','pension','portfolio'])}
     </div>
     <div class="stat">
       <label><i data-lucide="home" class="tile-icon"></i> נכסים</label>
@@ -98,6 +108,7 @@ function renderDash(){
       <div class="sub" style="font-size:10px;color:var(--t3)">
         ${(D.nwData.assets.rows||[]).filter(r=>rowLatestILS(r)>0).map(r=>r.name).slice(0,2).join(' · ')||'דירה, רכב, מזומן'}
       </div>
+      ${tileUpdatedLine(['nw'])}
     </div>
     <div class="stat">
       <label><i data-lucide="landmark" class="tile-icon"></i> פנסיה והשתלמות</label>
@@ -105,6 +116,7 @@ function renderDash(){
       <div class="sub" style="font-size:10px;color:var(--t3)">
         ${(D.nwData.investments.rows||[]).filter(r=>{const n=r.name||'';return(n.includes('פנסיה')||n.includes('השתלמות'))&&rowLatestILS(r)>0}).map(r=>r.name).join(' · ')||'פנסיה + קרן השתלמות'}
       </div>
+      ${tileUpdatedLine(['pension'])}
     </div>
     <div class="stat">
       <label><i data-lucide="wallet" class="tile-icon"></i> השקעות נזילות + חסכונות</label>
@@ -112,6 +124,7 @@ function renderDash(){
       <div class="sub" style="font-size:10px;color:var(--t3)">
         ${liquidInvest>0?'תיק '+fmt(liquidInvest):''}${liquidInvest>0&&savingsTotal>0?' · ':''}${savingsSubText||'קרן חירום, קרן כספית'}
       </div>
+      ${tileUpdatedLine(['portfolio','nw'])}
     </div>`;
 
   // Insights card

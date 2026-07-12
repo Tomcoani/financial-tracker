@@ -88,7 +88,7 @@ function portItemUpdate(el){
   });
   updatePortStats();syncNWFromPension();
   if(document.getElementById('nw-investments'))renderNWSection('nw-investments','investments');
-  markDirty();
+  touchSection('portfolio');markDirty();
 }
 function addPortItem(pi){
   if(!D.portfolios[pi])return;
