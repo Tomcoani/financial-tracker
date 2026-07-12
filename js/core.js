@@ -132,7 +132,9 @@ auth.onAuthStateChanged(async user=>{
     injectLogos();
     document.getElementById('auth').style.display='none';
     document.getElementById('app').style.display='flex';
-    document.getElementById('uname').textContent=user.displayName||user.email;
+    // Prefer the name saved in settings (source of truth) over the Firebase
+    // Auth profile, so a name change in settings survives reload.
+    document.getElementById('uname').textContent=(D.settings&&D.settings.displayName)||user.displayName||user.email;
     // Show admin nav only for admin email
     document.getElementById('admin-nav-btn').style.display=user.email===ADMIN_EMAIL?'':'none';
     if(!D.settings)D.settings={displayName:'',email:user.email||'',age:'',notifyEmail:user.email||'',gender:'male'};

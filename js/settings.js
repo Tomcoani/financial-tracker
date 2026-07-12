@@ -178,6 +178,10 @@ async function saveSettings(){
   if(CU)localStorage.removeItem('onboarding_gender_'+CU);
   const hintEl=document.getElementById('settings-gender-hint');
   if(hintEl)hintEl.style.display='none';
+  // Keep the Firebase Auth profile in sync so nothing reverts the name later
+  if(auth.currentUser&&D.settings.displayName){
+    try{await auth.currentUser.updateProfile({displayName:D.settings.displayName});}catch(e){}
+  }
   await saveDataFS(CU,D);
   showToast('הגדרות נשמרו ✓');
 }
