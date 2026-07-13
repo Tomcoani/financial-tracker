@@ -150,7 +150,12 @@
             </div>
             <div style="font-size:11.5px;color:var(--t3)">לדוגמה: 20,000 בעו"ש − 10,000 אפס חדש − 6,000 הוצאות צפויות = <strong style="color:var(--teal)">4,000 ₪ פנויים להשקעה</strong></div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--t3)">📅 תאריך עדכון אחרון:</span>
+              <input type="date" id="cf-last-updated" onchange="D.cfLastUpdated=this.value;markDirty()"
+                style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:4px 8px"/>
+            </div>
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:12px;color:var(--t3)">מטבע:</span>
               <select id="cf-currency" onchange="D.cfCurrency=this.value;markDirty();calcCashFlow()"
@@ -654,14 +659,14 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=14"></script>
-<script defer src="js/cashflow-goals.js?v=14"></script>
-<script defer src="js/pension.js?v=14"></script>
-<script defer src="js/networth.js?v=14"></script>
-<script defer src="js/portfolio.js?v=14"></script>
-<script defer src="js/dashboard.js?v=14"></script>
-<script defer src="js/settings.js?v=14"></script>
-<script defer src="js/admin.js?v=14"></script>
-<script defer src="js/misc.js?v=14"></script>
+<script defer src="js/core.js?v=15"></script>
+<script defer src="js/cashflow-goals.js?v=15"></script>
+<script defer src="js/pension.js?v=15"></script>
+<script defer src="js/networth.js?v=15"></script>
+<script defer src="js/portfolio.js?v=15"></script>
+<script defer src="js/dashboard.js?v=15"></script>
+<script defer src="js/settings.js?v=15"></script>
+<script defer src="js/admin.js?v=15"></script>
+<script defer src="js/misc.js?v=15"></script>
 </body>
 </html>

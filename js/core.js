@@ -34,7 +34,7 @@ function g(m,f){return D?.settings?.gender==='female'?f:m;}
 function nw6(n){return Array(n||D?.nwPeriodsCount||6).fill('');}
 function defData(){
   return {
-    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',
+    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',cfLastUpdated:'',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
     goals:[{name:'קרן חירום',where:'',saved:'',needed:'',h:0,done:false,goalLocs:[]}],
@@ -305,6 +305,8 @@ function renderAll(){
   }
   const cfCurEl=document.getElementById('cf-currency');
   if(cfCurEl&&D.cfCurrency)cfCurEl.value=D.cfCurrency;
+  const cfLuEl=document.getElementById('cf-last-updated');
+  if(cfLuEl)cfLuEl.value=D.cfLastUpdated||'';
   const cfCreditEl=document.getElementById('cf-credit');
   if(cfCreditEl){
     const n=D.cfCredit?parseFloat(String(D.cfCredit).replace(/,/g,'')):0;
