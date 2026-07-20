@@ -75,7 +75,32 @@ function renderBudget(){
   renderBudgetMonthSelect();
   ['income','needs','wants'].forEach(renderBudgetSection);
   renderBudgetSummary();
+  const notesEl=document.getElementById('budget-notes');
+  if(notesEl)notesEl.value=curBudget().notes||'';
   setTimeout(attachAllNumFormats,0);
+}
+function budgetNotesChange(el){
+  curBudget().notes=el.value;
+  touchSection('budget');markDirty();
+}
+// ── Unusual expense marker ──
+// A category is flagged when its amount is 30%+ (and at least ₪200) above its
+// average in previous months — needs at least 2 previous data points.
+function budgetRowFlag(sec,name,amount){
+  const amt=parseFloat(String(amount||0).replace(/,/g,''))||0;
+  const nm=(name||'').trim();
+  if(!amt||!nm||sec==='income')return null;
+  const keys=Object.keys(D.budgetMonths).sort().filter(k=>k<D.budgetCurMonth);
+  const vals=[];
+  keys.forEach(k=>{
+    const row=(D.budgetMonths[k][sec]||[]).find(r=>(r.name||'').trim()===nm);
+    const v=row?parseFloat(String(row.amount||0).replace(/,/g,''))||0:0;
+    if(v>0)vals.push(v);
+  });
+  if(vals.length<2)return null;
+  const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
+  if(amt>avg*1.3&&(amt-avg)>=200)return Math.round(avg);
+  return null;
 }
 function renderBudgetMonthSelect(){
   const sel=document.getElementById('budget-month-select');
@@ -113,10 +138,13 @@ function renderBudgetSection(sec){
   const rows=curBudget()[sec]||[];
   let html='';
   rows.forEach((row,i)=>{
+    const flagAvg=budgetRowFlag(sec,row.name,row.amount);
     html+=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
       <input type="text" value="${esc(row.name||'')}" placeholder="${meta.ph}" dir="rtl"
         oninput="updateBudgetRow('${sec}',${i},'name',this.value)"
         style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:var(--font);font-size:13px;padding:8px 10px;text-align:right"/>
+      <span id="budget-flag-${sec}-${i}" onclick="budgetFlagInfo('${sec}',${i})"
+        title="גבוה מהרגיל" style="display:${flagAvg!=null?'inline':'none'};cursor:pointer;font-size:14px;flex-shrink:0">👀</span>
       <input type="number" value="${row.amount||''}" placeholder="0" data-no-fmt
         oninput="updateBudgetRow('${sec}',${i},'amount',this.value)"
         style="width:110px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:${meta.color};font-family:var(--font);font-size:14px;font-weight:700;padding:8px 10px;text-align:center"/>
@@ -139,7 +167,16 @@ function updateBudgetRow(sec,i,field,val){
     if(totEl)totEl.textContent=fmt(budgetTotal(sec));
     renderBudgetSummary();
   }
+  // Refresh the "higher than usual" marker for this row
+  const flagEl=document.getElementById('budget-flag-'+sec+'-'+i);
+  if(flagEl)flagEl.style.display=budgetRowFlag(sec,b[sec][i].name,b[sec][i].amount)!=null?'inline':'none';
   touchSection('budget');markDirty();
+}
+function budgetFlagInfo(sec,i){
+  const row=curBudget()[sec][i];
+  if(!row)return;
+  const avg=budgetRowFlag(sec,row.name,row.amount);
+  if(avg!=null)showToast('👀 "'+(row.name||'')+'" גבוה מהרגיל — הממוצע בחודשים קודמים: '+fmt(avg));
 }
 function addBudgetRow(sec){
   curBudget()[sec].push({name:'',amount:''});
@@ -154,9 +191,39 @@ function removeBudgetRow(sec,i){
   renderBudgetSection(sec);
   renderBudgetSummary();
 }
+// ── Savings trend chart: how much was left over, month by month ──
+let chBudget=null;
+function renderBudgetTrend(){
+  const wrap=document.getElementById('budget-trend-card');
+  const canvas=document.getElementById('ch-budget');
+  if(!wrap||!canvas)return;
+  const keys=Object.keys(D.budgetMonths).sort();
+  const pts=keys.map(k=>{
+    const s=budgetSavedOf(D.budgetMonths[k]);
+    return {k,saved:s.inc-s.exp,has:(s.inc||s.exp)>0};
+  }).filter(p=>p.has);
+  if(pts.length<2||typeof Chart==='undefined'){
+    wrap.style.display='none';
+    if(chBudget){chBudget.destroy();chBudget=null;}
+    return;
+  }
+  wrap.style.display='block';
+  const labels=pts.map(p=>{const q=p.k.split('-');return (HEB_MONTHS[+q[1]-1]||q[1])+' '+q[0].slice(2);});
+  const data=pts.map(p=>p.saved);
+  if(chBudget)chBudget.destroy();
+  chBudget=new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:data.map(v=>v>=0?'rgba(66,235,214,.75)':'rgba(239,68,68,.75)'),borderRadius:6,maxBarThickness:46}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw>=0?'נשאר: ':'גירעון: ')+fmt(Math.abs(c.raw))}}},
+      scales:{y:{ticks:{callback:v=>fmt(v),color:'#94a3b8',font:{size:10}},grid:{color:'rgba(30,45,69,.6)'}},
+        x:{ticks:{color:'#94a3b8',font:{size:11}},grid:{display:false}}}}
+  });
+}
 function renderBudgetSummary(){
   const el=document.getElementById('budget-summary');
   if(!el)return;
+  renderBudgetTrend();
   const inc=budgetTotal('income'),needs=budgetTotal('needs'),wants=budgetTotal('wants');
   const exp=needs+wants,saved=inc-exp;
   const pct=v=>inc>0?Math.round(v/inc*100):0;

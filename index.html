@@ -149,6 +149,11 @@
         </div>
       </div>
       <div id="budget-summary"></div>
+      <div class="card" id="budget-trend-card" style="display:none">
+        <div class="ch-title">📈 כמה נשאר, חודש אחרי חודש</div>
+        <div class="ch-hint">ההשוואה הכי חשובה היא מול עצמכם — ככה רואים התקדמות לאורך זמן.</div>
+        <div style="height:190px"><canvas id="ch-budget"></canvas></div>
+      </div>
       <div class="card">
         <div class="ch-title">💰 הכנסות</div>
         <div class="ch-hint">כל הכסף שנכנס החודש (נטו, אחרי מס) — משכורות, עסק, קצבאות והכנסות חד-פעמיות.</div>
@@ -166,6 +171,14 @@
         <div class="ch-hint">דברים שנעים שיש אבל אפשר לוותר עליהם: בילויים, קניות, חופשות ומנויים.</div>
         <div id="budget-wants"></div>
         <button class="btnadd" onclick="addBudgetRow('wants')" style="margin-top:8px">+ הוסף הוצאת מותרות</button>
+      </div>
+      <div class="card">
+        <div class="ch-title">📝 הערות לחודש</div>
+        <div class="ch-hint">מה היה מיוחד החודש? למשל: חתונה משפחתית, טסט לרכב, בונוס בעבודה — כדי שבעתיד תזכרו למה החודש הזה היה שונה.</div>
+        <textarea id="budget-notes" rows="2" dir="rtl" oninput="budgetNotesChange(this)"
+          placeholder="כתבו כאן הערה חופשית על החודש..."
+          style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--white);font-family:var(--font);font-size:13px;line-height:1.6;resize:vertical;outline:none"
+          onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"></textarea>
       </div>
     </div>
 
@@ -701,15 +714,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=18"></script>
-<script defer src="js/cashflow-goals.js?v=18"></script>
-<script defer src="js/pension.js?v=18"></script>
-<script defer src="js/networth.js?v=18"></script>
-<script defer src="js/portfolio.js?v=18"></script>
-<script defer src="js/dashboard.js?v=18"></script>
-<script defer src="js/settings.js?v=18"></script>
-<script defer src="js/admin.js?v=18"></script>
-<script defer src="js/misc.js?v=18"></script>
-<script defer src="js/budget.js?v=18"></script>
+<script defer src="js/core.js?v=19"></script>
+<script defer src="js/cashflow-goals.js?v=19"></script>
+<script defer src="js/pension.js?v=19"></script>
+<script defer src="js/networth.js?v=19"></script>
+<script defer src="js/portfolio.js?v=19"></script>
+<script defer src="js/dashboard.js?v=19"></script>
+<script defer src="js/settings.js?v=19"></script>
+<script defer src="js/admin.js?v=19"></script>
+<script defer src="js/misc.js?v=19"></script>
+<script defer src="js/budget.js?v=19"></script>
 </body>
 </html>
