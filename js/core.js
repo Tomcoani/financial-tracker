@@ -91,7 +91,7 @@ auth.onAuthStateChanged(async user=>{
     const loaded=await loadData(CU);
     D=loaded||defData();
     if(!D.snapshots)D.snapshots=[];
-    if(!D.monthlyBudget)D.monthlyBudget=defBudget();
+    migrateBudget(); // budget months structure (converts old single-month shape)
     if(!D.portfolio)D.portfolio=defData().portfolio;
     if(!D.portfolios){
       // Migrate from old single portfolio to multi-portfolio
