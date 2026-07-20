@@ -96,7 +96,7 @@ async function renderAdmin(){
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                 <i data-lucide="mail" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> שנה מייל
               </button>`:''}
-              <button onclick="event.stopPropagation();adminDeleteUser('${u.uid}','${esc(u.name)}')"
+              <button onclick="event.stopPropagation();adminDeleteUser('${u.uid}','${esc(u.name)}','${esc(u.email)}')"
                 style="margin-top:4px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                 <i data-lucide="trash-2" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> מחק לקוח
@@ -141,13 +141,19 @@ async function renderAdmin(){
 }
 
 // ══ ADMIN TOOLS ══
-async function adminDeleteUser(uid,name){
+async function adminDeleteUser(uid,name,email){
   if(!confirm('למחוק את הלקוח "'+name+'"?\n\nכל הנתונים שלו יימחקו לצמיתות ולא ניתן לשחזר.'))return;
   try{
     await db.collection('users').doc(uid).collection('data').doc('main').delete();
     await db.collection('users').doc(uid).delete();
-    showToast('לקוח נמחק ✓');
+    showToast('נתוני הלקוח נמחקו ✓');
     renderAdmin();
+    // The browser SDK cannot delete another user's AUTH account — without this
+    // step the email stays "taken" in Firebase and can't be reused. Guide the
+    // admin straight to the console Users screen to finish the job.
+    if(confirm('הנתונים נמחקו ✓\n\nשלב אחרון: כדי לשחרר את המייל'+(email?'\n'+email:'')+'\nצריך למחוק גם את חשבון ההתחברות ב-Firebase Console\n(חפש את המייל ← תפריט ⋮ ← Delete account).\n\nלפתוח את מסך המשתמשים בקונסולה עכשיו?')){
+      window.open('https://console.firebase.google.com/project/clientworth-91908/authentication/users','_blank');
+    }
   }catch(e){
     alert('שגיאה במחיקה: '+e.message);
   }
