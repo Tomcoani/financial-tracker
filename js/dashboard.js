@@ -288,7 +288,7 @@ function renderDash(){
 function updateLastUpdatedBars(){
   const ts=D.lastSaved?new Date(D.lastSaved):null;
   const label=ts?'עודכן לאחרונה: '+fmtDate(ts.toISOString())+' '+ts.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):'טרם נשמר';
-  ['p-goals','p-pension','p-nw','p-portfolio','p-history','p-notes','p-settings'].forEach(pid=>{
+  ['p-budget','p-goals','p-pension','p-nw','p-portfolio','p-history','p-notes','p-settings'].forEach(pid=>{
     const el=document.getElementById('lup-'+pid);
     if(el)el.innerHTML=`<span class="lup-dot"></span><span>${label}</span>`;
   });

@@ -70,6 +70,7 @@
   </div>
   <div class="nav">
     <button id="nav-dash" class="nbtn on" onclick="goTo('dash',this)"><i data-lucide="layout-dashboard" class="nav-icon"></i> דשבורד</button>
+    <button id="nav-budget" class="nbtn" onclick="goTo('budget',this)"><i data-lucide="wallet" class="nav-icon"></i> התנהלות חודשית</button>
     <button id="nav-goals" class="nbtn" onclick="goTo('goals',this)"><i data-lucide="target" class="nav-icon"></i> מטרות</button>
     <button id="nav-pension" class="nbtn" onclick="goTo('pension',this)"><i data-lucide="landmark" class="nav-icon"></i> פנסיה</button>
     <button id="nav-portfolio" class="nbtn" onclick="goTo('portfolio',this)"><i data-lucide="briefcase" class="nav-icon"></i> תיק השקעות</button>
@@ -125,6 +126,45 @@
           <button onclick="submitFeedback()" class="btnsave" style="padding:9px 22px">שליחה לתום ←</button>
           <span id="feedback-status" style="font-size:13px;font-weight:700;color:var(--teal);display:none"></span>
         </div>
+      </div>
+    </div>
+
+    <!-- MONTHLY BUDGET -->
+    <div class="panel" id="p-budget">
+      <div class="last-updated-bar" id="lup-p-budget"><span class="lup-dot"></span><span></span></div>
+      <div class="card" style="background:linear-gradient(135deg,rgba(66,235,214,.06),rgba(66,235,214,.01))">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <div class="ch-title" style="margin:0">💵 התנהלות חודשית</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--t3)">חודש:</span>
+            <input type="month" id="budget-month" onchange="budgetMonthChange(this)"
+              style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:4px 8px"/>
+          </div>
+        </div>
+        <div style="font-size:12.5px;color:var(--t2);line-height:1.8">
+          כאן ${''}רושמים את ההכנסות וההוצאות של החודש כדי לראות <strong>כמה באמת נשאר בסוף החודש</strong>.
+          החלוקה עובדת לפי כלל <strong style="color:var(--teal)">50/30/20</strong>:
+          <strong style="color:var(--green)">50% צרכים</strong> · <strong style="color:var(--amber)">30% רצונות</strong> · <strong style="color:var(--teal)">20% חיסכון</strong>.
+        </div>
+      </div>
+      <div id="budget-summary"></div>
+      <div class="card">
+        <div class="ch-title">💰 הכנסות</div>
+        <div class="ch-hint">כל הכסף שנכנס החודש (נטו, אחרי מס) — משכורות, עסק, קצבאות והכנסות חד-פעמיות.</div>
+        <div id="budget-income"></div>
+        <button class="btnadd" onclick="addBudgetRow('income')" style="margin-top:8px">+ הוסף הכנסה</button>
+      </div>
+      <div class="card">
+        <div class="ch-title"><span style="color:var(--green)">🏠</span> צרכים — הוצאות חיוניות</div>
+        <div class="ch-hint">הוצאות שאי אפשר בלעדיהן: דיור, חשבונות, אוכל בסיסי, תחבורה, ביטוחים. יעד: עד 50% מההכנסה.</div>
+        <div id="budget-needs"></div>
+        <button class="btnadd" onclick="addBudgetRow('needs')" style="margin-top:8px">+ הוסף הוצאה חיונית</button>
+      </div>
+      <div class="card">
+        <div class="ch-title"><span style="color:var(--amber)">🎉</span> רצונות — מותרות</div>
+        <div class="ch-hint">נעים שיהיו אבל אפשר לוותר: בילויים, קניות, חופשות, מנויים. יעד: עד 30% מההכנסה.</div>
+        <div id="budget-wants"></div>
+        <button class="btnadd" onclick="addBudgetRow('wants')" style="margin-top:8px">+ הוסף מותרות</button>
       </div>
     </div>
 
@@ -572,6 +612,7 @@
 
   <!-- MOBILE MORE MENU -->
   <div class="mobile-more-menu" id="mobile-more-menu" style="display:none">
+    <button onclick="goTo('budget',document.getElementById('nav-budget'));syncMobileNav('budget');closeMobileMore()"><i data-lucide="wallet"></i> התנהלות חודשית</button>
     <button onclick="goTo('nw',document.getElementById('nav-nw'));syncMobileNav('nw');closeMobileMore()"><i data-lucide="trending-up"></i> שווי נטו</button>
     <button onclick="goTo('history',document.getElementById('nav-history'));syncMobileNav('history');closeMobileMore()"><i data-lucide="clock"></i> היסטוריה</button>
     <button onclick="goTo('notes',document.getElementById('nav-notes'));syncMobileNav('notes');closeMobileMore()"><i data-lucide="notebook-pen"></i> הערות</button>
@@ -659,14 +700,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=15"></script>
-<script defer src="js/cashflow-goals.js?v=15"></script>
-<script defer src="js/pension.js?v=15"></script>
-<script defer src="js/networth.js?v=15"></script>
-<script defer src="js/portfolio.js?v=15"></script>
-<script defer src="js/dashboard.js?v=15"></script>
-<script defer src="js/settings.js?v=15"></script>
-<script defer src="js/admin.js?v=15"></script>
-<script defer src="js/misc.js?v=15"></script>
+<script defer src="js/core.js?v=16"></script>
+<script defer src="js/cashflow-goals.js?v=16"></script>
+<script defer src="js/pension.js?v=16"></script>
+<script defer src="js/networth.js?v=16"></script>
+<script defer src="js/portfolio.js?v=16"></script>
+<script defer src="js/dashboard.js?v=16"></script>
+<script defer src="js/settings.js?v=16"></script>
+<script defer src="js/admin.js?v=16"></script>
+<script defer src="js/misc.js?v=16"></script>
+<script defer src="js/budget.js?v=16"></script>
 </body>
 </html>

@@ -91,6 +91,7 @@ auth.onAuthStateChanged(async user=>{
     const loaded=await loadData(CU);
     D=loaded||defData();
     if(!D.snapshots)D.snapshots=[];
+    if(!D.monthlyBudget)D.monthlyBudget=defBudget();
     if(!D.portfolio)D.portfolio=defData().portfolio;
     if(!D.portfolios){
       // Migrate from old single portfolio to multi-portfolio
@@ -285,6 +286,7 @@ function goTo(id,btn){
   _lastTab=id;
   syncMobileNav(id);
   if(id==='dash')renderDash();
+  if(id==='budget')renderBudget();
   if(id==='history')renderHistory();
   if(id==='portfolio'){renderPortfolio();renderPortfolioCharts();}
   if(id==='nw'){syncNWFromPension();renderNW();}
