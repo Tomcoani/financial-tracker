@@ -61,8 +61,11 @@ function curBudget(){migrateBudget();return D.budgetMonths[D.budgetCurMonth];}
 const BUDGET_SECTIONS={
   income:{color:'var(--teal)',ph:'מקור הכנסה...',totalLbl:'סה"כ הכנסות'},
   needs:{color:'var(--green)',ph:'הוצאה חיונית...',totalLbl:'סה"כ צרכים'},
-  wants:{color:'var(--amber)',ph:'הוצאה על מותרות...',totalLbl:'סה"כ רצונות'}
+  wants:{color:'var(--amber)',ph:'הוצאת כיף...',totalLbl:'סה"כ כיף'}
 };
+// Force LTR rendering for money amounts inside RTL text, so "−₪1,120" doesn't
+// get bidi-scrambled into "1,120₪−".
+function iln(s){return '<span style="direction:ltr;unicode-bidi:isolate;display:inline-block">'+s+'</span>';}
 function budgetTotal(sec){
   return (curBudget()[sec]||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
 }
@@ -111,25 +114,82 @@ function renderBudgetMonthSelect(){
 }
 function budgetMonthSelect(el){
   if(el.value==='__new__'){
-    // Reveal the month picker, defaulted to the current calendar month
-    const inp=document.getElementById('budget-new-month');
-    if(inp){inp.style.display='inline-block';inp.value=currentMonthKey();inp.focus();}
     el.value=D.budgetCurMonth; // keep the select on the current month meanwhile
+    budgetPickOpen('add');
     return;
   }
   D.budgetCurMonth=el.value;
   markDirty();
   renderBudget();
 }
-function budgetAddMonth(key){
-  const inp=document.getElementById('budget-new-month');
-  if(inp)inp.style.display='none';
-  if(!/^\d{4}-\d{2}$/.test(key||''))return;
-  if(!D.budgetMonths[key])D.budgetMonths[key]=newBudgetMonthTemplate();
+// ── Month picker (two dropdowns: month + year) ──
+// _budgetPickMode: 'add' = create a new month, 'move' = change the current month's date
+let _budgetPickMode='add';
+function budgetPickOpen(mode){
+  _budgetPickMode=mode;
+  const wrap=document.getElementById('budget-month-picker');
+  const mSel=document.getElementById('budget-pick-month');
+  const ySel=document.getElementById('budget-pick-year');
+  const lbl=document.getElementById('budget-pick-label');
+  if(!wrap||!mSel||!ySel)return;
+  // Years: current−2 … current+1, plus any year already in the data
+  const nowY=new Date().getFullYear();
+  const years=new Set();
+  for(let y=nowY-2;y<=nowY+1;y++)years.add(y);
+  Object.keys(D.budgetMonths).forEach(k=>years.add(+k.split('-')[0]));
+  const yList=Array.from(years).sort();
+  mSel.innerHTML=HEB_MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  ySel.innerHTML=yList.map(y=>`<option value="${y}">${y}</option>`).join('');
+  // Default: 'move' → the current month's date; 'add' → today's month
+  const base=mode==='move'?D.budgetCurMonth:currentMonthKey();
+  const p=base.split('-');
+  ySel.value=p[0];mSel.value=String(+p[1]);
+  if(lbl)lbl.textContent=mode==='move'?'העבר את החודש הנוכחי אל:':'איזה חודש להוסיף?';
+  wrap.style.display='flex';
+}
+function budgetPickCancel(){
+  const wrap=document.getElementById('budget-month-picker');
+  if(wrap)wrap.style.display='none';
+}
+function budgetPickConfirm(){
+  const m=document.getElementById('budget-pick-month').value;
+  const y=document.getElementById('budget-pick-year').value;
+  const key=y+'-'+String(m).padStart(2,'0');
+  budgetPickCancel();
+  if(_budgetPickMode==='move'){
+    if(key===D.budgetCurMonth)return;
+    if(D.budgetMonths[key]){showToast('חודש '+fmtBudgetMonth(key)+' כבר קיים — מחק אותו קודם או בחר תאריך אחר');return;}
+    D.budgetMonths[key]=D.budgetMonths[D.budgetCurMonth];
+    delete D.budgetMonths[D.budgetCurMonth];
+    D.budgetCurMonth=key;
+    touchSection('budget');markDirty();
+    renderBudget();
+    showToast('החודש הועבר ל'+fmtBudgetMonth(key)+' ✓');
+    return;
+  }
+  // add mode
+  if(D.budgetMonths[key]){
+    D.budgetCurMonth=key;renderBudget();
+    showToast('חודש '+fmtBudgetMonth(key)+' כבר קיים — עברתי אליו');
+    return;
+  }
+  D.budgetMonths[key]=newBudgetMonthTemplate();
   D.budgetCurMonth=key;
   touchSection('budget');markDirty();
   renderBudget();
   showToast('נוסף חודש '+fmtBudgetMonth(key)+' ✓');
+}
+// Delete the month currently shown (e.g. opened by mistake)
+function budgetDeleteMonth(){
+  const key=D.budgetCurMonth;
+  if(!confirm('למחוק את חודש '+fmtBudgetMonth(key)+' וכל הנתונים שבו?\n\nלא ניתן לשחזר.'))return;
+  delete D.budgetMonths[key];
+  const keys=Object.keys(D.budgetMonths).sort();
+  D.budgetCurMonth=keys.length?keys[keys.length-1]:currentMonthKey();
+  if(!D.budgetMonths[D.budgetCurMonth])D.budgetMonths[D.budgetCurMonth]=defBudgetMonth();
+  touchSection('budget');markDirty();
+  renderBudget();
+  showToast('חודש '+fmtBudgetMonth(key)+' נמחק ✓');
 }
 function renderBudgetSection(sec){
   const el=document.getElementById('budget-'+sec);
@@ -244,7 +304,7 @@ function renderBudgetSummary(){
       const d=saved-prevSaved;
       if(d!==0){
         cmpHtml=`<div style="font-size:12px;color:${d>0?'var(--green)':'var(--amber)'};margin-top:3px">
-          ${d>0?'↑':'↓'} ${d>0?'+':'−'}${fmt(Math.abs(d))} לעומת ${fmtBudgetMonth(keys[idx-1])} (${prevSaved>=0?'חיסכון':'גירעון'} של ${fmt(Math.abs(prevSaved))})</div>`;
+          ${d>0?'↑':'↓'} ${iln((d>0?'+':'−')+fmt(Math.abs(d)))} לעומת ${fmtBudgetMonth(keys[idx-1])} (${prevSaved>=0?'חיסכון':'גירעון'} של ${iln(fmt(Math.abs(prevSaved)))})</div>`;
       }
     }
   }
@@ -253,7 +313,7 @@ function renderBudgetSummary(){
   <div class="card" style="background:linear-gradient(135deg,rgba(66,235,214,.09),rgba(66,235,214,.02));border:1.5px solid rgba(66,235,214,.35)">
     <div style="text-align:center;margin-bottom:14px">
       <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${savedPositive?'נשאר לכם החודש':'הייתם בגירעון החודש'}</div>
-      <div style="font-size:30px;font-weight:800;color:${savedPositive?'var(--teal)':'var(--red)'}">${savedPositive?'':'−'}${fmt(Math.abs(saved))}</div>
+      <div style="font-size:30px;font-weight:800;color:${savedPositive?'var(--teal)':'var(--red)'}">${iln((savedPositive?'':'−')+fmt(Math.abs(saved)))}</div>
       ${inc>0&&savedPositive?`<div style="font-size:12px;color:var(--t2);margin-top:2px">${savePct}% מההכנסה נשארו פנויים לחיסכון ולהשקעה</div>`:''}
       ${cmpHtml}
     </div>
@@ -263,22 +323,22 @@ function renderBudgetSummary(){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">
       <div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
         <div style="font-size:11px;color:var(--t3)"><span style="color:var(--green)">●</span> צרכים</div>
-        <div style="font-size:15px;font-weight:800;color:var(--white)">${fmt(needs)}</div>
+        <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(needs))}</div>
         <div style="font-size:11px;color:var(--t3)">${inc>0?needsPct+'% מההכנסה':''}</div>
       </div>
       <div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
-        <div style="font-size:11px;color:var(--t3)"><span style="color:var(--amber)">●</span> רצונות</div>
-        <div style="font-size:15px;font-weight:800;color:var(--white)">${fmt(wants)}</div>
+        <div style="font-size:11px;color:var(--t3)"><span style="color:var(--amber)">●</span> כיף</div>
+        <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(wants))}</div>
         <div style="font-size:11px;color:var(--t3)">${inc>0?wantsPct+'% מההכנסה':''}</div>
       </div>
       <div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
         <div style="font-size:11px;color:var(--t3)"><span style="color:var(--teal)">●</span> נשאר פנוי</div>
-        <div style="font-size:15px;font-weight:800;color:var(--white)">${fmt(Math.max(0,saved))}</div>
+        <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(Math.max(0,saved)))}</div>
         <div style="font-size:11px;color:var(--t3)">${inc>0?Math.max(0,savePct)+'% מההכנסה':''}</div>
       </div>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--t3);text-align:center">
-      הכנסות ${fmt(inc)} − הוצאות ${fmt(exp)} = ${savedPositive?'נשארו':'גירעון של'} ${fmt(Math.abs(saved))}
+      הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
     </div>
   </div>`;
 }

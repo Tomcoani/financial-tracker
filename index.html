@@ -135,16 +135,26 @@
       <div class="card" style="background:linear-gradient(135deg,rgba(66,235,214,.06),rgba(66,235,214,.01))">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
           <div class="ch-title" style="margin:0">💵 התנהלות חודשית</div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-size:12px;color:var(--t3)">חודש:</span>
             <select id="budget-month-select" onchange="budgetMonthSelect(this)"
               style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:4px 8px"></select>
-            <input type="month" id="budget-new-month" onchange="budgetAddMonth(this.value)" style="display:none;background:var(--s2);border:1px solid var(--teal-border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:4px 8px"/>
+            <button onclick="budgetPickOpen('move')" title="שנה את התאריך של החודש הנוכחי"
+              style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t2);font-size:13px;cursor:pointer;padding:4px 8px">✏️</button>
+            <button onclick="budgetDeleteMonth()" title="מחק את החודש הנוכחי"
+              style="background:var(--s2);border:1px solid rgba(239,68,68,.35);border-radius:8px;color:#fca5a5;font-size:13px;cursor:pointer;padding:4px 8px">🗑</button>
           </div>
+        </div>
+        <div id="budget-month-picker" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;background:var(--s2);border:1px solid var(--teal-border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+          <span id="budget-pick-label" style="font-size:12.5px;color:var(--t2);font-weight:600">איזה חודש להוסיף?</span>
+          <select id="budget-pick-month" style="background:var(--s1);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:5px 8px"></select>
+          <select id="budget-pick-year" style="background:var(--s1);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:5px 8px"></select>
+          <button onclick="budgetPickConfirm()" class="btnsave" style="padding:6px 16px;font-size:12px">אישור ✓</button>
+          <button onclick="budgetPickCancel()" style="background:transparent;border:1px solid var(--border);color:var(--t3);border-radius:8px;padding:6px 12px;font-family:var(--font);font-size:12px;cursor:pointer">ביטול</button>
         </div>
         <div style="font-size:12.5px;color:var(--t2);line-height:1.8">
           כאן רושמים פעם בחודש את ההכנסות וההוצאות — כדי לראות לאן הכסף הולך ו<strong>כמה באמת נשאר בסוף החודש</strong>.
-          ההוצאות מחולקות לשניים: <strong style="color:var(--green)">צרכים</strong> (מה שחייבים) ו<strong style="color:var(--amber)">רצונות</strong> (מה שכיף שיש).
+          ההוצאות מחולקות לשניים: <strong style="color:var(--green)">צרכים</strong> (מה שחייבים) ו<strong style="color:var(--amber)">כיף</strong> (מה שנעים שיש).
           כל חודש נשמר בנפרד, כך שאפשר לחזור אחורה ולראות את ההתקדמות.
         </div>
       </div>
@@ -167,10 +177,10 @@
         <button class="btnadd" onclick="addBudgetRow('needs')" style="margin-top:8px">+ הוסף הוצאה חיונית</button>
       </div>
       <div class="card">
-        <div class="ch-title"><span style="color:var(--amber)">🎉</span> רצונות — מותרות</div>
+        <div class="ch-title"><span style="color:var(--amber)">🎉</span> כיף — מותרות</div>
         <div class="ch-hint">דברים שנעים שיש אבל אפשר לוותר עליהם: בילויים, קניות, חופשות ומנויים.</div>
         <div id="budget-wants"></div>
-        <button class="btnadd" onclick="addBudgetRow('wants')" style="margin-top:8px">+ הוסף הוצאת מותרות</button>
+        <button class="btnadd" onclick="addBudgetRow('wants')" style="margin-top:8px">+ הוסף הוצאת כיף</button>
       </div>
       <div class="card">
         <div class="ch-title">📝 הערות לחודש</div>
@@ -714,15 +724,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=19"></script>
-<script defer src="js/cashflow-goals.js?v=19"></script>
-<script defer src="js/pension.js?v=19"></script>
-<script defer src="js/networth.js?v=19"></script>
-<script defer src="js/portfolio.js?v=19"></script>
-<script defer src="js/dashboard.js?v=19"></script>
-<script defer src="js/settings.js?v=19"></script>
-<script defer src="js/admin.js?v=19"></script>
-<script defer src="js/misc.js?v=19"></script>
-<script defer src="js/budget.js?v=19"></script>
+<script defer src="js/core.js?v=20"></script>
+<script defer src="js/cashflow-goals.js?v=20"></script>
+<script defer src="js/pension.js?v=20"></script>
+<script defer src="js/networth.js?v=20"></script>
+<script defer src="js/portfolio.js?v=20"></script>
+<script defer src="js/dashboard.js?v=20"></script>
+<script defer src="js/settings.js?v=20"></script>
+<script defer src="js/admin.js?v=20"></script>
+<script defer src="js/misc.js?v=20"></script>
+<script defer src="js/budget.js?v=20"></script>
 </body>
 </html>
