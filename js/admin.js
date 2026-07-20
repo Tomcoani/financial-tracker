@@ -86,6 +86,11 @@ async function renderAdmin(){
                   <i data-lucide="send" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת במייל
                 </button>`:''}
               </div>`:''}
+              <button onclick="event.stopPropagation();openCertModal('${esc(u.name)}')"
+                style="margin-top:4px;background:rgba(66,235,214,.12);border:1px solid rgba(66,235,214,.3);color:#5eead4;
+                border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                🎓 הכן תעודה
+              </button>
               ${u.email?`<button onclick="event.stopPropagation();adminSendPasswordReset('${u.email}')"
                 style="margin-top:4px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d;
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
@@ -266,6 +271,72 @@ async function adminSendPasswordReset(email){
     alert('שגיאה: '+e.message);
   }
 }
+
+// ══ CERTIFICATE GENERATOR ══
+// Draws the client's name (Alef Bold — same font as the Canva original) over
+// a blank certificate background exported once from Canva (cert-bg.png in the
+// project root). Position/size/color are calibrated once and kept in localStorage.
+let _certImg=null;
+function openCertModal(name){
+  document.getElementById('cert-modal').style.display='flex';
+  document.getElementById('cert-name-input').value=name||'';
+  document.getElementById('cert-sub-input').value='';
+  document.getElementById('cert-y').value=localStorage.getItem('certY')||54;
+  document.getElementById('cert-size').value=localStorage.getItem('certSize')||6;
+  document.getElementById('cert-color').value=localStorage.getItem('certColor')||'#1a2b4a';
+  const ready=()=>{
+    document.getElementById('cert-setup').style.display='none';
+    document.getElementById('cert-editor').style.display='block';
+    document.getElementById('cert-dl').style.display='block';
+    // Make sure the certificate font is loaded before drawing on canvas
+    const draw=()=>certDraw();
+    if(document.fonts&&document.fonts.load)document.fonts.load('700 40px Alef').then(draw).catch(draw);
+    else draw();
+  };
+  if(_certImg){ready();return;}
+  const img=new Image();
+  img.onload=()=>{_certImg=img;ready();};
+  img.onerror=()=>{
+    document.getElementById('cert-setup').style.display='block';
+    document.getElementById('cert-editor').style.display='none';
+    document.getElementById('cert-dl').style.display='none';
+  };
+  img.src='cert-bg.png?v='+Date.now();
+}
+function certDraw(){
+  if(!_certImg)return;
+  const cv=document.getElementById('cert-canvas');
+  cv.width=_certImg.naturalWidth;cv.height=_certImg.naturalHeight;
+  const ctx=cv.getContext('2d');
+  ctx.drawImage(_certImg,0,0);
+  const name=document.getElementById('cert-name-input').value.trim();
+  const sub=document.getElementById('cert-sub-input').value.trim();
+  const y=+document.getElementById('cert-y').value;
+  const sizePct=+document.getElementById('cert-size').value;
+  const color=document.getElementById('cert-color').value;
+  localStorage.setItem('certY',y);localStorage.setItem('certSize',sizePct);localStorage.setItem('certColor',color);
+  const fs=cv.width*sizePct/100;
+  ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';
+  ctx.font='700 '+fs+'px Alef, Heebo, sans-serif';
+  if(name)ctx.fillText(name,cv.width/2,cv.height*y/100);
+  if(sub){
+    ctx.font='400 '+(fs*0.42)+'px Heebo, Alef, sans-serif';
+    ctx.fillText(sub,cv.width/2,cv.height*y/100+fs*0.95);
+  }
+}
+function certDownloadPng(){
+  certDraw();
+  const name=document.getElementById('cert-name-input').value.trim()||'לקוח';
+  document.getElementById('cert-canvas').toBlob(b=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);
+    a.download='תעודת סיום קורס - '+name+'.png';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },'image/png');
+  showToast('התעודה ירדה ✓ 🎓');
+}
+function closeCertModal(){document.getElementById('cert-modal').style.display='none';}
 
 // Open WhatsApp / email with a ready-made update reminder for the client.
 // If the client saved a phone number in settings, WhatsApp opens their chat directly.

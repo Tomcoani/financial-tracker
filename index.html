@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
 <link rel="stylesheet" href="styles/main.css?v=8">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -696,6 +696,38 @@
   </div>
 </div>
 
+<!-- CERTIFICATE MODAL -->
+<div class="overlay" id="cert-modal" style="display:none">
+  <div class="modal" style="text-align:right;width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column">
+    <h2 style="margin-bottom:10px">🎓 הכנת תעודת סיום</h2>
+    <div id="cert-setup" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--t1);line-height:1.9">
+      <strong style="color:#fcd34d">חסר קובץ רקע לתעודה — הגדרה חד-פעמית:</strong><br>
+      1. פתחו את עיצוב התעודה בקאנבה<br>
+      2. שכפלו את העיצוב ומחקו את תיבת הטקסט של השם (רק אותה)<br>
+      3. הורידו כ-<strong>PNG</strong> (איכות גבוהה)<br>
+      4. שמרו את הקובץ בשם <strong dir="ltr">cert-bg.png</strong> בתיקיית הפרויקט (ליד index.html) ובקשו מקלוד לדחוף אותו לאתר<br>
+      מרגע שהקובץ שם — הכנת תעודה היא קליק אחד לכל לקוח.
+    </div>
+    <div id="cert-editor" style="display:none;overflow-y:auto;min-height:0">
+      <canvas id="cert-canvas" style="width:100%;border:1px solid var(--border);border-radius:10px;background:#fff"></canvas>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div class="sf"><label>שם על התעודה</label><input id="cert-name-input" oninput="certDraw()" dir="rtl"/></div>
+        <div class="sf"><label>שורה נוספת (לא חובה — למשל "קבוצתי אפריל 26")</label><input id="cert-sub-input" oninput="certDraw()" dir="rtl" placeholder=""/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 90px;gap:10px;margin-top:8px;align-items:end">
+        <div class="sf"><label>גובה השם (מיקום אנכי)</label><input id="cert-y" type="range" min="20" max="85" step="0.5" oninput="certDraw()"/></div>
+        <div class="sf"><label>גודל הכתב</label><input id="cert-size" type="range" min="2" max="12" step="0.2" oninput="certDraw()"/></div>
+        <div class="sf"><label>צבע</label><input id="cert-color" type="color" oninput="certDraw()" style="width:100%;height:34px;padding:2px;background:var(--s2);border:1px solid var(--border);border-radius:8px;cursor:pointer"/></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--t3);margin-top:4px">המיקום, הגודל והצבע נשמרים — מכיילים פעם אחת וזהו.</div>
+    </div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btnsnap secondary" onclick="closeCertModal()">סגור</button>
+      <button class="btnsnap primary" id="cert-dl" onclick="certDownloadPng()" style="flex:1;display:none">⬇ הורד תעודה</button>
+    </div>
+  </div>
+</div>
+
 <!-- RESET MODAL -->
 <div class="overlay" id="reset-modal" style="display:none">
   <div class="modal">
@@ -728,15 +760,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=21"></script>
-<script defer src="js/cashflow-goals.js?v=21"></script>
-<script defer src="js/pension.js?v=21"></script>
-<script defer src="js/networth.js?v=21"></script>
-<script defer src="js/portfolio.js?v=21"></script>
-<script defer src="js/dashboard.js?v=21"></script>
-<script defer src="js/settings.js?v=21"></script>
-<script defer src="js/admin.js?v=21"></script>
-<script defer src="js/misc.js?v=21"></script>
-<script defer src="js/budget.js?v=21"></script>
+<script defer src="js/core.js?v=22"></script>
+<script defer src="js/cashflow-goals.js?v=22"></script>
+<script defer src="js/pension.js?v=22"></script>
+<script defer src="js/networth.js?v=22"></script>
+<script defer src="js/portfolio.js?v=22"></script>
+<script defer src="js/dashboard.js?v=22"></script>
+<script defer src="js/settings.js?v=22"></script>
+<script defer src="js/admin.js?v=22"></script>
+<script defer src="js/misc.js?v=22"></script>
+<script defer src="js/budget.js?v=22"></script>
 </body>
 </html>
