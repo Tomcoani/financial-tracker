@@ -157,6 +157,10 @@
           ההוצאות מחולקות לשניים: <strong style="color:var(--green)">צרכים</strong> (מה שחייבים) ו<strong style="color:var(--amber)">כיף</strong> (מה שנעים שיש).
           כל חודש נשמר בנפרד, כך שאפשר לחזור אחורה ולראות את ההתקדמות.
         </div>
+        <button id="budget-copy-prev" onclick="budgetCopyPrevAmounts()" style="display:none;align-items:center;gap:6px;margin-top:10px;background:rgba(66,235,214,.10);border:1px solid var(--teal-border);color:var(--teal);border-radius:9px;padding:7px 14px;font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer">
+          📋 העתק סכומים מהחודש הקודם
+        </button>
+        <div id="budget-copy-prev-hint" style="display:none;font-size:10.5px;color:var(--t3);margin-top:4px">ממלא רק שדות ריקים לפי שם הקטגוריה — סכומים שכבר הקלדתם לא יידרסו.</div>
       </div>
       <div id="budget-summary"></div>
       <div class="card" id="budget-trend-card" style="display:none">
@@ -724,15 +728,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=20"></script>
-<script defer src="js/cashflow-goals.js?v=20"></script>
-<script defer src="js/pension.js?v=20"></script>
-<script defer src="js/networth.js?v=20"></script>
-<script defer src="js/portfolio.js?v=20"></script>
-<script defer src="js/dashboard.js?v=20"></script>
-<script defer src="js/settings.js?v=20"></script>
-<script defer src="js/admin.js?v=20"></script>
-<script defer src="js/misc.js?v=20"></script>
-<script defer src="js/budget.js?v=20"></script>
+<script defer src="js/core.js?v=21"></script>
+<script defer src="js/cashflow-goals.js?v=21"></script>
+<script defer src="js/pension.js?v=21"></script>
+<script defer src="js/networth.js?v=21"></script>
+<script defer src="js/portfolio.js?v=21"></script>
+<script defer src="js/dashboard.js?v=21"></script>
+<script defer src="js/settings.js?v=21"></script>
+<script defer src="js/admin.js?v=21"></script>
+<script defer src="js/misc.js?v=21"></script>
+<script defer src="js/budget.js?v=21"></script>
 </body>
 </html>

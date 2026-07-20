@@ -80,7 +80,45 @@ function renderBudget(){
   renderBudgetSummary();
   const notesEl=document.getElementById('budget-notes');
   if(notesEl)notesEl.value=curBudget().notes||'';
+  // "Copy amounts" button only makes sense when a previous month has data
+  const hasPrev=!!budgetPrevKey();
+  const copyBtn=document.getElementById('budget-copy-prev');
+  if(copyBtn)copyBtn.style.display=hasPrev?'inline-flex':'none';
+  const copyHint=document.getElementById('budget-copy-prev-hint');
+  if(copyHint)copyHint.style.display=hasPrev?'block':'none';
   setTimeout(attachAllNumFormats,0);
+}
+// Closest earlier month that actually has data
+function budgetPrevKey(){
+  const keys=Object.keys(D.budgetMonths).sort().filter(k=>k<D.budgetCurMonth);
+  for(let i=keys.length-1;i>=0;i--){
+    const s=budgetSavedOf(D.budgetMonths[keys[i]]);
+    if(s.inc||s.exp)return keys[i];
+  }
+  return null;
+}
+// Copy amounts from the previous month into EMPTY fields only (matched by
+// category name) — fixed expenses like rent repeat, so the user then edits
+// just what changed. Never overwrites a typed amount.
+function budgetCopyPrevAmounts(){
+  const pk=budgetPrevKey();
+  if(!pk){showToast('אין חודש קודם עם נתונים להעתקה');return;}
+  const prev=D.budgetMonths[pk],cur=curBudget();
+  let filled=0;
+  ['income','needs','wants'].forEach(sec=>{
+    (cur[sec]||[]).forEach(row=>{
+      if(parseFloat(String(row.amount||0).replace(/,/g,''))||0)return; // typed — keep
+      const nm=(row.name||'').trim();
+      if(!nm)return;
+      const pRow=(prev[sec]||[]).find(r=>(r.name||'').trim()===nm);
+      const v=pRow?parseFloat(String(pRow.amount||0).replace(/,/g,''))||0:0;
+      if(v){row.amount=String(v);filled++;}
+    });
+  });
+  if(!filled){showToast('אין מה להעתיק — כל השדות כבר מלאים');return;}
+  touchSection('budget');markDirty();
+  renderBudget();
+  showToast('הועתקו '+filled+' סכומים מ'+fmtBudgetMonth(pk)+' ✓ עדכנו רק מה שהשתנה');
 }
 function budgetNotesChange(el){
   curBudget().notes=el.value;
