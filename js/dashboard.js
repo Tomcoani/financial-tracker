@@ -112,7 +112,7 @@ function renderDash(){
     </div>
     <div class="stat">
       <label><i data-lucide="landmark" class="tile-icon"></i> פנסיה והשתלמות</label>
-      <div class="val vp">${fmt(penFromNW||nwInvest)}</div>
+      <div class="val vp">${fmt(penFromNW)}</div>
       <div class="sub" style="font-size:10px;color:var(--t3)">
         ${(D.nwData.investments.rows||[]).filter(r=>{const n=r.name||'';return(n.includes('פנסיה')||n.includes('השתלמות'))&&rowLatestILS(r)>0}).map(r=>r.name).join(' · ')||'פנסיה + קרן השתלמות'}
       </div>
