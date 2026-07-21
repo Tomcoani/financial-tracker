@@ -242,24 +242,38 @@ function fbErr(c){
 }
 
 // ══ DIRTY / SAVE ══
+let _firstDirtyAt=0;
 function markDirty(){
   dirty=true;
   document.getElementById('save-bar').style.display='flex';
   document.getElementById('save-status').textContent='';
-  // auto-save after 10 seconds of inactivity
+  if(!_firstDirtyAt)_firstDirtyAt=Date.now();
+  // Save 3s after the last keystroke, but never hold unsaved changes longer
+  // than 15s even while typing continuously.
   clearTimeout(autoSaveTimer);
-  autoSaveTimer=setTimeout(()=>manualSave(),10000);
+  const remaining=15000-(Date.now()-_firstDirtyAt);
+  autoSaveTimer=setTimeout(()=>manualSave(),Math.max(400,Math.min(3000,remaining)));
 }
-async function manualSave(){
-  if(!CU||!dirty)return;
-  collectAll();
-  D.lastSaved = new Date().toISOString();
-  await saveDataFS(CU,D);
-  dirty=false;
-  document.getElementById('save-bar').style.display='none';
-  updateLastUpdatedBars();
-  showToast('נשמר בענן ☁️');
+let _saving=false;
+async function manualSave(silent){
+  if(!CU||!dirty||_saving)return;
+  _saving=true;
+  try{
+    collectAll();
+    D.lastSaved=new Date().toISOString();
+    await saveDataFS(CU,D);
+    dirty=false;_firstDirtyAt=0;
+    document.getElementById('save-bar').style.display='none';
+    updateLastUpdatedBars();
+    if(!silent)showToast('נשמר בענן ☁️');
+  }finally{_saving=false;}
 }
+// Save right away without waiting for the debounce (tab switch / leaving the app)
+function flushSave(){clearTimeout(autoSaveTimer);if(dirty)manualSave(true);}
+// Save when the app is hidden/backgrounded (switching tabs, locking phone, etc.)
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushSave();});
+window.addEventListener('pagehide',flushSave);
+window.addEventListener('blur',flushSave);
 function collectAll(){
   D.monthly=document.getElementById('monthly').value;
   D.penNotes=document.getElementById('pen-notes').value;
@@ -279,6 +293,7 @@ function collectAll(){
 // ══ NAV ══
 let _lastTab='';
 function goTo(id,btn){
+  if(_lastTab&&_lastTab!==id)flushSave(); // persist edits from the tab we're leaving
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
   document.getElementById('p-'+id).classList.add('on');
