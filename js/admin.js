@@ -273,60 +273,105 @@ async function adminSendPasswordReset(email){
 }
 
 // ══ CERTIFICATE GENERATOR ══
-// Draws the client's name (Alef Bold — same font as the Canva original) over
-// a blank certificate background exported once from Canva (cert-bg.png in the
-// project root). Position/size/color are calibrated once and kept in localStorage.
-let _certImg=null;
+// The whole certificate is drawn in code (matching the Tomani design), so the
+// name + completion date fill in automatically — no external file needed. If a
+// blank cert-bg.png (exported from Canva without the name/date) is later placed
+// in the project root, it's used as the background instead for a 1:1 match, and
+// the name/date are overlaid on top.
+const CERT_TEAL='#57D1C9';
+let _certBg=null,_certBgTried=false;
 function openCertModal(name){
   document.getElementById('cert-modal').style.display='flex';
   document.getElementById('cert-name-input').value=name||'';
-  document.getElementById('cert-sub-input').value='';
-  document.getElementById('cert-y').value=localStorage.getItem('certY')||54;
-  document.getElementById('cert-size').value=localStorage.getItem('certSize')||6;
-  document.getElementById('cert-color').value=localStorage.getItem('certColor')||'#1a2b4a';
-  const ready=()=>{
-    document.getElementById('cert-setup').style.display='none';
-    document.getElementById('cert-editor').style.display='block';
-    document.getElementById('cert-dl').style.display='block';
-    // Make sure the certificate font is loaded before drawing on canvas
-    const draw=()=>certDraw();
-    if(document.fonts&&document.fonts.load)document.fonts.load('700 40px Alef').then(draw).catch(draw);
-    else draw();
+  const di=document.getElementById('cert-date-input');
+  if(di&&!di.value){const d=new Date();di.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  const go=()=>{
+    if(document.fonts&&document.fonts.load)
+      Promise.all([document.fonts.load('800 40px Heebo'),document.fonts.load('700 40px Alef')]).then(certDraw).catch(certDraw);
+    else certDraw();
   };
-  if(_certImg){ready();return;}
+  if(_certBgTried){go();return;}
   const img=new Image();
-  img.onload=()=>{_certImg=img;ready();};
-  img.onerror=()=>{
-    document.getElementById('cert-setup').style.display='block';
-    document.getElementById('cert-editor').style.display='none';
-    document.getElementById('cert-dl').style.display='none';
-  };
+  img.onload=()=>{_certBg=img;_certBgTried=true;go();};
+  img.onerror=()=>{_certBg=null;_certBgTried=true;go();};
   img.src='cert-bg.png?v='+Date.now();
 }
+function certFmtDate(iso){
+  if(!iso)return '';
+  const p=(iso||'').split('-');
+  if(p.length!==3)return iso;
+  return (+p[2])+'/'+(+p[1])+'/'+p[0];
+}
+// Teal outline "A" logo mark, drawn on a white area
+function certDrawLogo(ctx,cx,cy,h){
+  const w=h*0.95,t=h*0.20;
+  ctx.fillStyle=CERT_TEAL;
+  ctx.beginPath();ctx.moveTo(cx,cy-h/2);ctx.lineTo(cx+w/2,cy+h/2);ctx.lineTo(cx-w/2,cy+h/2);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.moveTo(cx,cy-h/2+t*1.9);ctx.lineTo(cx+w/2-t*1.45,cy+h/2-t*0.05);ctx.lineTo(cx-w/2+t*1.45,cy+h/2-t*0.05);ctx.closePath();ctx.fill();
+  ctx.fillStyle=CERT_TEAL;ctx.fillRect(cx-w*0.17,cy+h*0.08,w*0.34,t*0.72);
+}
+function certDrawDesign(ctx,W,H){
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  const tri=(a,b,c,d,e,f)=>{ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,d);ctx.lineTo(e,f);ctx.closePath();ctx.fill();};
+  // teal corner triangles (top-left + bottom-right)
+  ctx.fillStyle=CERT_TEAL;
+  tri(0,0, W*0.135,0, 0,H*0.19);
+  tri(W*0.03,H*0.205, W*0.10,H*0.045, 0,H*0.05);
+  tri(W,H, W*0.865,H, W,H*0.81);
+  tri(W*0.97,H*0.795, W*0.90,H*0.955, W,H*0.95);
+  // black frame lines (top + bottom)
+  ctx.strokeStyle='#111';ctx.lineWidth=H*0.007;
+  ctx.beginPath();ctx.moveTo(W*0.19,H*0.055);ctx.lineTo(W*0.93,H*0.055);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W*0.07,H*0.945);ctx.lineTo(W*0.81,H*0.945);ctx.stroke();
+  // teal vertical accents (left + right)
+  ctx.strokeStyle=CERT_TEAL;ctx.lineWidth=H*0.006;
+  ctx.beginPath();ctx.moveTo(W*0.045,H*0.21);ctx.lineTo(W*0.045,H*0.62);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W*0.955,H*0.06);ctx.lineTo(W*0.955,H*0.78);ctx.stroke();
+  // logo + brand
+  certDrawLogo(ctx,W/2,H*0.135,H*0.10);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const ls=v=>{if(ctx.letterSpacing!==undefined)ctx.letterSpacing=v;};
+  ctx.fillStyle='#111';ctx.direction='ltr';ctx.font='700 '+(H*0.026)+'px Heebo, sans-serif';
+  ls((H*0.004)+'px');ctx.fillText('TOMANI.CO',W/2,H*0.215);ls('0px');
+  ctx.direction='rtl';
+  ctx.fillStyle='#111';ctx.font='800 '+(H*0.05)+'px Heebo, sans-serif';
+  ls((H*0.012)+'px');ctx.fillText('תעודת בוגר/ת הדרך לעושר',W/2,H*0.315);ls('0px');
+  ctx.fillStyle='#333';ctx.font='400 '+(H*0.028)+'px Heebo, sans-serif';
+  ctx.fillText('שמוענקת בזאת ל:',W/2,H*0.415);
+  ctx.fillStyle='#1c1c1c';ctx.font='400 '+(H*0.03)+'px Heebo, sans-serif';
+  ctx.fillText('על מחויבות לתהליך ועמידה בכל המשימות בתוכנית "הדרך לעושר"',W/2,H*0.60);
+  ctx.fillStyle='#111';ctx.font='700 '+(H*0.032)+'px Heebo, sans-serif';
+  ctx.fillText('מקבלי תעודה זו לקחו שליטה על הכסף שלהם ובחרו להתקדם לעתיד טוב יותר',W/2,H*0.65);
+  // signature (left) + date label (right)
+  ctx.fillStyle='#111';ctx.font='700 '+(H*0.034)+'px Heebo, sans-serif';
+  ctx.fillText('תום אני',W*0.24,H*0.85);
+  ctx.fillStyle='#333';ctx.font='400 '+(H*0.023)+'px Heebo, sans-serif';
+  ctx.fillText('רו"ח ומייסד תוכנית הדרך לעושר',W*0.24,H*0.895);
+  ctx.fillText('תאריך סיום',W*0.76,H*0.895);
+}
 function certDraw(){
-  if(!_certImg)return;
   const cv=document.getElementById('cert-canvas');
-  cv.width=_certImg.naturalWidth;cv.height=_certImg.naturalHeight;
   const ctx=cv.getContext('2d');
-  ctx.drawImage(_certImg,0,0);
-  const name=document.getElementById('cert-name-input').value.trim();
-  const sub=document.getElementById('cert-sub-input').value.trim();
-  const y=+document.getElementById('cert-y').value;
-  const sizePct=+document.getElementById('cert-size').value;
-  const color=document.getElementById('cert-color').value;
-  localStorage.setItem('certY',y);localStorage.setItem('certSize',sizePct);localStorage.setItem('certColor',color);
-  const fs=cv.width*sizePct/100;
-  ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';
-  ctx.font='700 '+fs+'px Alef, Heebo, sans-serif';
-  if(name)ctx.fillText(name,cv.width/2,cv.height*y/100);
-  if(sub){
-    ctx.font='400 '+(fs*0.42)+'px Heebo, Alef, sans-serif';
-    ctx.fillText(sub,cv.width/2,cv.height*y/100+fs*0.95);
+  let W,H;
+  if(_certBg){W=_certBg.naturalWidth;H=_certBg.naturalHeight;cv.width=W;cv.height=H;ctx.drawImage(_certBg,0,0);}
+  else{W=2000;H=1414;cv.width=W;cv.height=H;certDrawDesign(ctx,W,H);}
+  const name=(document.getElementById('cert-name-input').value||'').trim();
+  const dateStr=certFmtDate(document.getElementById('cert-date-input').value);
+  // name
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';ctx.fillStyle='#111';
+  ctx.font='700 '+(H*0.07)+'px Alef, Heebo, sans-serif';
+  if(name)ctx.fillText(name,W/2,H*0.50);
+  // date (right block). On a Canva bg, cover the baked-in "0/0/2026" placeholder first.
+  if(dateStr){
+    if(_certBg){ctx.fillStyle='#fff';ctx.fillRect(W*0.655,H*0.815,W*0.21,H*0.06);}
+    ctx.direction='ltr';ctx.fillStyle='#111';ctx.font='800 '+(H*0.04)+'px Heebo, sans-serif';
+    ctx.fillText(dateStr,W*0.76,H*0.85);
   }
 }
 function certDownloadPng(){
   certDraw();
-  const name=document.getElementById('cert-name-input').value.trim()||'לקוח';
+  const name=(document.getElementById('cert-name-input').value||'').trim()||'לקוח';
   document.getElementById('cert-canvas').toBlob(b=>{
     const a=document.createElement('a');
     a.href=URL.createObjectURL(b);
