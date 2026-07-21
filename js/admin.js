@@ -286,9 +286,10 @@ function openCertModal(name){
   const di=document.getElementById('cert-date-input');
   if(di&&!di.value){const d=new Date();di.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   const go=()=>{
-    if(document.fonts&&document.fonts.load)
-      Promise.all([document.fonts.load('800 40px Heebo'),document.fonts.load('700 40px Alef')]).then(certDraw).catch(certDraw);
-    else certDraw();
+    const fonts=(document.fonts&&document.fonts.load)
+      ? Promise.all([document.fonts.load('800 40px Heebo'),document.fonts.load('700 40px Alef')])
+      : Promise.resolve();
+    Promise.all([fonts,buildCertLogo()]).then(certDraw).catch(certDraw);
   };
   if(_certBgTried){go();return;}
   const img=new Image();
@@ -302,14 +303,37 @@ function certFmtDate(iso){
   if(p.length!==3)return iso;
   return (+p[2])+'/'+(+p[1])+'/'+p[0];
 }
-// Teal outline "A" logo mark, drawn on a white area
+// The real Tomani "A" mark, lifted out of the embedded banner logo.
+// That logo is teal-on-black, so the mark is cropped and the black background
+// is keyed out via brightness->alpha, leaving a clean transparent mark.
+let _certLogo=null;
+function buildCertLogo(){
+  return new Promise(resolve=>{
+    if(_certLogo)return resolve(_certLogo);
+    const img=new Image();
+    img.onload=()=>{
+      const SX=47,SY=28,SW=335,SH=258; // bounds of the "A" inside the banner
+      const c=document.createElement('canvas');c.width=SW;c.height=SH;
+      const x=c.getContext('2d');
+      x.drawImage(img,SX,SY,SW,SH,0,0,SW,SH);
+      const id=x.getImageData(0,0,SW,SH),p=id.data;
+      for(let i=0;i<p.length;i+=4){
+        const m=Math.max(p[i],p[i+1],p[i+2]); // ~0 on the black bg, ~235 on the mark
+        p[i]=66;p[i+1]=235;p[i+2]=214;        // normalize to the brand teal
+        // Threshold at 24 clears JPEG noise; the ramp keeps edges anti-aliased
+        p[i+3]=m<24?0:Math.min(255,Math.round((m-24)*255/211));
+      }
+      x.putImageData(id,0,0);
+      _certLogo=c;resolve(c);
+    };
+    img.onerror=()=>resolve(null);
+    img.src='data:image/jpeg;base64,'+LOGO_B64;
+  });
+}
 function certDrawLogo(ctx,cx,cy,h){
-  const w=h*0.95,t=h*0.20;
-  ctx.fillStyle=CERT_TEAL;
-  ctx.beginPath();ctx.moveTo(cx,cy-h/2);ctx.lineTo(cx+w/2,cy+h/2);ctx.lineTo(cx-w/2,cy+h/2);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.moveTo(cx,cy-h/2+t*1.9);ctx.lineTo(cx+w/2-t*1.45,cy+h/2-t*0.05);ctx.lineTo(cx-w/2+t*1.45,cy+h/2-t*0.05);ctx.closePath();ctx.fill();
-  ctx.fillStyle=CERT_TEAL;ctx.fillRect(cx-w*0.17,cy+h*0.08,w*0.34,t*0.72);
+  if(!_certLogo)return;
+  const w=h*(_certLogo.width/_certLogo.height);
+  ctx.drawImage(_certLogo,cx-w/2,cy-h/2,w,h);
 }
 function certDrawDesign(ctx,W,H){
   ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
