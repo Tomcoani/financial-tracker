@@ -69,7 +69,7 @@
     </div>
   </div>
   <div class="nav">
-    <button id="nav-dash" class="nbtn on" onclick="goTo('dash',this)"><i data-lucide="layout-dashboard" class="nav-icon"></i> דשבורד</button>
+    <button id="nav-dash" class="nbtn on" onclick="goTo('dash',this)"><i data-lucide="home" class="nav-icon"></i> בית</button>
     <button id="nav-budget" class="nbtn" onclick="goTo('budget',this)"><i data-lucide="wallet" class="nav-icon"></i> התנהלות חודשית</button>
     <button id="nav-goals" class="nbtn" onclick="goTo('goals',this)"><i data-lucide="target" class="nav-icon"></i> מטרות</button>
     <button id="nav-pension" class="nbtn" onclick="goTo('pension',this)"><i data-lucide="landmark" class="nav-icon"></i> פנסיה</button>
@@ -403,7 +403,7 @@
       <div class="card">
         <div class="ch-title">היסטוריית תמונות מצב</div>
         <div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.7;text-align:right">
-          כל חודש לחץ "שמור תמונת מצב" בדשבורד. כאן תראה את כל ההיסטוריה עם השוואה בין תקופות.
+          כל חודש לחץ "שמור תמונת מצב" בעמוד הבית. כאן תראה את כל ההיסטוריה עם השוואה בין תקופות.
         </div>
         <div class="hist-chart-wrap" id="hist-chart-wrap" style="display:none">
           <canvas id="ch-hist"></canvas>
@@ -563,7 +563,7 @@
       <div class="admin-banner"><i data-lucide="shield-check" style="width:14px;height:14px;vertical-align:middle;margin-left:4px"></i> לוח ניהול — גישה מוגבלת לתום אני בלבד</div>
       <div class="card" style="border-color:rgba(66,235,214,.35)">
         <div class="ch-title"><i data-lucide="inbox" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> תיבת משוב מלקוחות <span id="admin-feedback-count"></span></div>
-        <div class="ch-hint">הערות, רעיונות ותקלות שלקוחות שלחו דרך הדשבורד — עם שם השולח</div>
+        <div class="ch-hint">הערות, רעיונות ותקלות שלקוחות שלחו דרך עמוד הבית — עם שם השולח</div>
         <div id="admin-feedback"><p style="color:var(--t3);font-size:13px;text-align:right">טוען...</p></div>
       </div>
       <div class="card" style="border-color:rgba(66,235,214,.25)">
@@ -622,7 +622,7 @@
   <!-- MOBILE BOTTOM NAV (shown only on mobile via CSS) -->
   <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
     <button class="mbn-btn on" id="mbn-dash" onclick="goTo('dash',document.getElementById('nav-dash'));syncMobileNav('dash')">
-      <i data-lucide="layout-dashboard"></i><span>דשבורד</span>
+      <i data-lucide="home"></i><span>בית</span>
     </button>
     <button class="mbn-btn" id="mbn-goals" onclick="goTo('goals',document.getElementById('nav-goals'));syncMobileNav('goals')">
       <i data-lucide="target"></i><span>מטרות</span>
@@ -747,15 +747,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=26"></script>
-<script defer src="js/cashflow-goals.js?v=26"></script>
-<script defer src="js/pension.js?v=26"></script>
-<script defer src="js/networth.js?v=26"></script>
-<script defer src="js/portfolio.js?v=26"></script>
-<script defer src="js/dashboard.js?v=26"></script>
-<script defer src="js/settings.js?v=26"></script>
-<script defer src="js/admin.js?v=26"></script>
-<script defer src="js/misc.js?v=26"></script>
-<script defer src="js/budget.js?v=26"></script>
+<script defer src="js/core.js?v=27"></script>
+<script defer src="js/cashflow-goals.js?v=27"></script>
+<script defer src="js/pension.js?v=27"></script>
+<script defer src="js/networth.js?v=27"></script>
+<script defer src="js/portfolio.js?v=27"></script>
+<script defer src="js/dashboard.js?v=27"></script>
+<script defer src="js/settings.js?v=27"></script>
+<script defer src="js/admin.js?v=27"></script>
+<script defer src="js/misc.js?v=27"></script>
+<script defer src="js/budget.js?v=27"></script>
 </body>
 </html>

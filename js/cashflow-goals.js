@@ -747,7 +747,9 @@ function planPickBuild(){
       plan.push({from:l.name,to:t.name,amount:Math.round(mv)});
       avail-=mv;t.gap-=mv;
     });
-    if(avail>=100)plan.push({from:l.name,to:'תיק השקעות',amount:Math.round(avail)});
+    // Whatever is left after the goals goes to the investment portfolio.
+    // Flagged with port:true so it renders as one dedicated card.
+    if(avail>=100)plan.push({from:l.name,to:'תיק השקעות',amount:Math.round(avail),port:true});
   });
   if(!plan.length){showToast('אין נכסים פנויים לתכנון — מלא את רשימת הנכסים והמטרות');return;}
   D.transferPlan=plan;
@@ -763,8 +765,7 @@ function renderTransferPlan(){
     <span style="font-size:11px;color:var(--t3);line-height:1.6">מחושב לפי סדר העדיפויות שבחרת, ה"אפס החדש" מהתזרים, והכסף שכבר משויך למטרות. אפשר לערוך כל סכום או למחוק שורה.</span>
     <button onclick="buildTransferPlan()" style="background:transparent;border:1px solid var(--teal-border);color:var(--teal);border-radius:8px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">שנה עדיפויות</button>
   </div>`;
-  plan.forEach((p,i)=>{
-    html+=`<div style="display:grid;grid-template-columns:1fr 22px 1fr 92px 24px;gap:6px;align-items:center;margin-bottom:6px">
+  const row=(p,i)=>`<div style="display:grid;grid-template-columns:1fr 22px 1fr 92px 24px;gap:6px;align-items:center;margin-bottom:6px">
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.from)}</div>
       <div style="text-align:center;color:${p.keep?'var(--amber)':'var(--teal)'};font-size:15px">⟵</div>
       <div style="background:${p.keep?'rgba(245,158,11,.07)':'rgba(66,235,214,.06)'};border:1px solid ${p.keep?'rgba(245,158,11,.3)':'var(--teal-border)'};border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:${p.keep?'var(--amber)':'var(--teal)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.keep?'🏦 ':'🎯 '}${esc(p.to)}</div>
@@ -773,8 +774,29 @@ function renderTransferPlan(){
         style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 8px;color:var(--white);font-family:var(--font);font-size:12px;font-weight:700;text-align:right;width:100%"/>
       <button class="bdel" onclick="D.transferPlan.splice(${i},1);renderTransferPlan();markDirty()">×</button>
     </div>`;
-  });
-  html+=`<div id="plan-total" style="display:flex;justify-content:space-between;padding:8px 0 2px;margin-top:4px;border-top:1px solid var(--border);font-size:12px">
+  // Goal / keep rows first, then the portfolio card collecting the leftovers
+  plan.forEach((p,i)=>{if(!p.port)html+=row(p,i);});
+  const portIdx=plan.map((p,i)=>({p,i})).filter(x=>x.p.port);
+  if(portIdx.length){
+    const portTotal=portIdx.reduce((s,x)=>s+(parseFloat(x.p.amount)||0),0);
+    html+=`<div style="margin-top:12px;background:linear-gradient(135deg,rgba(66,235,214,.10),rgba(66,235,214,.03));border:1.5px solid rgba(66,235,214,.35);border-radius:14px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <div style="min-width:0">
+          <div style="font-size:13.5px;font-weight:800;color:var(--teal)">📈 העברה לתיק השקעות</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px">כל היתרה שלא הוקצתה למטרה מגיעה לכאן</div>
+        </div>
+        <div id="plan-port-total" style="font-size:17px;font-weight:800;color:var(--teal);white-space:nowrap">${fmt(portTotal)}</div>
+      </div>
+      ${portIdx.map(({p,i})=>`<div style="display:grid;grid-template-columns:1fr 92px 24px;gap:6px;align-items:center;margin-bottom:6px">
+        <div style="font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">מ${esc(p.from)}</div>
+        <input type="number" value="${p.amount||''}" data-no-fmt
+          oninput="D.transferPlan[${i}].amount=parseFloat(this.value)||0;markDirty();updatePlanTotal()"
+          style="background:var(--s2);border:1px solid var(--teal-border);border-radius:8px;padding:7px 8px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;text-align:right;width:100%"/>
+        <button class="bdel" onclick="D.transferPlan.splice(${i},1);renderTransferPlan();markDirty()">×</button>
+      </div>`).join('')}
+    </div>`;
+  }
+  html+=`<div id="plan-total" style="display:flex;justify-content:space-between;padding:8px 0 2px;margin-top:10px;border-top:1px solid var(--border);font-size:12px">
     <span style="color:var(--t3)">סה"כ מועבר</span>
     <span style="font-weight:800;color:var(--teal)">${fmt(planMovedTotal())}</span>
   </div>`;
@@ -792,4 +814,6 @@ function resetTransferPlan(){
 function updatePlanTotal(){
   const el=document.querySelector('#plan-total span:last-child');
   if(el)el.textContent=fmt(planMovedTotal());
+  const pt=document.getElementById('plan-port-total');
+  if(pt)pt.textContent=fmt((D.transferPlan||[]).filter(p=>p.port).reduce((s,p)=>s+(parseFloat(p.amount)||0),0));
 }

@@ -229,7 +229,9 @@ function renderDash(){
   }
 
   const LIQUID_COLS=['#42ebd6','#3b82f6','#10b981','#f59e0b','#06b6d4','#34d399'];
-  const ILLIQ_COLS=['#7c3aed','#a78bfa','#4f46e5','#c084fc','#818cf8','#6d28d9'];
+  // Stays in the purple family (matching the pension tile) but alternates hue
+  // AND lightness so neighbouring slices are easy to tell apart.
+  const ILLIQ_COLS=['#a855f7','#f472b6','#818cf8','#e879f9','#c4b5fd','#7c3aed'];
   chAlloc=buildDonut('ch-alloc', liquidItems, LIQUID_COLS);
   chAlloc2=buildDonut('ch-alloc2', illiquidItems, ILLIQ_COLS);
   // Adjust chart height on mobile for bottom legend
