@@ -609,25 +609,54 @@ function updateLocFooter(){
     const c=g.savedCurrency||'ILS';goalsByCur[c]=(goalsByCur[c]||0)+(parseFloat(g.saved)||0);
   });
   const allocatedILS=Object.entries(goalsByCur).reduce((s,[c,a])=>s+toILS(a,c),0);
-  const unallocatedILS=Math.max(0,totalILS-allocatedILS);
   const fmtMulti=(byCur)=>Object.entries(byCur).map(([c,a])=>`<span style="margin-right:6px">${fmtCur(a,c)}</span>`).join('');
   // Dominant goal currency for unallocated display
   const goalCurList=Object.keys(goalsByCur);
   const domGoalCur=goalCurList.length?goalCurList[0]:'ILS';
+  // Money not tied to a goal, and how much of it the user marked for the portfolio
+  const unallocBeforePort=Math.max(0,totalILS-allocatedILS);
+  const portAllocILS=Math.min(Math.max(0,parseFloat(D.locPortfolioAllocILS)||0),unallocBeforePort);
+  const unallocatedILS=unallocBeforePort-portAllocILS;
+  const portInputVal=portAllocILS>0?Math.round(fromILS(portAllocILS,domGoalCur)):'';
+  const portLine=(unallocBeforePort>100||portAllocILS>0)?`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:13px;flex-wrap:wrap">
+      <span style="color:var(--teal);display:flex;align-items:center;gap:5px">📈 מוקצה לתיק השקעות</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        ${unallocatedILS>100?`<button onclick="allocRestToPort()" title="הקצה את כל היתרה לתיק"
+          style="background:transparent;border:1px solid var(--teal-border);color:var(--teal);border-radius:7px;padding:3px 9px;font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">הקצה את היתרה</button>`:''}
+        <input type="number" data-no-fmt value="${portInputVal}" placeholder="0" onchange="setLocPortAlloc(this.value,'${domGoalCur}')"
+          style="width:108px;background:var(--s2);border:1px solid var(--teal-border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:800;padding:5px 8px;text-align:right"/>
+      </span>
+    </div>`:'';
   el.innerHTML=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
     ${allocatedILS>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;flex-wrap:wrap;gap:4px">
       <span style="color:var(--t2)">מוקצה למטרות</span>
       <span style="color:var(--teal);font-weight:700;direction:ltr">${fmtMulti(goalsByCur)}</span>
     </div>`:''}
+    ${portLine}
     ${unallocatedILS>100?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
-      <span style="color:var(--amber)">⚠ טרם הוקצה למטרה</span>
+      <span style="color:var(--amber)">⚠ טרם הוקצה</span>
       <span style="color:var(--amber);font-weight:700">${fmtCur(fromILS(unallocatedILS,domGoalCur),domGoalCur)}</span>
-    </div>`:(allocatedILS>0?'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה למטרות</div>':'')}
+    </div>`:((allocatedILS>0||portAllocILS>0)?'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה</div>':'')}
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;margin-top:2px;border-top:1px solid var(--border);flex-wrap:wrap;gap:4px">
       <span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
       <span style="font-size:14px;font-weight:800;color:var(--teal);direction:ltr">${fmtMulti(assetsByCur)}</span>
     </div>
   </div>`;
+  setTimeout(attachAllNumFormats,0);
+}
+// Mark how much of the unallocated money goes to the investment portfolio
+function setLocPortAlloc(val,cur){
+  const n=parseFloat(String(val).replace(/,/g,''))||0;
+  D.locPortfolioAllocILS=Math.max(0,toILS(n,cur||'ILS'));
+  markDirty();updateLocFooter();
+}
+// Assign everything not tied to a goal to the portfolio
+function allocRestToPort(){
+  const total=(D.locations||[]).filter(l=>!l._auto).reduce((s,l)=>s+toILS(parseFloat(l.amount)||0,l.currency||'ILS'),0);
+  const goals=(D.goals||[]).filter(g=>!g.done).reduce((s,g)=>s+toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS'),0);
+  D.locPortfolioAllocILS=Math.max(0,total-goals);
+  markDirty();updateLocFooter();
 }
 function lu(el){
   const i=+el.dataset.i,f=el.dataset.f;
