@@ -774,9 +774,12 @@ function renderTransferPlan(){
         style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 8px;color:var(--white);font-family:var(--font);font-size:12px;font-weight:700;text-align:right;width:100%"/>
       <button class="bdel" onclick="D.transferPlan.splice(${i},1);renderTransferPlan();markDirty()">×</button>
     </div>`;
+  // A row is a portfolio row if flagged, or (for plans built before the flag
+  // existed) if its destination is the portfolio.
+  const isPort=p=>p.port||(!p.keep&&(p.to==='תיק השקעות'||p.to==='שוק ההון'));
   // Goal / keep rows first, then the portfolio card collecting the leftovers
-  plan.forEach((p,i)=>{if(!p.port)html+=row(p,i);});
-  const portIdx=plan.map((p,i)=>({p,i})).filter(x=>x.p.port);
+  plan.forEach((p,i)=>{if(!isPort(p))html+=row(p,i);});
+  const portIdx=plan.map((p,i)=>({p,i})).filter(x=>isPort(x.p));
   if(portIdx.length){
     const portTotal=portIdx.reduce((s,x)=>s+(parseFloat(x.p.amount)||0),0);
     html+=`<div style="margin-top:12px;background:linear-gradient(135deg,rgba(66,235,214,.10),rgba(66,235,214,.03));border:1.5px solid rgba(66,235,214,.35);border-radius:14px;padding:12px 14px">
@@ -815,5 +818,5 @@ function updatePlanTotal(){
   const el=document.querySelector('#plan-total span:last-child');
   if(el)el.textContent=fmt(planMovedTotal());
   const pt=document.getElementById('plan-port-total');
-  if(pt)pt.textContent=fmt((D.transferPlan||[]).filter(p=>p.port).reduce((s,p)=>s+(parseFloat(p.amount)||0),0));
+  if(pt)pt.textContent=fmt((D.transferPlan||[]).filter(p=>p.port||(!p.keep&&(p.to==='תיק השקעות'||p.to==='שוק ההון'))).reduce((s,p)=>s+(parseFloat(p.amount)||0),0));
 }
