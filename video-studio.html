@@ -350,10 +350,21 @@
         <span>הסרטון פורסם</span>
       </label>
       <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:14px">
-        <div class="grow"><label class="field-label">צפיות</label><input type="number" id="vidViews" placeholder="0" min="0"></div>
-        <div class="grow"><label class="field-label">אחוז צפייה ממוצע (%)</label><input type="number" id="vidWatch" placeholder="0" min="0" max="100"></div>
-        <div class="grow"><label class="field-label">לידים / פניות</label><input type="number" id="vidLeads" placeholder="0" min="0"></div>
+        <div class="grow"><label class="field-label">צפיות</label><input type="number" id="vidViews" placeholder="0" min="0" oninput="updatePerfPreview()"></div>
+        <div class="grow"><label class="field-label">חשיפה (חשבונות)</label><input type="number" id="vidReach" placeholder="0" min="0" oninput="updatePerfPreview()"></div>
+        <div class="grow"><label class="field-label">% לא-עוקבים</label><input type="number" id="vidNonFollower" placeholder="0" min="0" max="100" oninput="updatePerfPreview()"></div>
       </div>
+      <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:14px">
+        <div class="grow"><label class="field-label">שמירות 🔖</label><input type="number" id="vidSaves" placeholder="0" min="0" oninput="updatePerfPreview()"></div>
+        <div class="grow"><label class="field-label">שיתופים 🔁</label><input type="number" id="vidShares" placeholder="0" min="0" oninput="updatePerfPreview()"></div>
+        <div class="grow"><label class="field-label">עוקבים חדשים ➕</label><input type="number" id="vidFollows" placeholder="0" min="0" oninput="updatePerfPreview()"></div>
+      </div>
+      <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:14px">
+        <div class="grow"><label class="field-label">לייקים</label><input type="number" id="vidLikes" placeholder="0" min="0"></div>
+        <div class="grow"><label class="field-label">תגובות</label><input type="number" id="vidComments" placeholder="0" min="0"></div>
+        <div class="grow"></div>
+      </div>
+      <div id="perfPreview" style="margin-top:14px"></div>
     </div>
 
     <div class="row" style="justify-content:space-between; margin-top:8px; flex-wrap:wrap; gap:10px">
@@ -384,6 +395,12 @@
       <div class="card-desc">כללים שקשה לבדוק אוטומטית — Claude יעריך כל אחד. למשל: "ה-HOOK יוצר סקרנות אמיתית ולא קליקבייט".</div>
       <div id="cfgAiRules"></div>
       <button class="btn btn-ghost btn-sm" onclick="addAiRule()">+ הוסף חוק רך</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧠 בסיס ידע / יוצרי רפרנס</div>
+      <div class="card-desc">עקרונות ותובנות שנכנסים ל"מוח" של Claude בכל בדיקה חכמה — בנוסף למסגרת המקצועית המובנית. הוסף כאן טיפים מיוצרים שאתה מעריך (למשל @iamchrischung), ניסוחי HOOK שעבדו, או כללים אישיים.</div>
+      <textarea id="cfgExpertNotes" style="min-height:150px" placeholder="למשל: כל שנייה קונה את הבאה; פותחים לולאה פתוחה; ספציפיות ומספרים..." oninput="config.expertNotes=this.value"></textarea>
     </div>
 
     <div class="card">
@@ -421,12 +438,27 @@
 //  STATE + STORAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const CONFIG_VERSION = 2;
+
+// Built-in "expert brain" — established attention/retention principles taught by top
+// short-form creators (e.g. attention-psychology-focused creators like @iamchrischung).
+const EXPERT_FRAMEWORK = `אתה חושב לפי העקרונות של יוצרי התוכן הקצר המובילים בעולם (בסגנון של יוצרים שמתמחים ב"פסיכולוגיה של תשומת לב" כמו @iamchrischung):
+
+1. פריים ראשון: 3 השניות הראשונות מכריעות אם גוללים או נשארים. הפתיח חייב הבטחה קונקרטית / סקרנות ספציפית / אמירה נגד-אינטואיטיבית — לא פתיח אבסטרקטי, פילוסופי או איטי.
+2. לולאה פתוחה (open loop): הפתיח פותח פער-מידע שהצופה חייב לסגור, וכל משפט פותח את הבא ומשלם את הקודם. אין משפטי מילוי.
+3. ספציפיות מנצחת כלליות: מספרים, דוגמאות אישיות ("אני אישית..."), ופרטים קונקרטיים בונים אמון ומחזיקים תשומת לב.
+4. פסיכולוגיית הפצה: וידאו שאפשר *לשמור* (רשימה/צ׳קליסט/צעדים) ו*לשתף* (מידע שימושי לשלוח למישהו) מקבל חשיפה גבוהה ללא-עוקבים — זה מנוע הצמיחה האמיתי, לא צפיות גולמיות.
+5. מבנה: Hook → העלאת סטייקס/Super Hook → ערך מעשי אחד וברור → CTA אחד ממוקד.
+6. רעיון אחד לסרטון, מובן תוך 5 שניות. קצב מהיר, משפטים קצרים, pattern interrupts.
+7. CTA יחיד וברור בסוף (מה בדיוק לעשות עכשיו).`;
+
 const RULE_TYPES = {
   minWords:        { label: 'מינימום מילים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
   maxWords:        { label: 'מקסימום מילים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
   minChars:        { label: 'מינימום תווים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
   maxChars:        { label: 'מקסימום תווים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
   mustHaveQuestion:{ label: 'חייב לכלול שאלה (?)',   needsValue: false },
+  containsNumber:  { label: 'כולל מספר קונקרטי',      needsValue: false },
   mustContain:     { label: 'חייב להכיל אחת מ...',   needsValue: true,  vPlaceholder: 'מילים מופרדות בפסיק', vType: 'text' },
   mustNotContain:  { label: 'אסור להכיל...',         needsValue: true,  vPlaceholder: 'מילים אסורות מופרדות בפסיק', vType: 'text' },
   maxSentenceWords:{ label: 'משפט לא ארוך מ... מילים', needsValue: true, vPlaceholder: 'מספר', vType: 'number' },
@@ -437,37 +469,55 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 function defaultConfig() {
   const bHook = uid(), bSuper = uid(), bBody = uid(), bCta = uid();
   return {
+    _v: CONFIG_VERSION,
     blocks: [
-      { id: bHook,  name: 'HOOK',       guideline: '3 השניות הראשונות — עצור את הגלילה' },
+      { id: bHook,  name: 'HOOK',       guideline: '3 השניות הראשונות — הבטחה קונקרטית או סקרנות ספציפית' },
       { id: bSuper, name: 'SUPER HOOK', guideline: 'משפט שמחייב להישאר עד הסוף' },
-      { id: bBody,  name: 'גוף',        guideline: 'הערך / התוכן המרכזי' },
-      { id: bCta,   name: 'CTA',        guideline: 'קריאה אחת ברורה לפעולה' },
+      { id: bBody,  name: 'גוף',        guideline: 'ערך מעשי — רצוי רשימה/צעדים שאפשר לשמור' },
+      { id: bCta,   name: 'CTA',        guideline: 'קריאה אחת ברורה לפעולה (הגיבו/עקבו/שתפו)' },
     ],
     localRules: [
-      { id: uid(), name: 'HOOK קצר', type: 'maxWords', target: bHook, value: '14', severity: 'must' },
-      { id: uid(), name: 'שאלה/פנייה ב-HOOK', type: 'mustHaveQuestion', target: bHook, value: '', severity: 'nice' },
-      { id: uid(), name: 'בלי מילות מילוי', type: 'mustNotContain', target: '__all__', value: 'בעצם, כאילו, אמ, אהh', severity: 'nice' },
-      { id: uid(), name: 'משפטים לא ארוכים מדי', type: 'maxSentenceWords', target: '__all__', value: '20', severity: 'nice' },
+      { id: uid(), name: 'HOOK קצר וממוקד', type: 'maxWords', target: bHook, value: '16', severity: 'must' },
+      { id: uid(), name: 'HOOK כולל מספר/ספציפיות', type: 'containsNumber', target: bHook, value: '', severity: 'nice' },
+      { id: uid(), name: 'CTA ברור וקיים', type: 'mustContain', target: bCta, value: 'הגיבו, תגיבו, עקבו, עקוב, שתפו, שמרו, לינק, קישור, הורידו, כתבו', severity: 'must' },
+      { id: uid(), name: 'בלי מילות מילוי', type: 'mustNotContain', target: '__all__', value: 'בעצם, כאילו, אמממ', severity: 'nice' },
+      { id: uid(), name: 'משפטים לא ארוכים מדי', type: 'maxSentenceWords', target: '__all__', value: '22', severity: 'nice' },
     ],
     aiRules: [
-      { id: uid(), text: 'ה-HOOK יוצר סקרנות אמיתית ולא קליקבייט זול' },
-      { id: uid(), text: 'המסר המרכזי מובן תוך 5 שניות' },
-      { id: uid(), text: 'יש קריאה אחת ברורה לפעולה (CTA)' },
-      { id: uid(), text: 'הטון מדבר לקהל היעד ולא כללי מדי' },
+      { id: uid(), text: 'ה-HOOK מבטיח ערך קונקרטי או יוצר סקרנות ספציפית ב-3 השניות הראשונות — לא פתיח אבסטרקטי/פילוסופי איטי' },
+      { id: uid(), text: 'התוכן ניתן לשמירה: רשימה, צ׳קליסט או צעדים שאפשר לחזור אליהם (מעלה שמירות)' },
+      { id: uid(), text: 'התוכן ניתן לשיתוף: מידע שימושי שגורם לרצות לשלוח אותו למישהו (מעלה שיתופים והפצה ללא-עוקבים)' },
+      { id: uid(), text: 'יש הנחיה מעשית וברורה מה לעשות — לא רק מסר רגשי/מוטיבציוני כללי' },
+      { id: uid(), text: 'יש ספציפיות: מספרים, דוגמאות אישיות ("אני אישית..."), ופרטים קונקרטיים' },
+      { id: uid(), text: 'יש CTA אחד ברור וממוקד בסוף' },
     ],
     checklist: [
-      { id: uid(), label: 'ה-HOOK עוצר גלילה' },
-      { id: uid(), label: 'יש ערך ברור לצופה' },
+      { id: uid(), label: 'ה-HOOK מבטיח ערך קונקרטי (לא פתיח אבסטרקטי)' },
+      { id: uid(), label: 'יש משהו לשמור (רשימה/צעדים)' },
+      { id: uid(), label: 'יש משהו ששווה לשתף עם מישהו' },
       { id: uid(), label: 'ה-CTA ברור וספציפי' },
       { id: uid(), label: 'האורך מתאים לפלטפורמה' },
     ],
+    expertNotes: 'יוצרי רפרנס: @iamchrischung ("פסיכולוגיה של תשומת לב").\nעקרונות שאני אוהב:\n- כל שנייה קונה את הבאה — הפריים הראשון חייב לעצור גלילה.\n- פותחים "לולאה פתוחה" (open loop) ולא סוגרים מיד.\n- ספציפיות ומספרים במקום כלליות.\n(הוסף כאן טיפים/עקרונות נוספים ככל שתלמד — הם נכנסים לכל בדיקה חכמה.)',
   };
 }
 
 function loadConfig() {
   try {
     const raw = localStorage.getItem('vs_config');
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      let c = JSON.parse(raw);
+      // auto-upgrade to calibrated defaults for users who haven't created videos yet
+      if ((c._v || 1) < CONFIG_VERSION && loadVideos().length === 0) {
+        c = defaultConfig();
+      } else {
+        // backfill newly-added keys without clobbering the user's own data
+        const d = defaultConfig();
+        for (const k of Object.keys(d)) if (c[k] === undefined) c[k] = d[k];
+      }
+      localStorage.setItem('vs_config', JSON.stringify(c));
+      return c;
+    }
   } catch (e) {}
   const d = defaultConfig();
   localStorage.setItem('vs_config', JSON.stringify(d));
@@ -578,6 +628,8 @@ function renderConfig() {
       <div class="grow"><input type="text" value="${esc(c.label)}" placeholder="פריט צ'קליסט..." oninput="config.checklist[${i}].label=this.value"></div>
       <button class="icon-btn" title="מחק" onclick="delCheckItem(${i})">🗑</button>
     </div>`).join('') || '<div class="hint">אין פריטים עדיין.</div>';
+
+  document.getElementById('cfgExpertNotes').value = config.expertNotes || '';
 }
 
 function addBlock() { config.blocks.push({ id: uid(), name: '', guideline: '' }); renderConfig(); }
@@ -635,6 +687,7 @@ function evalRule(r, fields) {
     case 'minChars': { const n = text.length; passed = n >= (+v||0); detail = `${where}: ${n} תווים (מינימום ${v})`; break; }
     case 'maxChars': { const n = text.length; passed = n <= (+v||Infinity); detail = `${where}: ${n} תווים (מקסימום ${v})`; break; }
     case 'mustHaveQuestion': { passed = /[?？]/.test(text); detail = `${where}: ${passed ? 'יש שאלה' : 'אין סימן שאלה'}`; break; }
+    case 'containsNumber': { passed = /\d/.test(text); detail = `${where}: ${passed ? 'כולל מספר קונקרטי' : 'אין מספר קונקרטי (ספרה)'}`; break; }
     case 'mustContain': {
       const terms = (v||'').split(',').map(t => t.trim()).filter(Boolean);
       const hit = terms.find(t => text.includes(t));
@@ -681,6 +734,23 @@ function computeReadiness(fields, checklistState) {
   return { total, mustFailed: must.filter(r => !r.passed).length };
 }
 
+// Objective performance score from real IG signals (calibrated: save ~2% & share ~2.5% = excellent)
+function computePerformance(a) {
+  if (!a || !a.reach) return null;
+  const r = a.reach;
+  const saveRate = (a.saves || 0) / r;
+  const shareRate = (a.shares || 0) / r;
+  const followRate = (a.follows || 0) / r;
+  const nf = (a.nonFollowerPct || 0) / 100;
+  const score = Math.round(
+    Math.min(1, saveRate / 0.02) * 30 +
+    Math.min(1, shareRate / 0.025) * 30 +
+    Math.min(1, nf / 0.85) * 25 +
+    Math.min(1, followRate / 0.006) * 15
+  );
+  return { score, saveRate, shareRate, followRate, nf };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  EDITOR
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -692,10 +762,16 @@ function openEditor(id) {
   const vid = id ? videos.find(v => v.id === id) : null;
 
   document.getElementById('vidTitle').value = vid ? vid.title : '';
-  document.getElementById('vidPublished').checked = vid?.actual?.published || false;
-  document.getElementById('vidViews').value = vid?.actual?.views ?? '';
-  document.getElementById('vidWatch').value = vid?.actual?.watchPct ?? '';
-  document.getElementById('vidLeads').value = vid?.actual?.leads ?? '';
+  const av = vid?.actual || {};
+  document.getElementById('vidPublished').checked = av.published || false;
+  document.getElementById('vidViews').value = av.views ?? '';
+  document.getElementById('vidReach').value = av.reach ?? '';
+  document.getElementById('vidNonFollower').value = av.nonFollowerPct ?? '';
+  document.getElementById('vidSaves').value = av.saves ?? '';
+  document.getElementById('vidShares').value = av.shares ?? '';
+  document.getElementById('vidFollows').value = av.follows ?? '';
+  document.getElementById('vidLikes').value = av.likes ?? '';
+  document.getElementById('vidComments').value = av.comments ?? '';
 
   // Block fields
   document.getElementById('blockFields').innerHTML = config.blocks.map(b => `
@@ -724,7 +800,36 @@ function openEditor(id) {
 
   hideEditorError();
   onEditorInput();
+  updatePerfPreview();
   switchView('editor');
+}
+
+function readActual() {
+  return {
+    published: document.getElementById('vidPublished').checked,
+    views: numOrNull(document.getElementById('vidViews').value),
+    reach: numOrNull(document.getElementById('vidReach').value),
+    nonFollowerPct: numOrNull(document.getElementById('vidNonFollower').value),
+    saves: numOrNull(document.getElementById('vidSaves').value),
+    shares: numOrNull(document.getElementById('vidShares').value),
+    follows: numOrNull(document.getElementById('vidFollows').value),
+    likes: numOrNull(document.getElementById('vidLikes').value),
+    comments: numOrNull(document.getElementById('vidComments').value),
+  };
+}
+
+function updatePerfPreview() {
+  const el = document.getElementById('perfPreview');
+  if (!el) return;
+  const p = computePerformance(readActual());
+  const a = readActual();
+  if (!p) { el.innerHTML = '<div class="hint">מלא חשיפה + שמירות/שיתופים כדי לקבל ציון ביצועים בפועל.</div>'; return; }
+  const c = scoreColor(p.score);
+  el.innerHTML = `<div class="rule-result pass" style="border-color:${c}">
+    <span class="rr-icon">📈</span>
+    <span><span class="rr-name" style="color:${c}">ציון ביצועים בפועל: ${p.score}/100</span> —
+    <span class="rr-detail">שמירות ${(p.saveRate*100).toFixed(1)}% · שיתופים ${(p.shareRate*100).toFixed(1)}% · לא-עוקבים ${a.nonFollowerPct||0}% · ${a.follows||0} עוקבים חדשים</span></span>
+  </div>`;
 }
 
 function readEditorFields() {
@@ -769,12 +874,7 @@ function saveVideo() {
   if (!title) { toast('צריך שם לסרטון', true); return; }
   const fields = readEditorFields();
   const checklist = readChecklistState();
-  const actual = {
-    published: document.getElementById('vidPublished').checked,
-    views: numOrNull(document.getElementById('vidViews').value),
-    watchPct: numOrNull(document.getElementById('vidWatch').value),
-    leads: numOrNull(document.getElementById('vidLeads').value),
-  };
+  const actual = readActual();
   const existing = editingId ? videos.find(v => v.id === editingId) : null;
 
   if (existing) {
@@ -851,22 +951,28 @@ function buildAiPrompt(fields) {
   const softRules = config.aiRules.map((r, i) => `${i+1}. ${r.text}`).join('\n') || '(לא הוגדרו)';
 
   // History of published videos with results
-  const withResults = videos.filter(v => v.actual?.published && v.actual?.views != null && v.id !== editingId);
+  const withResults = videos.filter(v => v.actual?.published && v.actual?.reach != null && v.id !== editingId);
   let historyBlock = '';
   if (withResults.length) {
     const examples = withResults.slice(0, 12).map(v => {
       const s = config.blocks.map(b => `${b.name}: ${(v.fields?.[b.id]||'').slice(0,300)}`).join(' | ');
-      const a = v.actual;
-      return `- כותרת: "${v.title}" | תוצאות: ${a.views ?? '?'} צפיות, ${a.watchPct ?? '?'}% צפייה, ${a.leads ?? '?'} לידים\n  תסריט: ${s}`;
+      const a = v.actual; const p = computePerformance(a);
+      return `- "${v.title}" | ציון ביצועים בפועל: ${p ? p.score : '?'}/100 | חשיפה ${a.reach}, ${a.saves??0} שמירות, ${a.shares??0} שיתופים, ${a.nonFollowerPct??'?'}% לא-עוקבים, ${a.follows??0} עוקבים חדשים\n  תסריט: ${s}`;
     }).join('\n');
-    historyBlock = `\n\n## היסטוריה — סרטונים קודמים שלי ותוצאותיהם בפועל (${withResults.length} סרטונים):\n${examples}\n\nהשתמש בהיסטוריה כדי לזהות מה עובד *אצל היוצר הזה* ולבסס עליה את הערכת הסיכוי.`;
+    historyBlock = `\n\n## היסטוריה — סרטונים קודמים שלי ותוצאותיהם בפועל (${withResults.length}):\n${examples}\n\nחשוב: "ציון ביצועים בפועל" מבוסס על שיעור שמירות, שיעור שיתופים, אחוז חשיפה ללא-עוקבים והמרת עוקבים — האותות שבאמת מנבאים הצלחה כאן (לא צפיות גולמיות). זהה מה מבדיל בין הציונים הגבוהים לנמוכים ובסס על כך את הערכת הסיכוי.`;
   }
 
   const confidenceNote = withResults.length >= 5
     ? 'יש מספיק היסטוריה — בסס את הערכת הסיכוי בעיקר על דמיון לסרטונים שהצליחו בפועל, וסמן confidence לפי איכות ההתאמה.'
     : `יש מעט מאוד היסטוריה (${withResults.length} סרטונים עם תוצאות). לכן הערכת הסיכוי מבוססת בעיקר על עקרונות מקצועיים, לא על דאטה — סמן confidence כ-"low" והסבר זאת.`;
 
+  const expertNotes = (config.expertNotes || '').trim();
+  const notesBlock = expertNotes ? `\n\n## בסיס ידע ועקרונות אישיים של היוצר (תן להם משקל גבוה):\n${expertNotes}` : '';
+
   return `אתה אסטרטג תוכן וידאו לרשתות חברתיות (Reels/TikTok/Shorts), מומחה ל-HOOKים ולשימור צופים.
+
+${EXPERT_FRAMEWORK}${notesBlock}
+
 נתח את תסריט הסרטון הבא והחזר JSON תקין בלבד, ללא טקסט מסביב, במבנה הזה בדיוק:
 
 {
@@ -962,8 +1068,10 @@ function renderLibrary() {
     const prob = v.aiResult?.successProbability;
     const a = v.actual || {};
     const publishedBadge = a.published ? `<span class="badge green">פורסם</span>` : `<span class="badge gray">טיוטה</span>`;
+    const perf = computePerformance(a);
     const resultsBadge = (a.published && a.views != null)
-      ? `<span class="badge">👁 ${Number(a.views).toLocaleString('he')} · ⏱ ${a.watchPct ?? '?'}% · 🎯 ${a.leads ?? 0} לידים</span>` : '';
+      ? `<span class="badge">👁 ${Number(a.views).toLocaleString('he')} · 🔖 ${a.saves ?? 0} · 🔁 ${a.shares ?? 0} · ➕ ${a.follows ?? 0}</span>` : '';
+    const perfBadge = perf ? `<span class="badge" style="color:${scoreColor(perf.score)};border-color:${scoreColor(perf.score)}">📈 ביצועים ${perf.score}</span>` : '';
     const mustBadge = readiness.mustFailed > 0 ? `<span class="badge red">${readiness.mustFailed} חוקי חובה נכשלו</span>` : '';
     return `
     <div class="vid-card">
@@ -980,6 +1088,7 @@ function renderLibrary() {
       <div class="vid-badges">
         ${publishedBadge}
         ${prob != null ? `<span class="badge" style="color:${scoreColor(prob)};border-color:${scoreColor(prob)}">🤖 סיכוי ${prob}%</span>` : ''}
+        ${perfBadge}
         ${mustBadge}
         ${resultsBadge}
       </div>
@@ -1032,12 +1141,7 @@ saveVideo = function() {
   if (!title) { toast('צריך שם לסרטון', true); return; }
   const fields = readEditorFields();
   const checklist = readChecklistState();
-  const actual = {
-    published: document.getElementById('vidPublished').checked,
-    views: numOrNull(document.getElementById('vidViews').value),
-    watchPct: numOrNull(document.getElementById('vidWatch').value),
-    leads: numOrNull(document.getElementById('vidLeads').value),
-  };
+  const actual = readActual();
   if (editingId) {
     const v = videos.find(x => x.id === editingId);
     Object.assign(v, { title, fields, checklist, actual, updatedAt: Date.now() });
