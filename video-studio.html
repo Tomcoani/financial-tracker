@@ -438,7 +438,7 @@
 //  STATE + STORAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const CONFIG_VERSION = 2;
+const CONFIG_VERSION = 4;
 
 // Built-in "expert brain" — established attention/retention principles taught by top
 // short-form creators (e.g. attention-psychology-focused creators like @iamchrischung).
@@ -450,7 +450,10 @@ const EXPERT_FRAMEWORK = `אתה חושב לפי העקרונות של יוצר�
 4. פסיכולוגיית הפצה: וידאו שאפשר *לשמור* (רשימה/צ׳קליסט/צעדים) ו*לשתף* (מידע שימושי לשלוח למישהו) מקבל חשיפה גבוהה ללא-עוקבים — זה מנוע הצמיחה האמיתי, לא צפיות גולמיות.
 5. מבנה: Hook → העלאת סטייקס/Super Hook → ערך מעשי אחד וברור → CTA אחד ממוקד.
 6. רעיון אחד לסרטון, מובן תוך 5 שניות. קצב מהיר, משפטים קצרים, pattern interrupts.
-7. CTA יחיד וברור בסוף (מה בדיוק לעשות עכשיו).`;
+7. CTA יחיד וברור בסוף (מה בדיוק לעשות עכשיו).
+8. שלוש הסיבות שגוללים החוצה: התוכן מבלבל, משעמם, או לא אמין. סרוק כל רגע כזה — הוסף לצידו הוכחה, או מחק אותו.
+9. כל טענה גדולה חייבת ביסוס. הוכח אותה ב-3 דרכים: עובדה, ציטוט, וסיפור קצר שמתחבר לתוכן.
+10. Net New Value: הערך חייב להיות טקטי ויישומי — משהו שהצופה לא ידע. לא "מובן מאליו".`;
 
 const RULE_TYPES = {
   minWords:        { label: 'מינימום מילים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
@@ -467,36 +470,40 @@ const RULE_TYPES = {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
 function defaultConfig() {
-  const bHook = uid(), bSuper = uid(), bBody = uid(), bCta = uid();
+  const bHook = uid(), bSuper = uid(), bContext = uid(), bResearch = uid(), bValue = uid(), bCta = uid();
   return {
     _v: CONFIG_VERSION,
     blocks: [
-      { id: bHook,  name: 'HOOK',       guideline: '3 השניות הראשונות — הבטחה קונקרטית או סקרנות ספציפית' },
-      { id: bSuper, name: 'SUPER HOOK', guideline: 'משפט שמחייב להישאר עד הסוף' },
-      { id: bBody,  name: 'גוף',        guideline: 'ערך מעשי — רצוי רשימה/צעדים שאפשר לשמור' },
-      { id: bCta,   name: 'CTA',        guideline: 'קריאה אחת ברורה לפעולה (הגיבו/עקבו/שתפו)' },
+      { id: bHook,     name: 'HOOK',          guideline: '3 השניות הראשונות — הבטחה קונקרטית או סקרנות ספציפית' },
+      { id: bSuper,    name: 'SUPER HOOK',    guideline: 'משפט שמחייב להישאר עד הסוף (מעלה סטייקס)' },
+      { id: bContext,  name: 'Context',       guideline: 'רקע קצר שממסגר את הבעיה — למה זה רלוונטי עכשיו' },
+      { id: bResearch, name: 'Research',      guideline: 'ביסוס: נתון, מקור, עובדה או דוגמה — לא רק דעה' },
+      { id: bValue,    name: 'Net New Value', guideline: 'ערך טקטי ויישומי שהצופה לא ידע — לא "מובן מאליו"' },
+      { id: bCta,      name: 'CTA',           guideline: 'קריאה אחת ברורה לפעולה (הגיבו/עקבו/שתפו)' },
     ],
     localRules: [
       { id: uid(), name: 'HOOK קצר וממוקד', type: 'maxWords', target: bHook, value: '16', severity: 'must' },
       { id: uid(), name: 'HOOK כולל מספר/ספציפיות', type: 'containsNumber', target: bHook, value: '', severity: 'nice' },
+      { id: uid(), name: 'Research מגובה בנתון/מספר', type: 'containsNumber', target: bResearch, value: '', severity: 'nice' },
       { id: uid(), name: 'CTA ברור וקיים', type: 'mustContain', target: bCta, value: 'הגיבו, תגיבו, עקבו, עקוב, שתפו, שמרו, לינק, קישור, הורידו, כתבו', severity: 'must' },
       { id: uid(), name: 'בלי מילות מילוי', type: 'mustNotContain', target: '__all__', value: 'בעצם, כאילו, אמממ', severity: 'nice' },
       { id: uid(), name: 'משפטים לא ארוכים מדי', type: 'maxSentenceWords', target: '__all__', value: '22', severity: 'nice' },
     ],
     aiRules: [
       { id: uid(), text: 'ה-HOOK מבטיח ערך קונקרטי או יוצר סקרנות ספציפית ב-3 השניות הראשונות — לא פתיח אבסטרקטי/פילוסופי איטי' },
-      { id: uid(), text: 'התוכן ניתן לשמירה: רשימה, צ׳קליסט או צעדים שאפשר לחזור אליהם (מעלה שמירות)' },
-      { id: uid(), text: 'התוכן ניתן לשיתוף: מידע שימושי שגורם לרצות לשלוח אותו למישהו (מעלה שיתופים והפצה ללא-עוקבים)' },
-      { id: uid(), text: 'יש הנחיה מעשית וברורה מה לעשות — לא רק מסר רגשי/מוטיבציוני כללי' },
-      { id: uid(), text: 'יש ספציפיות: מספרים, דוגמאות אישיות ("אני אישית..."), ופרטים קונקרטיים' },
+      { id: uid(), text: 'ה-Net New Value טקטי ויישומי — משהו שהצופה לא ידע, לא "מובן מאליו"' },
+      { id: uid(), text: 'כל טענה גדולה מגובה בהוכחה — עדיף ב-3 דרכים: עובדה, ציטוט, וסיפור קצר שמתחבר לתוכן' },
+      { id: uid(), text: 'אין רגעים מבלבלים, משעממים או לא-אמינים — לכל רגע כזה מוצגת הוכחה לצידו, או שהוא נמחק' },
+      { id: uid(), text: 'ה-Context ברור: הצופה מבין את הרקע והבעיה לפני הערך' },
+      { id: uid(), text: 'התוכן ניתן לשמירה ולשיתוף (רשימה/צעדים/מידע שימושי לשלוח למישהו)' },
       { id: uid(), text: 'יש CTA אחד ברור וממוקד בסוף' },
     ],
     checklist: [
       { id: uid(), label: 'ה-HOOK מבטיח ערך קונקרטי (לא פתיח אבסטרקטי)' },
-      { id: uid(), label: 'יש משהו לשמור (רשימה/צעדים)' },
-      { id: uid(), label: 'יש משהו ששווה לשתף עם מישהו' },
+      { id: uid(), label: 'ה-Net New Value טקטי — לא מובן מאליו' },
+      { id: uid(), label: 'כל טענה גדולה מגובה בהוכחה (עובדה/ציטוט/סיפור)' },
+      { id: uid(), label: 'אין רגע מבלבל / משעמם / לא-אמין בלי הוכחה' },
       { id: uid(), label: 'ה-CTA ברור וספציפי' },
-      { id: uid(), label: 'האורך מתאים לפלטפורמה' },
     ],
     expertNotes: 'יוצרי רפרנס: @iamchrischung ("פסיכולוגיה של תשומת לב").\nעקרונות שאני אוהב:\n- כל שנייה קונה את הבאה — הפריים הראשון חייב לעצור גלילה.\n- פותחים "לולאה פתוחה" (open loop) ולא סוגרים מיד.\n- ספציפיות ומספרים במקום כלליות.\n(הוסף כאן טיפים/עקרונות נוספים ככל שתלמד — הם נכנסים לכל בדיקה חכמה.)',
   };
@@ -983,8 +990,11 @@ ${EXPERT_FRAMEWORK}${notesBlock}
   "confidence": "low" | "medium" | "high",
   "reasoning": "<פסקה קצרה בעברית שמסבירה את הערכת הסיכוי>",
   "suggestions": [ "<שיפור קונקרטי 1>", "<שיפור 2>", "<שיפור 3>" ],
+  "weakMoments": [ { "text": "<ציטוט קצר מהתסריט>", "issue": "confusing" | "boring" | "unproven", "suggestion": "<הוכחה קונקרטית להוסיף (עובדה/ציטוט/סיפור קצר) או המלצה למחוק את הרגע>" } ],
   "improvedHook": "<גרסה משופרת ל-HOOK, בעברית>"
 }
+
+חשוב: סרוק את כל התסריט ואתר כל רגע שהוא מבלבל (confusing), משעמם (boring) או לא-אמין/טענה גדולה ללא ביסוס (unproven), והחזר אותם ב-weakMoments. לכל רגע כזה הצע הוכחה קונקרטית להוסיף — עדיף אחת מ-3: עובדה, ציטוט, או סיפור קצר שמתחבר — או המלץ למחוק אותו אם אי אפשר לבסס.
 
 ## החוקים הרכים שצריך להעריך (softRules — פריט לכל אחד):
 ${softRules}
@@ -1042,6 +1052,12 @@ function renderAiResults(r) {
     ${scoresHtml ? `<div class="section-label">פירוק ציונים</div>${scoresHtml}` : ''}
 
     ${softHtml ? `<div class="section-label">חוקים רכים</div>${softHtml}` : ''}
+
+    ${(r.weakMoments && r.weakMoments.length) ? `<div class="section-label">רגעים לחיזוק — מבלבל / משעמם / לא-אמין</div>${r.weakMoments.map(w => {
+      const map = { confusing: ['מבלבל','yellow'], boring: ['משעמם','gray'], unproven: ['לא מוכח','red'] };
+      const [lbl, cls] = map[w.issue] || [w.issue || '', 'gray'];
+      return `<div class="rule-result fail-nice"><span class="rr-icon">🔎</span><span><span class="badge ${cls}">${lbl}</span> <span class="rr-name">"${esc(w.text||'')}"</span><br><span class="rr-detail">${esc(w.suggestion||'')}</span></span></div>`;
+    }).join('')}` : ''}
 
     ${(r.suggestions && r.suggestions.length) ? `<div class="section-label">הצעות לשיפור</div><ul class="ai-suggestions">${r.suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
 
