@@ -315,6 +315,26 @@
 
   <!-- ══════════ EDITOR VIEW ══════════ -->
   <div class="view" id="view-editor">
+    <div class="card" style="border-color: rgba(108,99,255,0.35)">
+      <div class="card-title">✍️ צור תסריט עם AI</div>
+      <div class="card-desc">תן נושא ומטרה — Claude יכתוב תסריט לפי הבלוקים, בסגנון הסרטונים שעבדו לך ובהימנעות מדפוסי הנופלים. לומד מכל סרטון חדש שתוסיף לספרייה.</div>
+      <label class="field-label">נושא הסרטון</label>
+      <input type="text" id="genTopic" placeholder="למשל: איך לבחור קרן השתלמות" />
+      <div class="row" style="margin-top:12px; gap:12px; flex-wrap:wrap; align-items:flex-end">
+        <div class="grow">
+          <label class="field-label">מטרה</label>
+          <select id="genGoal">
+            <option value="auto">אוטומטי (Claude יבחר)</option>
+            <option value="reach">תפוצה (שמירות+שיתופים)</option>
+            <option value="conversion">המרה (תגובות+עוקבים)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="genBtn" onclick="generateScript()">✍️ כתוב תסריט</button>
+      </div>
+      <div class="error-box" id="genError"></div>
+      <div id="genResult" style="margin-top:14px"></div>
+    </div>
+
     <div class="card">
       <label class="field-label">שם / נושא הסרטון</label>
       <input type="text" id="vidTitle" placeholder="למשל: 3 טעויות שכל עצמאי עושה עם המסים" />
@@ -834,6 +854,9 @@ function openEditor(id) {
   else document.getElementById('aiResults').innerHTML = '';
 
   hideEditorError();
+  document.getElementById('genTopic').value = '';
+  document.getElementById('genResult').innerHTML = '';
+  hideGenError();
   onEditorInput();
   updatePerfPreview();
   switchView('editor');
@@ -980,6 +1003,102 @@ async function runAiCheck() {
   }
 }
 let pendingAiResult = null;
+
+// ── Shared Claude call ──────────────────────────────────────────────────────
+async function callClaude(prompt, maxTokens = 3000) {
+  const apiKey = getApiKey();
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || `שגיאת API: ${res.status}`); }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+// ── Script generation ───────────────────────────────────────────────────────
+function firstBlockText(v) { const b = config.blocks[0]; return (v.fields?.[b.id] || '').slice(0, 140); }
+function showGenError(m) { const b = document.getElementById('genError'); b.textContent = m; b.classList.add('show'); }
+function hideGenError() { document.getElementById('genError').classList.remove('show'); }
+
+function buildGenPrompt(topic, goal) {
+  const blockList = config.blocks.map(b => `- ${b.name}${b.guideline ? ` (${b.guideline})` : ''}`).join('\n');
+  const expertNotes = (config.expertNotes || '').trim();
+  const notesBlock = expertNotes ? `\n\n## עקרונות אישיים (משקל גבוה):\n${expertNotes}` : '';
+
+  const scored = videos.filter(v => v.actual?.reach).map(v => ({ v, p: computePerformance(v.actual) })).filter(x => x.p).sort((a, b) => b.p.score - a.p.score);
+  const fmt = x => `  ["${x.v.title}" — ציון ${x.p.score}/100, ${MODE_LABEL[x.p.mode]}] HOOK: ${firstBlockText(x.v)}`;
+  const winners = scored.filter(x => x.p.score >= 60).slice(0, 5).map(fmt).join('\n') || '  (עדיין אין)';
+  const flops = scored.filter(x => x.p.score < 40).slice(0, 5).map(fmt).join('\n') || '  (עדיין אין)';
+
+  const goalText = goal === 'reach'
+    ? 'המטרה: תפוצה — כתוב תוכן שמיר/שָתיר (רשימה/צעדים קונקרטיים) שמעודד שמירות ושיתופים.'
+    : goal === 'conversion'
+    ? 'המטרה: המרה — כלול CTA חזק שמבקש להגיב מילה כדי לקבל מדריך/לינק (מייצר תגובות רבות + עוקבים חדשים).'
+    : 'בחר את המנגנון (תפוצה או המרה) שמתאים ביותר לנושא, וציין אותו ב-targetMode.';
+
+  return `אתה כותב תסריטים לסרטוני רשת קצרים (Reels) בעברית עבור יוצר תוכן פיננסי.
+
+${EXPERT_FRAMEWORK}${notesBlock}
+
+## מה עבד לי בפועל (כתוב בסגנון ובאנרגיה האלה):
+${winners}
+
+## מה נפל לי (הימנע מהדפוסים והפתיחים האלה):
+${flops}
+
+${goalText}
+
+כתוב תסריט חדש ומקורי לנושא: "${topic}"
+בנה אותו בדיוק לפי הבלוקים הבאים, כל בלוק בנפרד:
+${blockList}
+
+דרישות: HOOK ספציפי עם משיכה חזקה (רצוי מספר/סטטוס), Net New Value טקטי שלא מובן מאליו, כל טענה גדולה מבוססת, ו-CTA אחד ברור.
+
+החזר JSON תקין בלבד, ללא טקסט מסביב:
+{
+  "blocks": { ${config.blocks.map(b => `"${b.name}": "<תוכן>"`).join(', ')} },
+  "targetMode": "reach" | "conversion",
+  "rationale": "<שורה קצרה: למה זה אמור לעבוד>"
+}`;
+}
+
+async function generateScript() {
+  const apiKey = getApiKey(); if (!apiKey) { openApiModal(); return; }
+  const topic = document.getElementById('genTopic').value.trim();
+  if (!topic) { showGenError('כתוב נושא לסרטון'); return; }
+  const goal = document.getElementById('genGoal').value;
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> כותב...';
+  hideGenError(); document.getElementById('genResult').innerHTML = '';
+  try {
+    const text = await callClaude(buildGenPrompt(topic, goal));
+    const parsed = parseAiJson(text);
+    if (parsed.blocks) {
+      const lower = {}; Object.keys(parsed.blocks).forEach(k => lower[k.trim().toLowerCase()] = parsed.blocks[k]);
+      config.blocks.forEach(b => {
+        const val = parsed.blocks[b.name] ?? lower[b.name.trim().toLowerCase()];
+        const ta = document.querySelector(`#blockFields textarea[data-block="${b.id}"]`);
+        if (ta && val != null) ta.value = val;
+      });
+    }
+    if (!document.getElementById('vidTitle').value.trim()) document.getElementById('vidTitle').value = topic;
+    onEditorInput();
+    const modeLbl = MODE_LABEL[parsed.targetMode] || '';
+    document.getElementById('genResult').innerHTML = `<div class="rule-result pass"><span class="rr-icon">✨</span><span><span class="rr-name">נכתב תסריט${modeLbl ? ` · יעד: ${modeLbl}` : ''}</span>${parsed.rationale ? `<br><span class="rr-detail">${esc(parsed.rationale)}</span>` : ''}</span></div>`;
+    toast('נכתב תסריט ✓ — אפשר לערוך ולהריץ בדיקה חכמה');
+  } catch (err) {
+    showGenError('שגיאה: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.innerHTML = '✍️ כתוב תסריט';
+  }
+}
 
 function buildAiPrompt(fields) {
   const scriptText = config.blocks.map(b => `### ${b.name}${b.guideline ? ` (הנחיה: ${b.guideline})` : ''}\n${(fields[b.id] || '(ריק)')}`).join('\n\n');
@@ -1254,10 +1373,70 @@ saveVideo = function() {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  SEED DATASET — real videos with metrics, auto-loaded once on first run
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const SEED_VIDEOS = [
+  { title: "5 החשבונות של ה-1% העשירים", blocks: {
+      "HOOK": "כדי להיות ב-1% של האנשים העשירים בישראל, אתם חייבים שיהיו לכם את החשבונות האלו",
+      "Net New Value": "1) חשבון עובר ושב — משאירים רק את המינימום, כי כל שקל שם מאבד ערך עם הזמן.\n2) קרן כספית — קרן חירום של 3-6 חודשי מחיה, קל להכניס ולהוציא, צוברת ריבית בלי סיכון.\n3) פנסיה — מסלול שתואם לגיל + הפקדה קבועה, שווה מיליונים.\n4) קרן השתלמות — פטור ממס אחרי 6 שנים.\n5) תיק השקעות — המקפצה ליעדים הגדולים, השקעה במדדים.",
+      "CTA": "אם אתם רוצים ללמוד איך להשקיע לבד תתחילו לעקוב ותגיבו \"השקעות\"" },
+    actual: { views: 47440, reach: 37418, nonFollowerPct: 93.9, saves: 742, shares: 925, comments: 60, likes: 964, follows: 245 } },
+  { title: "4 דרכים לקבל 40 אלף שקל מהבנק", blocks: {
+      "HOOK": "אם אתה לא מבין איך בנקים עובדים, אתה מפסיד לפחות 40 אלף שקל שהיית יכול לקבל מהבנק שלך. הנה 4 דרכים לקבל אותם אם תעבור בנק מחר בבוקר",
+      "Research": "ואני אומר את זה בתור רואה חשבון שעזר ללקוחות שלו להעביר יותר מ-30 מיליון שקל להשקעות בשנה האחרונה",
+      "Net New Value": "1) חשבון בלי עמלות — יש בנקים שנותנים פטור ל-10 שנים.\n2) הלוואה ללא ריבית — כסף חינם שאפשר להשקיע.\n3) מענק הצטרפות — 800 עד 1500 שקל מתנה.\n4) הלוואה בריבית הכי נמוכה שיש.",
+      "CTA": "כל מה שאתה צריך זה להגיב \"בנק\" על הפוסט והכל אצלך" },
+    actual: { views: 32197, reach: 19744, saves: 81, shares: 54, comments: 511, likes: 220, follows: 224 } },
+  { title: "חוקי הכסף שלי ושל אשתי", blocks: {
+      "HOOK": "אלו חוקי הכסף שלי ושל אשתי. בתור זוג שמצליח להתקדם כלכלית ב-2026 ומתכנן לפרוש בשלב מוקדם מאוד בחיים",
+      "Net New Value": "1) אין סודות על כסף — חשבון אישי לכל אחד + משותף.\n2) להיות עשירים, לא להיראות — קונים נכסים לא התחייבויות.\n3) מדברים על רכישות גדולות לפני שקונים.\n4) כסף דינמי — ישיבת מטרות פעם בחצי שנה.\n5) חזון משותף לחופש.",
+      "CTA": "מהם חוקי הכסף שאתם עוקבים אחריהם? כתבו לי בתגובות, ואם אתם אוהבים תוכן כזה – מוזמנים לעקוב." },
+    actual: { views: 16821, reach: 13828, saves: 113, shares: 299, comments: 6, likes: 306, follows: 52 } },
+  { title: "3 אוטומציות פיננסיות", blocks: {
+      "HOOK": "שלוש אוטומציות פיננסיות שהגדרתי בשנות ה-20 שלי כדי שיהיה לי מספיק כסף לכל דבר שארצה בשנות ה-40",
+      "Research": "וזה ממישהו שפעם היה תפרן בלי שקל חיסכון, והיום ב-1% הכלכלי של קבוצת הגיל שלו.",
+      "Net New Value": "1) העברה אוטומטית לחיסכון בריבית גבוהה / קרן כספית — 3-6 חודשי מחיה + מטרות.\n2) העברה אוטומטית לתיק השקעות — מדדים כל חודש, לא משנה מה בשוק.\n3) בדיקת שווי חודשית על כל היתרות.",
+      "CTA": "תתחילו לעקוב לעוד תוכן על כסף והשקעות" },
+    actual: { views: 7124, reach: 5144, saves: 57, shares: 44, comments: 5, likes: 102, follows: 57 } },
+  { title: "קו אחד – איך להעביר את החיים", blocks: {
+      "HOOK": "זה החיים שלכם. קו אחד, מגיל אפס עד גיל שמונים.",
+      "Context": "נכנסים לעבודה בגיל 20 ועובדים עד 65. רוב האנשים חיים ממשכורת למשכורת, ולפעמים חופשה ביוון. וככה עוברים 30, 40, 50.",
+      "Net New Value": "מגיעים לגיל 65 ומגלים שהעברתם 40 שנה רק בלהרוויח ולשרוד, בלי אפילו 9 שעות ללמוד לנהל כסף. וזה לא חייב להיות ככה.",
+      "CTA": "" },
+    actual: { views: 1396, reach: 969, nonFollowerPct: 52.8, saves: 4, shares: 9, comments: 2, likes: 18, follows: 0 } },
+  { title: "5 דברים שפוגעים בכם שאתם לא מבינים בכסף", blocks: {
+      "HOOK": "5 דברים שפוגעים בכם שאתם לא מבינים בכסף" },
+    actual: { views: 3087, reach: 2264, nonFollowerPct: 54.7, saves: 10, shares: 5, comments: 0, likes: 24, follows: 2 } },
+  { title: "קמצן או מתנהל כלכלית באחריות?", blocks: {
+      "HOOK": "תגידו, בנינו – אתם קמצנים?" },
+    actual: { views: 1483, reach: 961, nonFollowerPct: 51.7, saves: 6, shares: 3, comments: 6, likes: 24 } },
+];
+
+function seedIfEmpty() {
+  if (localStorage.getItem('vs_seeded')) return;
+  if (videos.length) { localStorage.setItem('vs_seeded', '1'); return; }
+  SEED_VIDEOS.forEach(item => {
+    const fields = {};
+    if (item.blocks) for (const [k, v] of Object.entries(item.blocks)) { const id = nameToBlockId(k); if (id) fields[id] = v; }
+    const a = item.actual || {};
+    videos.push({
+      id: uid(), title: item.title, fields, checklist: {},
+      actual: { published: true, views: a.views ?? null, reach: a.reach ?? null, nonFollowerPct: a.nonFollowerPct ?? null, saves: a.saves ?? null, shares: a.shares ?? null, follows: a.follows ?? null, likes: a.likes ?? null, comments: a.comments ?? null },
+      aiResult: null, createdAt: Date.now(), updatedAt: Date.now(),
+    });
+  });
+  videos.sort((x, y) => (computePerformance(y.actual)?.score || 0) - (computePerformance(x.actual)?.score || 0));
+  persistVideos();
+  localStorage.setItem('vs_seeded', '1');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════════════════
 
 updateApiBtn();
+seedIfEmpty();
 renderLibrary();
 </script>
 
