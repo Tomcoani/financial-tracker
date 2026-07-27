@@ -53,5 +53,12 @@
       "HOOK": "5 דברים שפוגעים בכם שאתם לא מבינים בכסף"
     },
     "actual": { "published": true, "views": 3087, "reach": 2264, "nonFollowerPct": 54.7, "saves": 10, "shares": 5, "comments": 0, "likes": 24, "follows": 2 }
+  },
+  {
+    "title": "קמצן או מתנהל כלכלית באחריות?",
+    "blocks": {
+      "HOOK": "תגידו, בנינו – אתם קמצנים?"
+    },
+    "actual": { "published": true, "views": 1483, "reach": 961, "nonFollowerPct": 51.7, "saves": 6, "shares": 3, "comments": 6, "likes": 24 }
   }
 ]
