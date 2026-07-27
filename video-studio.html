@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>סטודיו סרטונים | Tomani.co</title>
+
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22222f;
+    --border: #2e2e40;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --green: #43e97b;
+    --yellow: #f9c74f;
+    --red: #ff6584;
+    --text: #e8e8f0;
+    --muted: #7a7a9a;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+
+  .api-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .api-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .api-btn.connected { color: var(--green); border-color: var(--green); }
+
+  /* Tabs */
+  .tabs {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px 24px 0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 10px 20px;
+    border-radius: 10px 10px 0 0;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-color: var(--accent); border-bottom-color: var(--bg); background: var(--surface2); }
+
+  .main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #8b5cf6); color: white; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(108,99,255,0.35); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 8px; }
+  .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: none; border: 1px solid rgba(255,101,132,0.4); color: var(--accent2); }
+  .btn-danger:hover { background: rgba(255,101,132,0.1); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .card-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .card-desc { color: var(--muted); font-size: 13px; margin-bottom: 18px; line-height: 1.6; }
+
+  /* Inputs */
+  label.field-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    direction: rtl;
+    transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+  .modal input[type=password] { direction: ltr; }
+
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row > * { min-width: 0; }
+  .grow { flex: 1; }
+
+  /* Config list rows */
+  .cfg-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .cfg-row .grow { display: flex; flex-direction: column; gap: 8px; }
+  .cfg-drag { color: var(--muted); cursor: default; font-size: 18px; padding-top: 8px; }
+  .icon-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 18px; padding: 6px; line-height: 1; border-radius: 6px;
+  }
+  .icon-btn:hover { color: var(--accent2); background: rgba(255,101,132,0.1); }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Block editor in video */
+  .block-field { margin-bottom: 20px; }
+  .block-field .field-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 10px; }
+  .block-name { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .block-guideline { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .block-stat { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* Checklist */
+  .check-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .check-item:hover { border-color: var(--accent); }
+  .check-item.checked { border-color: var(--green); background: rgba(67,233,123,0.07); }
+  .check-item input { width: 20px; height: 20px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .check-item span { font-size: 14px; }
+
+  /* Rule check results */
+  .rule-result {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 12px; border-radius: 9px; margin-bottom: 7px; font-size: 13px;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .rule-result .rr-icon { flex-shrink: 0; font-size: 15px; }
+  .rule-result.pass { border-color: rgba(67,233,123,0.35); }
+  .rule-result.fail-must { border-color: rgba(255,101,132,0.4); background: rgba(255,101,132,0.06); }
+  .rule-result.fail-nice { border-color: rgba(249,199,79,0.4); background: rgba(249,199,79,0.06); }
+  .rr-name { font-weight: 600; }
+  .rr-detail { color: var(--muted); }
+
+  /* Badges */
+  .badge {
+    padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.3); color: var(--accent);
+    white-space: nowrap;
+  }
+  .badge.green { background: rgba(67,233,123,0.15); border-color: rgba(67,233,123,0.35); color: var(--green); }
+  .badge.yellow { background: rgba(249,199,79,0.15); border-color: rgba(249,199,79,0.35); color: var(--yellow); }
+  .badge.red { background: rgba(255,101,132,0.15); border-color: rgba(255,101,132,0.35); color: var(--red); }
+  .badge.gray { background: var(--surface2); border-color: var(--border); color: var(--muted); }
+
+  /* Score meter */
+  .meter { display: flex; align-items: center; gap: 12px; margin: 6px 0; }
+  .meter-label { width: 130px; font-size: 13px; flex-shrink: 0; }
+  .meter-bar-wrap { flex: 1; height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
+  .meter-bar { height: 100%; border-radius: 5px; transition: width 0.8s ease; }
+  .meter-num { width: 46px; text-align: left; font-size: 14px; font-weight: 700; }
+
+  .big-score { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 8px; }
+  .score-circle {
+    width: 90px; height: 90px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 800; position: relative;
+  }
+
+  /* Video library cards */
+  .vid-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; transition: border-color 0.2s; }
+  .vid-card:hover { border-color: var(--accent); }
+  .vid-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .vid-title { font-size: 17px; font-weight: 700; }
+  .vid-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .vid-badges { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+  .vid-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+  .empty { text-align: center; padding: 60px 24px; color: var(--muted); }
+  .empty .emoji { font-size: 52px; display: block; margin-bottom: 16px; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; width: 500px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 19px; margin-bottom: 8px; }
+  .modal p { color: var(--muted); font-size: 14px; margin-bottom: 18px; line-height: 1.6; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+  /* AI feedback block */
+  .ai-suggestions li { margin-bottom: 8px; line-height: 1.6; }
+  .ai-suggestions { padding-right: 20px; margin-top: 8px; }
+  .reasoning { background: var(--surface2); border-right: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; line-height: 1.7; font-size: 14px; color: var(--text); margin-top: 8px; }
+
+  .divider-line { height: 1px; background: var(--border); margin: 20px 0; }
+  .section-label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 0 10px; }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 50%; transform: translateX(50%);
+    background: var(--surface2); border: 1px solid var(--green); color: var(--green);
+    padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    z-index: 300; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(50%) translateY(-6px); }
+
+  .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-box { display: none; background: rgba(255,101,132,0.1); border: 1px solid rgba(255,101,132,0.3); border-radius: var(--radius); padding: 14px 18px; color: var(--accent2); margin-top: 14px; font-size: 14px; }
+  .error-box.show { display: block; }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    .tabs, .main { padding-left: 14px; padding-right: 14px; }
+    .meter-label { width: 90px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">🎬 סטודיו סרטונים</div>
+    <div class="header-subtitle">בנייה, בדיקה והערכת סיכוי · Tomani.co</div>
+  </div>
+  <div class="header-actions">
+    <button class="api-btn" id="apiBtn" onclick="openApiModal()">⚙️ מפתח API</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-view="library" onclick="switchView('library')">🎬 הסרטונים שלי</div>
+  <div class="tab" data-view="editor" onclick="newVideo()">➕ סרטון חדש</div>
+  <div class="tab" data-view="config" onclick="switchView('config')">⚙️ הגדרות תבנית וחוקים</div>
+</div>
+
+<div class="main">
+
+  <!-- ══════════ LIBRARY VIEW ══════════ -->
+  <div class="view active" id="view-library">
+    <div id="libraryList"></div>
+  </div>
+
+  <!-- ══════════ EDITOR VIEW ══════════ -->
+  <div class="view" id="view-editor">
+    <div class="card">
+      <label class="field-label">שם / נושא הסרטון</label>
+      <input type="text" id="vidTitle" placeholder="למשל: 3 טעויות שכל עצמאי עושה עם המסים" />
+    </div>
+
+    <div class="card">
+      <div class="card-title">✍️ תסריט הסרטון</div>
+      <div class="card-desc">מלא את הטקסט לפי השלד שהגדרת. בדיקת החוקים מתעדכנת תוך כדי כתיבה.</div>
+      <div id="blockFields"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✅ בדיקת חוקי מלל (אוטומטי)</div>
+      <div class="card-desc">חוקים דטרמיניסטיים שרצים מקומית, בלי צורך ב-API.</div>
+      <div id="localRuleResults"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">☑️ צ'קליסט ידני</div>
+      <div class="card-desc">סמן ידנית מה שהסרטון עומד בו.</div>
+      <div id="checklistItems"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🤖 בדיקה חכמה + הערכת סיכוי (Claude)</div>
+      <div class="card-desc">Claude בודק את "החוקים הרכים", נותן ציון איכות, מעריך סיכוי הצלחה ומציע שיפורים. ככל שתזין יותר תוצאות בפועל, ההערכה מדויקת יותר.</div>
+      <button class="btn btn-primary" id="aiBtn" onclick="runAiCheck()">🤖 הרץ בדיקה חכמה</button>
+      <div class="error-box" id="editorError"></div>
+      <div id="aiResults" style="margin-top:18px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 תוצאות בפועל</div>
+      <div class="card-desc">מלא אחרי שהסרטון עלה. הנתונים האלה מלמדים את המערכת מה עובד אצלך.</div>
+      <label class="check-item" style="cursor:pointer">
+        <input type="checkbox" id="vidPublished" />
+        <span>הסרטון פורסם</span>
+      </label>
+      <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:14px">
+        <div class="grow"><label class="field-label">צפיות</label><input type="number" id="vidViews" placeholder="0" min="0"></div>
+        <div class="grow"><label class="field-label">אחוז צפייה ממוצע (%)</label><input type="number" id="vidWatch" placeholder="0" min="0" max="100"></div>
+        <div class="grow"><label class="field-label">לידים / פניות</label><input type="number" id="vidLeads" placeholder="0" min="0"></div>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:space-between; margin-top:8px; flex-wrap:wrap; gap:10px">
+      <button class="btn btn-primary" onclick="saveVideo()">💾 שמור סרטון</button>
+      <button class="btn btn-secondary" onclick="switchView('library')">ביטול</button>
+    </div>
+  </div>
+
+  <!-- ══════════ CONFIG VIEW ══════════ -->
+  <div class="view" id="view-config">
+
+    <div class="card">
+      <div class="card-title">🧱 שלד התבנית</div>
+      <div class="card-desc">הבלוקים שכל סרטון בנוי מהם, לפי הסדר. לכל בלוק אפשר להוסיף הנחיה קצרה שתופיע בעורך.</div>
+      <div id="cfgBlocks"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addBlock()">+ הוסף בלוק</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📏 חוקי מלל אוטומטיים</div>
+      <div class="card-desc">חוקים דטרמיניסטיים שנבדקים מקומית ומיידית על התסריט. "חובה" = כשל אדום, "רצוי" = אזהרה צהובה.</div>
+      <div id="cfgRules"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addRule()">+ הוסף חוק</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🤖 חוקים רכים (ל-Claude)</div>
+      <div class="card-desc">כללים שקשה לבדוק אוטומטית — Claude יעריך כל אחד. למשל: "ה-HOOK יוצר סקרנות אמיתית ולא קליקבייט".</div>
+      <div id="cfgAiRules"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addAiRule()">+ הוסף חוק רך</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">☑️ פריטי צ'קליסט ידני</div>
+      <div class="card-desc">שאלות כן/לא שתסמן ידנית לכל סרטון.</div>
+      <div id="cfgChecklist"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addCheckItem()">+ הוסף פריט</button>
+    </div>
+
+    <div class="row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
+      <button class="btn btn-primary" onclick="saveConfig()">💾 שמור הגדרות</button>
+      <button class="btn btn-danger btn-sm" onclick="resetConfig()">שחזר ברירת מחדל</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- API Key Modal -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <h2>🔑 חיבור ל-Claude API</h2>
+    <p>הזן את מפתח ה-API שלך מ-Anthropic Console. המפתח נשמר מקומית בדפדפן בלבד ומשמש רק לבדיקה החכמה והערכת הסיכוי.</p>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." />
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveApiKey()">שמור</button>
+      <button class="btn btn-secondary" onclick="closeApiModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STATE + STORAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const RULE_TYPES = {
+  minWords:        { label: 'מינימום מילים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
+  maxWords:        { label: 'מקסימום מילים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
+  minChars:        { label: 'מינימום תווים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
+  maxChars:        { label: 'מקסימום תווים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
+  mustHaveQuestion:{ label: 'חייב לכלול שאלה (?)',   needsValue: false },
+  mustContain:     { label: 'חייב להכיל אחת מ...',   needsValue: true,  vPlaceholder: 'מילים מופרדות בפסיק', vType: 'text' },
+  mustNotContain:  { label: 'אסור להכיל...',         needsValue: true,  vPlaceholder: 'מילים אסורות מופרדות בפסיק', vType: 'text' },
+  maxSentenceWords:{ label: 'משפט לא ארוך מ... מילים', needsValue: true, vPlaceholder: 'מספר', vType: 'number' },
+};
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function defaultConfig() {
+  const bHook = uid(), bSuper = uid(), bBody = uid(), bCta = uid();
+  return {
+    blocks: [
+      { id: bHook,  name: 'HOOK',       guideline: '3 השניות הראשונות — עצור את הגלילה' },
+      { id: bSuper, name: 'SUPER HOOK', guideline: 'משפט שמחייב להישאר עד הסוף' },
+      { id: bBody,  name: 'גוף',        guideline: 'הערך / התוכן המרכזי' },
+      { id: bCta,   name: 'CTA',        guideline: 'קריאה אחת ברורה לפעולה' },
+    ],
+    localRules: [
+      { id: uid(), name: 'HOOK קצר', type: 'maxWords', target: bHook, value: '14', severity: 'must' },
+      { id: uid(), name: 'שאלה/פנייה ב-HOOK', type: 'mustHaveQuestion', target: bHook, value: '', severity: 'nice' },
+      { id: uid(), name: 'בלי מילות מילוי', type: 'mustNotContain', target: '__all__', value: 'בעצם, כאילו, אמ, אהh', severity: 'nice' },
+      { id: uid(), name: 'משפטים לא ארוכים מדי', type: 'maxSentenceWords', target: '__all__', value: '20', severity: 'nice' },
+    ],
+    aiRules: [
+      { id: uid(), text: 'ה-HOOK יוצר סקרנות אמיתית ולא קליקבייט זול' },
+      { id: uid(), text: 'המסר המרכזי מובן תוך 5 שניות' },
+      { id: uid(), text: 'יש קריאה אחת ברורה לפעולה (CTA)' },
+      { id: uid(), text: 'הטון מדבר לקהל היעד ולא כללי מדי' },
+    ],
+    checklist: [
+      { id: uid(), label: 'ה-HOOK עוצר גלילה' },
+      { id: uid(), label: 'יש ערך ברור לצופה' },
+      { id: uid(), label: 'ה-CTA ברור וספציפי' },
+      { id: uid(), label: 'האורך מתאים לפלטפורמה' },
+    ],
+  };
+}
+
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem('vs_config');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  const d = defaultConfig();
+  localStorage.setItem('vs_config', JSON.stringify(d));
+  return d;
+}
+function persistConfig() { localStorage.setItem('vs_config', JSON.stringify(config)); }
+
+function loadVideos() {
+  try { return JSON.parse(localStorage.getItem('vs_videos') || '[]'); } catch (e) { return []; }
+}
+function persistVideos() { localStorage.setItem('vs_videos', JSON.stringify(videos)); }
+
+let config = loadConfig();
+let videos = loadVideos();
+let editingId = null; // id of video being edited, or null for new
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  API KEY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function getApiKey() { return localStorage.getItem('claude_api_key') || ''; }
+function openApiModal() { document.getElementById('apiKeyInput').value = getApiKey(); document.getElementById('apiModal').classList.add('show'); }
+function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (key) { localStorage.setItem('claude_api_key', key); updateApiBtn(); }
+  closeApiModal();
+}
+function updateApiBtn() {
+  const btn = document.getElementById('apiBtn');
+  if (getApiKey()) { btn.textContent = '✅ API מחובר'; btn.classList.add('connected'); }
+  else { btn.textContent = '⚙️ מפתח API'; btn.classList.remove('connected'); }
+}
+document.getElementById('apiModal').addEventListener('click', function(e){ if (e.target === this) closeApiModal(); });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  VIEW SWITCHING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+  if (v === 'library') renderLibrary();
+  if (v === 'config') renderConfig();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CONFIG UI
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderConfig() {
+  // Blocks
+  document.getElementById('cfgBlocks').innerHTML = config.blocks.map((b, i) => `
+    <div class="cfg-row">
+      <span class="cfg-drag" title="סדר">≡</span>
+      <div class="grow">
+        <input type="text" value="${esc(b.name)}" placeholder="שם הבלוק" oninput="config.blocks[${i}].name=this.value">
+        <input type="text" value="${esc(b.guideline)}" placeholder="הנחיה קצרה (אופציונלי)" oninput="config.blocks[${i}].guideline=this.value">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <button class="icon-btn" title="למעלה" onclick="moveBlock(${i},-1)">▲</button>
+        <button class="icon-btn" title="למטה" onclick="moveBlock(${i},1)">▼</button>
+      </div>
+      <button class="icon-btn" title="מחק" onclick="delBlock(${i})">🗑</button>
+    </div>`).join('') || '<div class="hint">אין בלוקים עדיין.</div>';
+
+  // Rules
+  const blockOpts = (sel) => `<option value="__all__"${sel==='__all__'?' selected':''}>כל התסריט</option>` +
+    config.blocks.map(b => `<option value="${b.id}"${sel===b.id?' selected':''}>${esc(b.name)}</option>`).join('');
+  const typeOpts = (sel) => Object.entries(RULE_TYPES).map(([k,v]) => `<option value="${k}"${sel===k?' selected':''}>${v.label}</option>`).join('');
+
+  document.getElementById('cfgRules').innerHTML = config.localRules.map((r, i) => {
+    const rt = RULE_TYPES[r.type] || {};
+    return `
+    <div class="cfg-row">
+      <div class="grow">
+        <input type="text" value="${esc(r.name)}" placeholder="שם החוק" oninput="config.localRules[${i}].name=this.value">
+        <div class="row" style="flex-wrap:wrap;gap:8px">
+          <select onchange="config.localRules[${i}].type=this.value; renderConfig()" style="flex:1;min-width:150px">${typeOpts(r.type)}</select>
+          <select onchange="config.localRules[${i}].target=this.value" style="flex:1;min-width:120px">${blockOpts(r.target)}</select>
+        </div>
+        <div class="row" style="flex-wrap:wrap;gap:8px">
+          ${rt.needsValue ? `<input type="${rt.vType||'text'}" value="${esc(r.value)}" placeholder="${rt.vPlaceholder||''}" oninput="config.localRules[${i}].value=this.value" style="flex:1;min-width:150px">` : '<div style="flex:1"></div>'}
+          <select onchange="config.localRules[${i}].severity=this.value" style="flex:1;min-width:120px">
+            <option value="must"${r.severity==='must'?' selected':''}>חובה (אדום)</option>
+            <option value="nice"${r.severity==='nice'?' selected':''}>רצוי (צהוב)</option>
+          </select>
+        </div>
+      </div>
+      <button class="icon-btn" title="מחק" onclick="delRule(${i})">🗑</button>
+    </div>`;
+  }).join('') || '<div class="hint">אין חוקים עדיין.</div>';
+
+  // AI rules
+  document.getElementById('cfgAiRules').innerHTML = config.aiRules.map((r, i) => `
+    <div class="cfg-row">
+      <div class="grow"><input type="text" value="${esc(r.text)}" placeholder="נסח חוק רך..." oninput="config.aiRules[${i}].text=this.value"></div>
+      <button class="icon-btn" title="מחק" onclick="delAiRule(${i})">🗑</button>
+    </div>`).join('') || '<div class="hint">אין חוקים רכים עדיין.</div>';
+
+  // Checklist
+  document.getElementById('cfgChecklist').innerHTML = config.checklist.map((c, i) => `
+    <div class="cfg-row">
+      <div class="grow"><input type="text" value="${esc(c.label)}" placeholder="פריט צ'קליסט..." oninput="config.checklist[${i}].label=this.value"></div>
+      <button class="icon-btn" title="מחק" onclick="delCheckItem(${i})">🗑</button>
+    </div>`).join('') || '<div class="hint">אין פריטים עדיין.</div>';
+}
+
+function addBlock() { config.blocks.push({ id: uid(), name: '', guideline: '' }); renderConfig(); }
+function delBlock(i) { config.blocks.splice(i, 1); renderConfig(); }
+function moveBlock(i, dir) {
+  const j = i + dir; if (j < 0 || j >= config.blocks.length) return;
+  [config.blocks[i], config.blocks[j]] = [config.blocks[j], config.blocks[i]]; renderConfig();
+}
+function addRule() { config.localRules.push({ id: uid(), name: '', type: 'maxWords', target: '__all__', value: '', severity: 'nice' }); renderConfig(); }
+function delRule(i) { config.localRules.splice(i, 1); renderConfig(); }
+function addAiRule() { config.aiRules.push({ id: uid(), text: '' }); renderConfig(); }
+function delAiRule(i) { config.aiRules.splice(i, 1); renderConfig(); }
+function addCheckItem() { config.checklist.push({ id: uid(), label: '' }); renderConfig(); }
+function delCheckItem(i) { config.checklist.splice(i, 1); renderConfig(); }
+
+function saveConfig() {
+  config.blocks = config.blocks.filter(b => b.name.trim());
+  config.localRules = config.localRules.filter(r => r.name.trim());
+  config.aiRules = config.aiRules.filter(r => r.text.trim());
+  config.checklist = config.checklist.filter(c => c.label.trim());
+  persistConfig(); renderConfig(); toast('ההגדרות נשמרו ✓');
+}
+function resetConfig() {
+  if (!confirm('לשחזר את התבנית, החוקים והצ\'קליסט לברירת המחדל? הסרטונים שלך לא יימחקו.')) return;
+  config = defaultConfig(); persistConfig(); renderConfig(); toast('שוחזר לברירת מחדל ✓');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LOCAL RULE ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function wordCount(s) { return (s.trim().match(/\S+/g) || []).length; }
+function getTargetText(fields, target) {
+  if (target === '__all__') return config.blocks.map(b => fields[b.id] || '').join('\n').trim();
+  return (fields[target] || '').trim();
+}
+function blockName(target) {
+  if (target === '__all__') return 'כל התסריט';
+  const b = config.blocks.find(x => x.id === target);
+  return b ? b.name : '(בלוק שנמחק)';
+}
+
+function evalRule(r, fields) {
+  const text = getTargetText(fields, r.target);
+  const where = blockName(r.target);
+  const v = r.value;
+  let passed = true, detail = '';
+
+  if (!text) {
+    return { passed: false, detail: `אין תוכן ב"${where}"`, empty: true };
+  }
+  switch (r.type) {
+    case 'minWords': { const n = wordCount(text); passed = n >= (+v||0); detail = `${where}: ${n} מילים (מינימום ${v})`; break; }
+    case 'maxWords': { const n = wordCount(text); passed = n <= (+v||Infinity); detail = `${where}: ${n} מילים (מקסימום ${v})`; break; }
+    case 'minChars': { const n = text.length; passed = n >= (+v||0); detail = `${where}: ${n} תווים (מינימום ${v})`; break; }
+    case 'maxChars': { const n = text.length; passed = n <= (+v||Infinity); detail = `${where}: ${n} תווים (מקסימום ${v})`; break; }
+    case 'mustHaveQuestion': { passed = /[?？]/.test(text); detail = `${where}: ${passed ? 'יש שאלה' : 'אין סימן שאלה'}`; break; }
+    case 'mustContain': {
+      const terms = (v||'').split(',').map(t => t.trim()).filter(Boolean);
+      const hit = terms.find(t => text.includes(t));
+      passed = terms.length === 0 || !!hit;
+      detail = passed ? `${where}: נמצא "${hit||''}"` : `${where}: לא נמצאה אף אחת מ: ${terms.join(', ')}`;
+      break;
+    }
+    case 'mustNotContain': {
+      const terms = (v||'').split(',').map(t => t.trim()).filter(Boolean);
+      const hits = terms.filter(t => text.includes(t));
+      passed = hits.length === 0;
+      detail = passed ? `${where}: נקי` : `${where}: נמצאו מילים אסורות: ${hits.join(', ')}`;
+      break;
+    }
+    case 'maxSentenceWords': {
+      const sentences = text.split(/[.!?\n]+/).map(s => s.trim()).filter(Boolean);
+      const longest = sentences.reduce((m, s) => Math.max(m, wordCount(s)), 0);
+      passed = longest <= (+v||Infinity);
+      detail = `${where}: המשפט הארוך ביותר ${longest} מילים (מקסימום ${v})`;
+      break;
+    }
+    default: detail = 'סוג חוק לא ידוע';
+  }
+  return { passed, detail };
+}
+
+function evalAllRules(fields) {
+  return config.localRules.map(r => ({ rule: r, ...evalRule(r, fields) }));
+}
+
+// Readiness score: local must-rules + checklist coverage
+function computeReadiness(fields, checklistState) {
+  const results = evalAllRules(fields);
+  const must = results.filter(r => r.rule.severity === 'must');
+  const nice = results.filter(r => r.rule.severity === 'nice');
+  const checkItems = config.checklist;
+  const checkedCount = checkItems.filter(c => checklistState[c.id]).length;
+
+  // weights: must rules 50%, nice rules 20%, checklist 30%
+  const mustScore = must.length ? must.filter(r => r.passed).length / must.length : 1;
+  const niceScore = nice.length ? nice.filter(r => r.passed).length / nice.length : 1;
+  const checkScore = checkItems.length ? checkedCount / checkItems.length : 1;
+  const total = Math.round((mustScore*0.5 + niceScore*0.2 + checkScore*0.3) * 100);
+  return { total, mustFailed: must.filter(r => !r.passed).length };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EDITOR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function newVideo() { openEditor(null); }
+
+function openEditor(id) {
+  editingId = id;
+  const vid = id ? videos.find(v => v.id === id) : null;
+
+  document.getElementById('vidTitle').value = vid ? vid.title : '';
+  document.getElementById('vidPublished').checked = vid?.actual?.published || false;
+  document.getElementById('vidViews').value = vid?.actual?.views ?? '';
+  document.getElementById('vidWatch').value = vid?.actual?.watchPct ?? '';
+  document.getElementById('vidLeads').value = vid?.actual?.leads ?? '';
+
+  // Block fields
+  document.getElementById('blockFields').innerHTML = config.blocks.map(b => `
+    <div class="block-field">
+      <div class="field-head">
+        <div>
+          <span class="block-name">${esc(b.name)}</span>
+          ${b.guideline ? `<span class="block-guideline"> — ${esc(b.guideline)}</span>` : ''}
+        </div>
+        <span class="block-stat" id="stat-${b.id}"></span>
+      </div>
+      <textarea data-block="${b.id}" oninput="onEditorInput()" placeholder="כתוב כאן את ה${esc(b.name)}...">${esc(vid?.fields?.[b.id] || '')}</textarea>
+    </div>`).join('') || '<div class="hint">אין בלוקים בתבנית. הגדר אותם בלשונית "הגדרות".</div>';
+
+  // Checklist
+  const cl = vid?.checklist || {};
+  document.getElementById('checklistItems').innerHTML = config.checklist.map(c => `
+    <label class="check-item ${cl[c.id] ? 'checked' : ''}" data-check="${c.id}">
+      <input type="checkbox" ${cl[c.id] ? 'checked' : ''} onchange="onCheckToggle('${c.id}', this.checked)">
+      <span>${esc(c.label)}</span>
+    </label>`).join('') || '<div class="hint">אין פריטי צ\'קליסט. הגדר אותם בלשונית "הגדרות".</div>';
+
+  // AI results (restore if exist)
+  if (vid?.aiResult) renderAiResults(vid.aiResult);
+  else document.getElementById('aiResults').innerHTML = '';
+
+  hideEditorError();
+  onEditorInput();
+  switchView('editor');
+}
+
+function readEditorFields() {
+  const fields = {};
+  document.querySelectorAll('#blockFields textarea').forEach(ta => { fields[ta.dataset.block] = ta.value; });
+  return fields;
+}
+function readChecklistState() {
+  const st = {};
+  document.querySelectorAll('#checklistItems [data-check]').forEach(el => {
+    st[el.dataset.check] = el.querySelector('input').checked;
+  });
+  return st;
+}
+
+function onCheckToggle(id, checked) {
+  const el = document.querySelector(`#checklistItems [data-check="${id}"]`);
+  if (el) el.classList.toggle('checked', checked);
+}
+
+function onEditorInput() {
+  const fields = readEditorFields();
+  // per-block stats
+  config.blocks.forEach(b => {
+    const el = document.getElementById('stat-' + b.id);
+    if (el) { const t = fields[b.id] || ''; el.textContent = `${wordCount(t)} מילים · ${t.length} תווים`; }
+  });
+  // local rules
+  const results = evalAllRules(fields);
+  document.getElementById('localRuleResults').innerHTML = results.length ? results.map(r => {
+    const cls = r.passed ? 'pass' : (r.rule.severity === 'must' ? 'fail-must' : 'fail-nice');
+    const icon = r.passed ? '✅' : (r.rule.severity === 'must' ? '❌' : '⚠️');
+    return `<div class="rule-result ${cls}">
+      <span class="rr-icon">${icon}</span>
+      <span><span class="rr-name">${esc(r.rule.name)}</span> — <span class="rr-detail">${esc(r.detail)}</span></span>
+    </div>`;
+  }).join('') : '<div class="hint">לא הוגדרו חוקי מלל.</div>';
+}
+
+function saveVideo() {
+  const title = document.getElementById('vidTitle').value.trim();
+  if (!title) { toast('צריך שם לסרטון', true); return; }
+  const fields = readEditorFields();
+  const checklist = readChecklistState();
+  const actual = {
+    published: document.getElementById('vidPublished').checked,
+    views: numOrNull(document.getElementById('vidViews').value),
+    watchPct: numOrNull(document.getElementById('vidWatch').value),
+    leads: numOrNull(document.getElementById('vidLeads').value),
+  };
+  const existing = editingId ? videos.find(v => v.id === editingId) : null;
+
+  if (existing) {
+    Object.assign(existing, { title, fields, checklist, actual, updatedAt: Date.now() });
+  } else {
+    videos.unshift({ id: uid(), title, fields, checklist, actual, aiResult: existing?.aiResult || null, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+  persistVideos();
+  toast('הסרטון נשמר ✓');
+  switchView('library');
+}
+function numOrNull(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  AI CHECK + PREDICTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function runAiCheck() {
+  const apiKey = getApiKey();
+  if (!apiKey) { openApiModal(); return; }
+
+  const fields = readEditorFields();
+  const hasContent = config.blocks.some(b => (fields[b.id] || '').trim().length > 3);
+  if (!hasContent) { showEditorError('כתוב קודם תסריט לפני הבדיקה החכמה.'); return; }
+
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Claude בודק...';
+  hideEditorError();
+
+  try {
+    const prompt = buildAiPrompt(fields);
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 3000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `שגיאת API: ${response.status}`);
+    }
+    const data = await response.json();
+    const parsed = parseAiJson(data.content[0].text);
+    parsed._at = Date.now();
+    renderAiResults(parsed);
+
+    // attach to video if editing existing, else keep in memory to save with video
+    if (editingId) {
+      const v = videos.find(x => x.id === editingId);
+      if (v) { v.aiResult = parsed; persistVideos(); }
+    } else {
+      pendingAiResult = parsed;
+    }
+  } catch (err) {
+    showEditorError('שגיאה: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 הרץ בדיקה חכמה';
+  }
+}
+let pendingAiResult = null;
+
+function buildAiPrompt(fields) {
+  const scriptText = config.blocks.map(b => `### ${b.name}${b.guideline ? ` (הנחיה: ${b.guideline})` : ''}\n${(fields[b.id] || '(ריק)')}`).join('\n\n');
+  const softRules = config.aiRules.map((r, i) => `${i+1}. ${r.text}`).join('\n') || '(לא הוגדרו)';
+
+  // History of published videos with results
+  const withResults = videos.filter(v => v.actual?.published && v.actual?.views != null && v.id !== editingId);
+  let historyBlock = '';
+  if (withResults.length) {
+    const examples = withResults.slice(0, 12).map(v => {
+      const s = config.blocks.map(b => `${b.name}: ${(v.fields?.[b.id]||'').slice(0,300)}`).join(' | ');
+      const a = v.actual;
+      return `- כותרת: "${v.title}" | תוצאות: ${a.views ?? '?'} צפיות, ${a.watchPct ?? '?'}% צפייה, ${a.leads ?? '?'} לידים\n  תסריט: ${s}`;
+    }).join('\n');
+    historyBlock = `\n\n## היסטוריה — סרטונים קודמים שלי ותוצאותיהם בפועל (${withResults.length} סרטונים):\n${examples}\n\nהשתמש בהיסטוריה כדי לזהות מה עובד *אצל היוצר הזה* ולבסס עליה את הערכת הסיכוי.`;
+  }
+
+  const confidenceNote = withResults.length >= 5
+    ? 'יש מספיק היסטוריה — בסס את הערכת הסיכוי בעיקר על דמיון לסרטונים שהצליחו בפועל, וסמן confidence לפי איכות ההתאמה.'
+    : `יש מעט מאוד היסטוריה (${withResults.length} סרטונים עם תוצאות). לכן הערכת הסיכוי מבוססת בעיקר על עקרונות מקצועיים, לא על דאטה — סמן confidence כ-"low" והסבר זאת.`;
+
+  return `אתה אסטרטג תוכן וידאו לרשתות חברתיות (Reels/TikTok/Shorts), מומחה ל-HOOKים ולשימור צופים.
+נתח את תסריט הסרטון הבא והחזר JSON תקין בלבד, ללא טקסט מסביב, במבנה הזה בדיוק:
+
+{
+  "softRules": [ { "rule": "<נוסח החוק>", "passed": true/false, "comment": "<הסבר קצר בעברית>" } ],
+  "qualityScore": <0-100, עד כמה התסריט עומד בסטנדרט המקצועי>,
+  "scores": { "hook": <0-100>, "clarity": <0-100>, "value": <0-100>, "cta": <0-100>, "retention": <0-100> },
+  "successProbability": <0-100, הערכת סיכוי ההצלחה>,
+  "confidence": "low" | "medium" | "high",
+  "reasoning": "<פסקה קצרה בעברית שמסבירה את הערכת הסיכוי>",
+  "suggestions": [ "<שיפור קונקרטי 1>", "<שיפור 2>", "<שיפור 3>" ],
+  "improvedHook": "<גרסה משופרת ל-HOOK, בעברית>"
+}
+
+## החוקים הרכים שצריך להעריך (softRules — פריט לכל אחד):
+${softRules}
+
+${confidenceNote}${historyBlock}
+
+## התסריט לניתוח:
+${scriptText}
+
+החזר JSON בלבד.`;
+}
+
+function parseAiJson(text) {
+  let t = text.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf('{'), end = t.lastIndexOf('}');
+  if (start !== -1 && end !== -1) t = t.slice(start, end + 1);
+  return JSON.parse(t);
+}
+
+function scoreColor(n) { return n >= 75 ? 'var(--green)' : n >= 50 ? 'var(--yellow)' : 'var(--red)'; }
+
+function renderAiResults(r) {
+  const c = document.getElementById('aiResults');
+  const prob = r.successProbability ?? 0;
+  const conf = { low: 'נמוך', medium: 'בינוני', high: 'גבוה' }[r.confidence] || r.confidence || '—';
+  const confBadge = { low: 'red', medium: 'yellow', high: 'green' }[r.confidence] || 'gray';
+
+  const softHtml = (r.softRules || []).map(sr => `
+    <div class="rule-result ${sr.passed ? 'pass' : 'fail-nice'}">
+      <span class="rr-icon">${sr.passed ? '✅' : '⚠️'}</span>
+      <span><span class="rr-name">${esc(sr.rule)}</span><br><span class="rr-detail">${esc(sr.comment||'')}</span></span>
+    </div>`).join('');
+
+  const scoreLabels = { hook: 'HOOK', clarity: 'בהירות', value: 'ערך', cta: 'CTA', retention: 'שימור צופים' };
+  const scoresHtml = r.scores ? Object.entries(r.scores).map(([k, val]) => `
+    <div class="meter">
+      <div class="meter-label">${scoreLabels[k] || k}</div>
+      <div class="meter-bar-wrap"><div class="meter-bar" style="width:${val}%;background:${scoreColor(val)}"></div></div>
+      <div class="meter-num" style="color:${scoreColor(val)}">${val}</div>
+    </div>`).join('') : '';
+
+  c.innerHTML = `
+    <div class="big-score">
+      <div class="score-circle" style="border:6px solid ${scoreColor(prob)};color:${scoreColor(prob)}">${prob}%</div>
+      <div>
+        <div style="font-size:15px;font-weight:700">סיכוי הצלחה מוערך</div>
+        <div style="margin-top:6px"><span class="badge ${confBadge}">רמת ביטחון: ${conf}</span>
+        ${r.qualityScore != null ? `<span class="badge" style="margin-right:6px">ציון איכות: ${r.qualityScore}/100</span>` : ''}</div>
+      </div>
+    </div>
+    ${r.reasoning ? `<div class="reasoning">${esc(r.reasoning)}</div>` : ''}
+
+    ${scoresHtml ? `<div class="section-label">פירוק ציונים</div>${scoresHtml}` : ''}
+
+    ${softHtml ? `<div class="section-label">חוקים רכים</div>${softHtml}` : ''}
+
+    ${(r.suggestions && r.suggestions.length) ? `<div class="section-label">הצעות לשיפור</div><ul class="ai-suggestions">${r.suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+
+    ${r.improvedHook ? `<div class="section-label">הצעה ל-HOOK משופר</div><div class="reasoning">${esc(r.improvedHook)}</div>` : ''}
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LIBRARY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function renderLibrary() {
+  const list = document.getElementById('libraryList');
+  if (!videos.length) {
+    list.innerHTML = `<div class="empty"><span class="emoji">🎬</span>
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px">עדיין אין סרטונים</div>
+      <div style="margin-bottom:20px">צור את הסרטון הראשון שלך לפי התבנית.</div>
+      <button class="btn btn-primary" onclick="newVideo()">➕ סרטון חדש</button></div>`;
+    return;
+  }
+  list.innerHTML = videos.map(v => {
+    const readiness = computeReadiness(v.fields || {}, v.checklist || {});
+    const rc = scoreColor(readiness.total);
+    const prob = v.aiResult?.successProbability;
+    const a = v.actual || {};
+    const publishedBadge = a.published ? `<span class="badge green">פורסם</span>` : `<span class="badge gray">טיוטה</span>`;
+    const resultsBadge = (a.published && a.views != null)
+      ? `<span class="badge">👁 ${Number(a.views).toLocaleString('he')} · ⏱ ${a.watchPct ?? '?'}% · 🎯 ${a.leads ?? 0} לידים</span>` : '';
+    const mustBadge = readiness.mustFailed > 0 ? `<span class="badge red">${readiness.mustFailed} חוקי חובה נכשלו</span>` : '';
+    return `
+    <div class="vid-card">
+      <div class="vid-card-head">
+        <div>
+          <div class="vid-title">${esc(v.title)}</div>
+          <div class="vid-meta">עודכן ${new Date(v.updatedAt).toLocaleDateString('he-IL')} · ${new Date(v.updatedAt).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-size:22px;font-weight:800;color:${rc}">${readiness.total}%</div>
+          <div style="font-size:11px;color:var(--muted)">מוכנות</div>
+        </div>
+      </div>
+      <div class="vid-badges">
+        ${publishedBadge}
+        ${prob != null ? `<span class="badge" style="color:${scoreColor(prob)};border-color:${scoreColor(prob)}">🤖 סיכוי ${prob}%</span>` : ''}
+        ${mustBadge}
+        ${resultsBadge}
+      </div>
+      <div class="vid-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openEditor('${v.id}')">✏️ ערוך</button>
+        <button class="btn btn-ghost btn-sm" onclick="duplicateVideo('${v.id}')">⧉ שכפל</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteVideo('${v.id}')">🗑 מחק</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function duplicateVideo(id) {
+  const v = videos.find(x => x.id === id); if (!v) return;
+  const copy = JSON.parse(JSON.stringify(v));
+  copy.id = uid(); copy.title = v.title + ' (עותק)';
+  copy.actual = { published: false, views: null, watchPct: null, leads: null };
+  copy.createdAt = copy.updatedAt = Date.now();
+  videos.unshift(copy); persistVideos(); renderLibrary(); toast('שוכפל ✓');
+}
+function deleteVideo(id) {
+  const v = videos.find(x => x.id === id); if (!v) return;
+  if (!confirm(`למחוק את הסרטון "${v.title}"?`)) return;
+  videos = videos.filter(x => x.id !== id); persistVideos(); renderLibrary(); toast('נמחק');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function showEditorError(msg) { const b = document.getElementById('editorError'); b.textContent = msg; b.classList.add('show'); }
+function hideEditorError() { document.getElementById('editorError').classList.remove('show'); }
+
+let toastTimer;
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isErr ? 'var(--accent2)' : 'var(--green)';
+  t.style.color = isErr ? 'var(--accent2)' : 'var(--green)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Patch saveVideo to persist a pending AI result from a brand-new video
+const _origSaveVideo = saveVideo;
+saveVideo = function() {
+  const wasNew = !editingId;
+  const title = document.getElementById('vidTitle').value.trim();
+  if (!title) { toast('צריך שם לסרטון', true); return; }
+  const fields = readEditorFields();
+  const checklist = readChecklistState();
+  const actual = {
+    published: document.getElementById('vidPublished').checked,
+    views: numOrNull(document.getElementById('vidViews').value),
+    watchPct: numOrNull(document.getElementById('vidWatch').value),
+    leads: numOrNull(document.getElementById('vidLeads').value),
+  };
+  if (editingId) {
+    const v = videos.find(x => x.id === editingId);
+    Object.assign(v, { title, fields, checklist, actual, updatedAt: Date.now() });
+  } else {
+    videos.unshift({ id: uid(), title, fields, checklist, actual, aiResult: pendingAiResult || null, createdAt: Date.now(), updatedAt: Date.now() });
+    pendingAiResult = null;
+  }
+  persistVideos();
+  toast('הסרטון נשמר ✓');
+  switchView('library');
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+updateApiBtn();
+renderLibrary();
+</script>
+
+</body>
+</html>
