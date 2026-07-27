@@ -453,7 +453,10 @@ const EXPERT_FRAMEWORK = `אתה חושב לפי העקרונות של יוצר�
 7. CTA יחיד וברור בסוף (מה בדיוק לעשות עכשיו).
 8. שלוש הסיבות שגוללים החוצה: התוכן מבלבל, משעמם, או לא אמין. סרוק כל רגע כזה — הוסף לצידו הוכחה, או מחק אותו.
 9. כל טענה גדולה חייבת ביסוס. הוכח אותה ב-3 דרכים: עובדה, ציטוט, וסיפור קצר שמתחבר לתוכן.
-10. Net New Value: הערך חייב להיות טקטי ויישומי — משהו שהצופה לא ידע. לא "מובן מאליו".`;
+10. Net New Value: הערך חייב להיות טקטי ויישומי — משהו שהצופה לא ידע. לא "מובן מאליו".
+11. שני מנגנוני הצלחה — סרטון יכול לנצח באחד מהם, זהה לאיזה התסריט מכוון והערך לפיו:
+   (א) תפוצה: תוכן שמיר/שָתיר שמייצר שמירות ושיתופים וחשיפה גבוהה ללא-עוקבים.
+   (ב) המרה: CTA חזק שמבקש להגיב מילה כדי לקבל מדריך/לינק — מייצר תגובות רבות + עוקבים חדשים + פניות DM.`;
 
 const RULE_TYPES = {
   minWords:        { label: 'מינימום מילים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
@@ -741,22 +744,29 @@ function computeReadiness(fields, checklistState) {
   return { total, mustFailed: must.filter(r => !r.passed).length };
 }
 
-// Objective performance score from real IG signals (calibrated: save ~2% & share ~2.5% = excellent)
+// Objective performance score from real IG signals. Two winning modes (calibrated on real data):
+//   Mode A "reach": saveable/shareable -> saves+shares+non-follower distribution
+//   Mode B "conversion": strong comment-CTA -> comments + new follows (DM/lead funnel)
+// A video wins if it's strong in EITHER mode, so we take the higher of the two.
 function computePerformance(a) {
   if (!a || !a.reach) return null;
   const r = a.reach;
   const saveRate = (a.saves || 0) / r;
   const shareRate = (a.shares || 0) / r;
+  const commentRate = (a.comments || 0) / r;
   const followRate = (a.follows || 0) / r;
-  const nf = (a.nonFollowerPct || 0) / 100;
-  const score = Math.round(
-    Math.min(1, saveRate / 0.02) * 30 +
-    Math.min(1, shareRate / 0.025) * 30 +
-    Math.min(1, nf / 0.85) * 25 +
-    Math.min(1, followRate / 0.006) * 15
-  );
-  return { score, saveRate, shareRate, followRate, nf };
+  const s_save = Math.min(1, saveRate / 0.02);      // 2% save rate = excellent
+  const s_share = Math.min(1, shareRate / 0.025);   // 2.5% share rate = excellent
+  const s_comment = Math.min(1, commentRate / 0.01);// 1% comment rate = excellent
+  const s_follow = Math.min(1, followRate / 0.006); // 0.6% follow conversion = excellent
+  const s_nf = a.nonFollowerPct != null ? Math.min(1, (a.nonFollowerPct / 100) / 0.85) : 0.5;
+  const reachScore = Math.round(100 * (s_save * 0.4 + s_share * 0.4 + s_nf * 0.2));
+  const convScore  = Math.round(100 * (s_comment * 0.55 + s_follow * 0.45));
+  const score = Math.max(reachScore, convScore);
+  const mode = convScore > reachScore ? 'conversion' : 'reach';
+  return { score, reachScore, convScore, mode, saveRate, shareRate, commentRate, followRate };
 }
+const MODE_LABEL = { reach: 'תפוצה (שמירות+שיתופים)', conversion: 'המרה (תגובות+עוקבים)' };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  EDITOR
@@ -834,8 +844,8 @@ function updatePerfPreview() {
   const c = scoreColor(p.score);
   el.innerHTML = `<div class="rule-result pass" style="border-color:${c}">
     <span class="rr-icon">📈</span>
-    <span><span class="rr-name" style="color:${c}">ציון ביצועים בפועל: ${p.score}/100</span> —
-    <span class="rr-detail">שמירות ${(p.saveRate*100).toFixed(1)}% · שיתופים ${(p.shareRate*100).toFixed(1)}% · לא-עוקבים ${a.nonFollowerPct||0}% · ${a.follows||0} עוקבים חדשים</span></span>
+    <span><span class="rr-name" style="color:${c}">ציון ביצועים בפועל: ${p.score}/100</span> · מנצח דרך: ${MODE_LABEL[p.mode]}<br>
+    <span class="rr-detail">תפוצה ${p.reachScore} / המרה ${p.convScore} · שמירות ${(p.saveRate*100).toFixed(1)}% · שיתופים ${(p.shareRate*100).toFixed(1)}% · תגובות ${(p.commentRate*100).toFixed(1)}% · ${a.follows||0} עוקבים חדשים</span></span>
   </div>`;
 }
 
@@ -964,7 +974,7 @@ function buildAiPrompt(fields) {
     const examples = withResults.slice(0, 12).map(v => {
       const s = config.blocks.map(b => `${b.name}: ${(v.fields?.[b.id]||'').slice(0,300)}`).join(' | ');
       const a = v.actual; const p = computePerformance(a);
-      return `- "${v.title}" | ציון ביצועים בפועל: ${p ? p.score : '?'}/100 | חשיפה ${a.reach}, ${a.saves??0} שמירות, ${a.shares??0} שיתופים, ${a.nonFollowerPct??'?'}% לא-עוקבים, ${a.follows??0} עוקבים חדשים\n  תסריט: ${s}`;
+      return `- "${v.title}" | ציון ${p ? p.score : '?'}/100 (מנצח דרך: ${p ? MODE_LABEL[p.mode] : '?'}) | חשיפה ${a.reach}, ${a.saves??0} שמירות, ${a.shares??0} שיתופים, ${a.comments??0} תגובות, ${a.follows??0} עוקבים חדשים, ${a.nonFollowerPct??'?'}% לא-עוקבים\n  תסריט: ${s}`;
     }).join('\n');
     historyBlock = `\n\n## היסטוריה — סרטונים קודמים שלי ותוצאותיהם בפועל (${withResults.length}):\n${examples}\n\nחשוב: "ציון ביצועים בפועל" מבוסס על שיעור שמירות, שיעור שיתופים, אחוז חשיפה ללא-עוקבים והמרת עוקבים — האותות שבאמת מנבאים הצלחה כאן (לא צפיות גולמיות). זהה מה מבדיל בין הציונים הגבוהים לנמוכים ובסס על כך את הערכת הסיכוי.`;
   }
@@ -1086,8 +1096,8 @@ function renderLibrary() {
     const publishedBadge = a.published ? `<span class="badge green">פורסם</span>` : `<span class="badge gray">טיוטה</span>`;
     const perf = computePerformance(a);
     const resultsBadge = (a.published && a.views != null)
-      ? `<span class="badge">👁 ${Number(a.views).toLocaleString('he')} · 🔖 ${a.saves ?? 0} · 🔁 ${a.shares ?? 0} · ➕ ${a.follows ?? 0}</span>` : '';
-    const perfBadge = perf ? `<span class="badge" style="color:${scoreColor(perf.score)};border-color:${scoreColor(perf.score)}">📈 ביצועים ${perf.score}</span>` : '';
+      ? `<span class="badge">👁 ${Number(a.views).toLocaleString('he')} · 🔖 ${a.saves ?? 0} · 🔁 ${a.shares ?? 0} · 💬 ${a.comments ?? 0} · ➕ ${a.follows ?? 0}</span>` : '';
+    const perfBadge = perf ? `<span class="badge" style="color:${scoreColor(perf.score)};border-color:${scoreColor(perf.score)}">📈 ביצועים ${perf.score} · ${MODE_LABEL[perf.mode]}</span>` : '';
     const mustBadge = readiness.mustFailed > 0 ? `<span class="badge red">${readiness.mustFailed} חוקי חובה נכשלו</span>` : '';
     return `
     <div class="vid-card">
