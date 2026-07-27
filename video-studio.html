@@ -333,6 +333,14 @@
       </div>
       <div class="error-box" id="genError"></div>
       <div id="genResult" style="margin-top:14px"></div>
+      <div style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px">
+        <div class="hint" style="margin-bottom:8px">אין מפתח API בתשלום? העתק את הפרומפט, הדבק בצ'אט חינמי (Claude.ai / ChatGPT / Gemini), והחזר את התשובה לכאן:</div>
+        <button class="btn btn-ghost btn-sm" onclick="copyGenPrompt()">📋 העתק פרומפט (חינם)</button>
+        <div id="genPasteWrap" style="display:none; margin-top:10px">
+          <textarea id="genPaste" placeholder="הדבק כאן את תשובת ה-JSON מהצ'אט..." style="direction:ltr; min-height:110px; font-size:12px"></textarea>
+          <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="applyPastedGen()">טען תסריט מההדבקה</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -362,6 +370,11 @@
       <div class="card-title">🤖 בדיקה חכמה + הערכת סיכוי (Claude)</div>
       <div class="card-desc">Claude בודק את "החוקים הרכים", נותן ציון איכות, מעריך סיכוי הצלחה ומציע שיפורים. ככל שתזין יותר תוצאות בפועל, ההערכה מדויקת יותר.</div>
       <button class="btn btn-primary" id="aiBtn" onclick="runAiCheck()">🤖 הרץ בדיקה חכמה</button>
+      <button class="btn btn-ghost btn-sm" style="margin-right:8px" onclick="copyCheckPrompt()">📋 העתק פרומפט (חינם)</button>
+      <div id="checkPasteWrap" style="display:none; margin-top:12px">
+        <textarea id="checkPaste" placeholder="הדבק כאן את תשובת ה-JSON מהצ'אט החינמי..." style="direction:ltr; min-height:110px; font-size:12px"></textarea>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="applyPastedCheck()">טען תוצאה מההדבקה</button>
+      </div>
       <div class="error-box" id="editorError"></div>
       <div id="aiResults" style="margin-top:18px"></div>
     </div>
@@ -875,6 +888,10 @@ function openEditor(id) {
   hideEditorError();
   document.getElementById('genTopic').value = '';
   document.getElementById('genResult').innerHTML = '';
+  document.getElementById('genPasteWrap').style.display = 'none';
+  document.getElementById('genPaste').value = '';
+  document.getElementById('checkPasteWrap').style.display = 'none';
+  document.getElementById('checkPaste').value = '';
   hideGenError();
   onEditorInput();
   updatePerfPreview();
@@ -1120,6 +1137,56 @@ async function generateScript() {
   } finally {
     btn.disabled = false; btn.innerHTML = '✍️ כתוב תסריט';
   }
+}
+
+// ── Free mode: copy prompt -> paste result (no paid API) ────────────────────
+function copyToClipboard(text, okMsg) {
+  navigator.clipboard.writeText(text).then(() => toast(okMsg || 'הועתק ✓')).catch(() => toast('העתקה נכשלה', true));
+}
+function fillBlocksFromParsed(parsed) {
+  if (!parsed.blocks) return;
+  const lower = {}; Object.keys(parsed.blocks).forEach(k => lower[k.trim().toLowerCase()] = parsed.blocks[k]);
+  config.blocks.forEach(b => {
+    const val = parsed.blocks[b.name] ?? lower[b.name.trim().toLowerCase()];
+    const ta = document.querySelector(`#blockFields textarea[data-block="${b.id}"]`);
+    if (ta && val != null) ta.value = val;
+  });
+}
+function copyGenPrompt() {
+  const topic = document.getElementById('genTopic').value.trim();
+  if (!topic) { showGenError('כתוב נושא לסרטון'); return; }
+  hideGenError();
+  copyToClipboard(buildGenPrompt(topic, document.getElementById('genGoal').value), 'הפרומפט הועתק — הדבק בצ׳אט חינמי');
+  document.getElementById('genPasteWrap').style.display = 'block';
+}
+function applyPastedGen() {
+  let parsed;
+  try { parsed = parseAiJson(document.getElementById('genPaste').value); } catch (e) { showGenError('JSON לא תקין בהדבקה'); return; }
+  hideGenError();
+  fillBlocksFromParsed(parsed);
+  if (!document.getElementById('vidTitle').value.trim()) document.getElementById('vidTitle').value = document.getElementById('genTopic').value.trim();
+  onEditorInput();
+  const modeLbl = MODE_LABEL[parsed.targetMode] || '';
+  document.getElementById('genResult').innerHTML = `<div class="rule-result pass"><span class="rr-icon">✨</span><span><span class="rr-name">נטען תסריט${modeLbl ? ` · יעד: ${modeLbl}` : ''}</span>${parsed.rationale ? `<br><span class="rr-detail">${esc(parsed.rationale)}</span>` : ''}</span></div>`;
+  toast('התסריט נטען ✓');
+}
+function copyCheckPrompt() {
+  const fields = readEditorFields();
+  const hasContent = config.blocks.some(b => (fields[b.id] || '').trim().length > 3);
+  if (!hasContent) { showEditorError('כתוב קודם תסריט לפני העתקת הפרומפט'); return; }
+  hideEditorError();
+  copyToClipboard(buildAiPrompt(fields), 'הפרומפט הועתק — הדבק בצ׳אט חינמי');
+  document.getElementById('checkPasteWrap').style.display = 'block';
+}
+function applyPastedCheck() {
+  let parsed;
+  try { parsed = parseAiJson(document.getElementById('checkPaste').value); } catch (e) { showEditorError('JSON לא תקין בהדבקה'); return; }
+  hideEditorError();
+  parsed._at = Date.now();
+  renderAiResults(parsed);
+  if (editingId) { const v = videos.find(x => x.id === editingId); if (v) { v.aiResult = parsed; persistVideos(); } }
+  else { pendingAiResult = parsed; }
+  toast('התוצאה נטענה ✓');
 }
 
 function buildAiPrompt(fields) {
