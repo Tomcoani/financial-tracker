@@ -797,8 +797,9 @@ function computePerformance(a) {
   const s_share = Math.min(1, shareRate / 0.025);   // 2.5% share rate = excellent
   const s_comment = Math.min(1, commentRate / 0.01);// 1% comment rate = excellent
   const s_follow = Math.min(1, followRate / 0.006); // 0.6% follow conversion = excellent
-  const s_nf = a.nonFollowerPct != null ? Math.min(1, (a.nonFollowerPct / 100) / 0.85) : 0.5;
-  const reachScore = Math.round(100 * (s_save * 0.4 + s_share * 0.4 + s_nf * 0.2));
+  // non-follower reach = the "did it actually spread" signal: <45% = none, ~90%+ = full
+  const s_nf = a.nonFollowerPct != null ? Math.max(0, Math.min(1, (a.nonFollowerPct / 100 - 0.45) / 0.45)) : 0.5;
+  const reachScore = Math.round(100 * (s_save * 0.25 + s_share * 0.25 + s_nf * 0.5));
   const convScore  = Math.round(100 * (s_comment * 0.55 + s_follow * 0.45));
   const score = Math.max(reachScore, convScore);
   const mode = convScore > reachScore ? 'conversion' : 'reach';
@@ -1138,10 +1139,17 @@ ${EXPERT_FRAMEWORK}${notesBlock}
   "reasoning": "<פסקה קצרה בעברית שמסבירה את הערכת הסיכוי>",
   "suggestions": [ "<שיפור קונקרטי 1>", "<שיפור 2>", "<שיפור 3>" ],
   "weakMoments": [ { "text": "<ציטוט קצר מהתסריט>", "issue": "confusing" | "boring" | "unproven", "suggestion": "<הוכחה קונקרטית להוסיף (עובדה/ציטוט/סיפור קצר) או המלצה למחוק את הרגע>" } ],
+  "threeQuestions": [
+    { "q": "הצופה כנראה מעולם לא שמע את זה", "passed": true/false, "comment": "<הסבר קצר>" },
+    { "q": "הצופה יכול ליישם את זה כבר היום", "passed": true/false, "comment": "<הסבר קצר>" },
+    { "q": "ראוי ל-10K צפיות (קהל רחב מספיק)", "passed": true/false, "comment": "<הסבר קצר>" }
+  ],
   "improvedHook": "<גרסה משופרת ל-HOOK, בעברית>"
 }
 
 חשוב: סרוק את כל התסריט ואתר כל רגע שהוא מבלבל (confusing), משעמם (boring) או לא-אמין/טענה גדולה ללא ביסוס (unproven), והחזר אותם ב-weakMoments. לכל רגע כזה הצע הוכחה קונקרטית להוסיף — עדיף אחת מ-3: עובדה, ציטוט, או סיפור קצר שמתחבר — או המלץ למחוק אותו אם אי אפשר לבסס.
+
+שלב סינון סופי (threeQuestions) — ענה בכנות על שלוש השאלות: (1) האם זה משהו שהצופה כנראה מעולם לא שמע (חדש ולא מובן מאליו)? (2) האם הצופה יכול ליישם את זה כבר היום? (3) האם זה ראוי ל-10K צפיות — יש לזה קהל רחב מספיק ומשיכה? אם אחת נכשלת, זה דגל אדום לתסריט.
 
 ## החוקים הרכים שצריך להעריך (softRules — פריט לכל אחד):
 ${softRules}
@@ -1195,6 +1203,12 @@ function renderAiResults(r) {
       </div>
     </div>
     ${r.reasoning ? `<div class="reasoning">${esc(r.reasoning)}</div>` : ''}
+
+    ${(r.threeQuestions && r.threeQuestions.length) ? `<div class="section-label">שלב סינון — 3 השאלות</div>${r.threeQuestions.map(q => `
+      <div class="rule-result ${q.passed ? 'pass' : 'fail-must'}">
+        <span class="rr-icon">${q.passed ? '✅' : '❌'}</span>
+        <span><span class="rr-name">${esc(q.q)}</span>${q.comment ? `<br><span class="rr-detail">${esc(q.comment)}</span>` : ''}</span>
+      </div>`).join('')}` : ''}
 
     ${scoresHtml ? `<div class="section-label">פירוק ציונים</div>${scoresHtml}` : ''}
 
