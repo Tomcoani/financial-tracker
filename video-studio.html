@@ -476,7 +476,7 @@
 //  STATE + STORAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const CONFIG_VERSION = 4;
+const CONFIG_VERSION = 5;
 
 // Built-in "expert brain" — established attention/retention principles taught by top
 // short-form creators (e.g. attention-psychology-focused creators like @iamchrischung).
@@ -506,6 +506,7 @@ const RULE_TYPES = {
   mustContain:     { label: 'חייב להכיל אחת מ...',   needsValue: true,  vPlaceholder: 'מילים מופרדות בפסיק', vType: 'text' },
   mustNotContain:  { label: 'אסור להכיל...',         needsValue: true,  vPlaceholder: 'מילים אסורות מופרדות בפסיק', vType: 'text' },
   maxSentenceWords:{ label: 'משפט לא ארוך מ... מילים', needsValue: true, vPlaceholder: 'מספר', vType: 'number' },
+  maxSentences:    { label: 'מקסימום משפטים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
 };
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -515,35 +516,42 @@ function defaultConfig() {
   return {
     _v: CONFIG_VERSION,
     blocks: [
-      { id: bHook,     name: 'HOOK',          guideline: '3 השניות הראשונות — הבטחה קונקרטית או סקרנות ספציפית' },
-      { id: bSuper,    name: 'SUPER HOOK',    guideline: 'משפט שמחייב להישאר עד הסוף (מעלה סטייקס)' },
-      { id: bContext,  name: 'Context',       guideline: 'רקע קצר שממסגר את הבעיה — למה זה רלוונטי עכשיו' },
+      { id: bHook,     name: 'HOOK',          guideline: 'משפט אחד קצר שעוצר גלילה ויוצר סקרנות (לא 3+ משפטים)' },
+      { id: bSuper,    name: 'SUPER HOOK',    guideline: 'מבוסס על מחקר / תוצאה / מאמץ — סמכות. למשל: "אחרי שקראתי 20 ספרים על כסף, אלו 3 הדברים..."' },
+      { id: bContext,  name: 'Context',       guideline: 'שורה-שתיים בלבד שממסגרות את הבעיה — לא 5 שורות רקע' },
       { id: bResearch, name: 'Research',      guideline: 'ביסוס: נתון, מקור, עובדה או דוגמה — לא רק דעה' },
-      { id: bValue,    name: 'Net New Value', guideline: 'ערך טקטי ויישומי שהצופה לא ידע — לא "מובן מאליו"' },
+      { id: bValue,    name: 'Net New Value', guideline: 'רעיון אחד, טקטי ויישומי היום, שהצופה לא ידע — לא "מובן מאליו"' },
       { id: bCta,      name: 'CTA',           guideline: 'קריאה אחת ברורה לפעולה (הגיבו/עקבו/שתפו)' },
     ],
     localRules: [
       { id: uid(), name: 'HOOK קצר וממוקד', type: 'maxWords', target: bHook, value: '16', severity: 'must' },
+      { id: uid(), name: 'HOOK לא 3+ משפטים', type: 'maxSentences', target: bHook, value: '2', severity: 'must' },
       { id: uid(), name: 'HOOK כולל מספר/ספציפיות', type: 'containsNumber', target: bHook, value: '', severity: 'nice' },
+      { id: uid(), name: 'Context קצר (לא 5 שורות)', type: 'maxSentences', target: bContext, value: '2', severity: 'nice' },
       { id: uid(), name: 'Research מגובה בנתון/מספר', type: 'containsNumber', target: bResearch, value: '', severity: 'nice' },
       { id: uid(), name: 'CTA ברור וקיים', type: 'mustContain', target: bCta, value: 'הגיבו, תגיבו, עקבו, עקוב, שתפו, שמרו, לינק, קישור, הורידו, כתבו', severity: 'must' },
       { id: uid(), name: 'בלי מילות מילוי', type: 'mustNotContain', target: '__all__', value: 'בעצם, כאילו, אמממ', severity: 'nice' },
       { id: uid(), name: 'משפטים לא ארוכים מדי', type: 'maxSentenceWords', target: '__all__', value: '22', severity: 'nice' },
     ],
     aiRules: [
-      { id: uid(), text: 'ה-HOOK מבטיח ערך קונקרטי או יוצר סקרנות ספציפית ב-3 השניות הראשונות — לא פתיח אבסטרקטי/פילוסופי איטי' },
-      { id: uid(), text: 'ה-Net New Value טקטי ויישומי — משהו שהצופה לא ידע, לא "מובן מאליו"' },
-      { id: uid(), text: 'כל טענה גדולה מגובה בהוכחה — עדיף ב-3 דרכים: עובדה, ציטוט, וסיפור קצר שמתחבר לתוכן' },
-      { id: uid(), text: 'אין רגעים מבלבלים, משעממים או לא-אמינים — לכל רגע כזה מוצגת הוכחה לצידו, או שהוא נמחק' },
-      { id: uid(), text: 'ה-Context ברור: הצופה מבין את הרקע והבעיה לפני הערך' },
-      { id: uid(), text: 'התוכן ניתן לשמירה ולשיתוף (רשימה/צעדים/מידע שימושי לשלוח למישהו)' },
-      { id: uid(), text: 'יש CTA אחד ברור וממוקד בסוף' },
+      { id: uid(), text: 'יש HOOK עוצר-גלילה שיוצר סקרנות ב-3 השניות הראשונות — קיים, קצר (לא 3+ משפטים), לא אבסטרקטי' },
+      { id: uid(), text: 'ה-SUPER HOOK מבוסס על מחקר / תוצאה / מאמץ שנתן סמכות (למשל "אחרי שקראתי 20 ספרים...")' },
+      { id: uid(), text: 'רעיון אחד בלבד לסרטון — לא מלמדים כמה דברים בבת אחת' },
+      { id: uid(), text: 'הרעיון חדש ומשנה מה שהצופה חושב או עושה — לא משהו שכולם כבר יודעים' },
+      { id: uid(), text: 'מגיע לערך מהר — מקסימום שורה-שתיים של הקשר, בלי לעכב את המהירות לערך' },
+      { id: uid(), text: 'שפה פשוטה וברורה, מובן מהפעם הראשונה, בלי ניסוחים מעורפלים כמו "זה יותר טוב"' },
+      { id: uid(), text: 'יש דוגמה קונקרטית + הוכחה לכל טענה גדולה (עובדה / ציטוט / סיפור קצר)' },
+      { id: uid(), text: 'מקיים את ההבטחה של ה-HOOK — מספק את מה שהובטח' },
+      { id: uid(), text: 'בלי חזרות — לא אומרים את אותו דבר פעמיים בלי להוסיף מידע חדש' },
+      { id: uid(), text: 'ניתן לשמירה/שיתוף + יש CTA אחד ברור בסוף' },
     ],
     checklist: [
-      { id: uid(), label: 'ה-HOOK מבטיח ערך קונקרטי (לא פתיח אבסטרקטי)' },
-      { id: uid(), label: 'ה-Net New Value טקטי — לא מובן מאליו' },
-      { id: uid(), label: 'כל טענה גדולה מגובה בהוכחה (עובדה/ציטוט/סיפור)' },
-      { id: uid(), label: 'אין רגע מבלבל / משעמם / לא-אמין בלי הוכחה' },
+      { id: uid(), label: 'ה-Net New Value טקטי ויישים היום — לא מובן מאליו' },
+      { id: uid(), label: 'יש HOOK כטקסט על המסך' },
+      { id: uid(), label: 'יש כתוביות בסרטון' },
+      { id: uid(), label: 'האודיו ברור — המוזיקה לא מכסה את הקול' },
+      { id: uid(), label: 'קיצצתי זמן מת בין השורות' },
+      { id: uid(), label: 'ה-B-roll קשור למה שנאמר' },
       { id: uid(), label: 'ה-CTA ברור וספציפי' },
     ],
     expertNotes: 'יוצרי רפרנס: @iamchrischung ("פסיכולוגיה של תשומת לב").\nעקרונות שאני אוהב:\n- כל שנייה קונה את הבאה — הפריים הראשון חייב לעצור גלילה.\n- פותחים "לולאה פתוחה" (open loop) ולא סוגרים מיד.\n- ספציפיות ומספרים במקום כלליות.\n(הוסף כאן טיפים/עקרונות נוספים ככל שתלמד — הם נכנסים לכל בדיקה חכמה.)',
@@ -757,6 +765,12 @@ function evalRule(r, fields) {
       detail = `${where}: המשפט הארוך ביותר ${longest} מילים (מקסימום ${v})`;
       break;
     }
+    case 'maxSentences': {
+      const sentences = text.split(/[.!?\n]+/).map(s => s.trim()).filter(Boolean);
+      passed = sentences.length <= (+v || Infinity);
+      detail = `${where}: ${sentences.length} משפטים (מקסימום ${v})`;
+      break;
+    }
     default: detail = 'סוג חוק לא ידוע';
   }
   return { passed, detail };
@@ -799,7 +813,11 @@ function computePerformance(a) {
   const s_follow = Math.min(1, followRate / 0.006); // 0.6% follow conversion = excellent
   // non-follower reach = the "did it actually spread" signal: <45% = none, ~90%+ = full
   const s_nf = a.nonFollowerPct != null ? Math.max(0, Math.min(1, (a.nonFollowerPct / 100 - 0.45) / 0.45)) : 0.5;
-  const reachScore = Math.round(100 * (s_save * 0.25 + s_share * 0.25 + s_nf * 0.5));
+  // overall engagement rate = general "the algorithm likes this" signal (~6% of reach = excellent)
+  const interactions = (a.likes || 0) + (a.comments || 0) + (a.saves || 0) + (a.shares || 0);
+  const s_eng = Math.min(1, (interactions / r) / 0.06);
+  // shares are the strongest distribution lever -> highest weight; non-follower reach confirms spread
+  const reachScore = Math.round(100 * (s_share * 0.35 + s_nf * 0.40 + s_save * 0.15 + s_eng * 0.10));
   const convScore  = Math.round(100 * (s_comment * 0.55 + s_follow * 0.45));
   const score = Math.max(reachScore, convScore);
   const mode = convScore > reachScore ? 'conversion' : 'reach';
@@ -1055,6 +1073,9 @@ ${winners}
 ${flops}
 
 ${goalText}
+
+## כללים שחובה לעמוד בהם (זה ההפך מ"רשימת הכישלון" — עמוד בכולם):
+${config.aiRules.map((r, i) => `${i + 1}. ${r.text}`).join('\n')}
 
 כתוב תסריט חדש ומקורי לנושא: "${topic}"
 בנה אותו בדיוק לפי הבלוקים הבאים, כל בלוק בנפרד:
