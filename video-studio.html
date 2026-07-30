@@ -344,8 +344,16 @@
     </div>
 
     <div class="card">
-      <label class="field-label">שם / נושא הסרטון</label>
-      <input type="text" id="vidTitle" placeholder="למשל: 3 טעויות שכל עצמאי עושה עם המסים" />
+      <div class="row" style="gap:12px; flex-wrap:wrap; align-items:flex-end">
+        <div class="grow">
+          <label class="field-label">שם / נושא</label>
+          <input type="text" id="vidTitle" placeholder="למשל: 3 טעויות שכל עצמאי עושה עם המסים" />
+        </div>
+        <div>
+          <label class="field-label">סוג תוכן</label>
+          <select id="vidType" onchange="changeEditorType(this.value)"></select>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -413,6 +421,12 @@
   <!-- ══════════ CONFIG VIEW ══════════ -->
   <div class="view" id="view-config">
 
+    <div class="card" style="border-color: rgba(108,99,255,0.35)">
+      <div class="card-title">🎞️ סוג תוכן</div>
+      <div class="card-desc">כל סוג תוכן (ריל / קרוסלה) מקבל תבנית, חוקים, צ'קליסט והיסטוריה נפרדים. בחר איזה סוג אתה עורך:</div>
+      <div id="cfgTypeSwitch" class="row" style="gap:8px; flex-wrap:wrap"></div>
+    </div>
+
     <div class="card">
       <div class="card-title">🧱 שלד התבנית</div>
       <div class="card-desc">הבלוקים שכל סרטון בנוי מהם, לפי הסדר. לכל בלוק אפשר להוסיף הנחיה קצרה שתופיע בעורך.</div>
@@ -437,7 +451,7 @@
     <div class="card">
       <div class="card-title">🧠 בסיס ידע / יוצרי רפרנס</div>
       <div class="card-desc">עקרונות ותובנות שנכנסים ל"מוח" של Claude בכל בדיקה חכמה — בנוסף למסגרת המקצועית המובנית. הוסף כאן טיפים מיוצרים שאתה מעריך (למשל @iamchrischung), ניסוחי HOOK שעבדו, או כללים אישיים.</div>
-      <textarea id="cfgExpertNotes" style="min-height:150px" placeholder="למשל: כל שנייה קונה את הבאה; פותחים לולאה פתוחה; ספציפיות ומספרים..." oninput="config.expertNotes=this.value"></textarea>
+      <textarea id="cfgExpertNotes" style="min-height:150px" placeholder="למשל: כל שנייה קונה את הבאה; פותחים לולאה פתוחה; ספציפיות ומספרים..." oninput="store.expertNotes=this.value"></textarea>
     </div>
 
     <div class="card">
@@ -489,7 +503,7 @@
 //  STATE + STORAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const CONFIG_VERSION = 6;
+const CONFIG_VERSION = 7;
 
 // Built-in "expert brain" — established attention/retention principles taught by top
 // short-form creators (e.g. attention-psychology-focused creators like @iamchrischung).
@@ -507,7 +521,16 @@ const EXPERT_FRAMEWORK = `אתה חושב לפי העקרונות של יוצר�
 10. Net New Value: הערך חייב להיות טקטי ויישומי — משהו שהצופה לא ידע. לא "מובן מאליו".
 11. שני מנגנוני הצלחה — סרטון יכול לנצח באחד מהם, זהה לאיזה התסריט מכוון והערך לפיו:
    (א) תפוצה: תוכן שמיר/שָתיר שמייצר שמירות ושיתופים וחשיפה גבוהה ללא-עוקבים.
-   (ב) המרה: CTA חזק שמבקש להגיב מילה כדי לקבל מדריך/לינק — מייצר תגובות רבות + עוקבים חדשים + פניות DM.`;
+   (ב) המרה: CTA חזק שמבקש להגיב מילה כדי לקבל מדריך/לינק — מייצר תגובות רבות + עוקבים חדשים + פניות DM.
+
+## אנטומיית הוק מתקדמת (מבנה פתיח מנצח):
+12. HOOK = מילת סקרנות (כמו "לרמות" / "דלת אחורית") + תוצאת חלום ("להוסיף 100 אלף עוקבים מהר") + פער סקרנות (מהי הדלת האחורית?).
+13. PRIMER: משפט שהולך *נגד* מה שכל הגורואים מטיפים — מכפיל את הסקרנות.
+14. SUPER HOOK = הוכחה שאי אפשר להתווכח איתה: שמות + מספרים + מסגרת זמן ("ג'ייק הוסיף 100 אלף עוקבים ב-4 שבועות"). זה מה שמשאיר אותם לצפות.
+15. ניגוד: השתמש ב"אבל" כדי למתוח את הפער — "המתחרים עושים X, אבל...". יוצר מסגור "אנחנו מול הם".
+16. REHOOK: באמצע התוכן, מילה חדשה/לא צפויה שתופסת מחדש את תשומת הלב.
+17. הרשאת סמכות: ציטוט של מומחה/מיליארדר מגביר אמינות (למשל צ'רלי מאנגר: "יתרון עצום לאורך זמן למי שמנסה לא להיות טיפש באופן עקבי, במקום לנסות להיות מאוד חכם").
+18. אינברסיה: קח את "רשימת הכישלון" ועשה בדיוק את ההפך — הסרה עקבית של כל הרע, בהגדרה, הופכת את התוכן לטוב.`;
 
 const RULE_TYPES = {
   minWords:        { label: 'מינימום מילים',        needsValue: true,  vPlaceholder: 'מספר', vType: 'number' },
@@ -524,10 +547,10 @@ const RULE_TYPES = {
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-function defaultConfig() {
+function defaultReelType() {
   const bHook = uid(), bSuper = uid(), bContext = uid(), bResearch = uid(), bValue = uid(), bCta = uid();
   return {
-    _v: CONFIG_VERSION,
+    name: 'ריל',
     blocks: [
       { id: bHook,     name: 'HOOK',          guideline: 'משפט אחד קצר שעוצר גלילה ויוצר סקרנות (לא 3+ משפטים)' },
       { id: bSuper,    name: 'SUPER HOOK',    guideline: 'מבוסס על מחקר / תוצאה / מאמץ — סמכות. למשל: "אחרי שקראתי 20 ספרים על כסף, אלו 3 הדברים..."' },
@@ -567,39 +590,98 @@ function defaultConfig() {
       { id: uid(), label: 'ה-B-roll קשור למה שנאמר' },
       { id: uid(), label: 'ה-CTA ברור וספציפי' },
     ],
+  };
+}
+
+function defaultCarouselType() {
+  const bCover = uid(), bContext = uid(), bSlides = uid(), bClose = uid();
+  return {
+    name: 'קרוסלה',
+    blocks: [
+      { id: bCover,   name: 'שער',         guideline: 'שקופית 1 — הוק שעוצר גלילה ומבטיח ערך קונקרטי (רצוי מספר)' },
+      { id: bContext, name: 'Context',     guideline: 'שורה קצרה — למה זה חשוב עכשיו' },
+      { id: bSlides,  name: 'שקופיות ערך', guideline: 'רעיון אחד לכל שקופית — התוכן הטקטי שרוצים לשמור' },
+      { id: bClose,   name: 'שקופית סיום', guideline: 'קריאה לשמור / לשתף / לעקוב' },
+    ],
+    localRules: [
+      { id: uid(), name: 'שער קצר', type: 'maxWords', target: bCover, value: '12', severity: 'must' },
+      { id: uid(), name: 'שער כולל מספר', type: 'containsNumber', target: bCover, value: '', severity: 'nice' },
+      { id: uid(), name: 'בלי מילות מילוי', type: 'mustNotContain', target: '__all__', value: 'בעצם, כאילו, אמממ', severity: 'nice' },
+    ],
+    aiRules: [
+      { id: uid(), text: 'השקופית הראשונה (שער) עוצרת גלילה ומבטיחה ערך קונקרטי' },
+      { id: uid(), text: 'רעיון אחד לכל שקופית — קל לעקוב שקופית-שקופית' },
+      { id: uid(), text: 'התוכן שמיר: רשימה / צעדים / רפרנס שרוצים לשמור ולחזור אליו' },
+      { id: uid(), text: 'ערך טקטי חדש שלא מובן מאליו' },
+      { id: uid(), text: 'כל טענה מגובה בעובדה או דוגמה קונקרטית' },
+      { id: uid(), text: 'שקופית הסיום מזמינה לשמור / לשתף / לעקוב' },
+    ],
+    checklist: [
+      { id: uid(), label: 'השער קריא וברור ויזואלית' },
+      { id: uid(), label: 'עיצוב עקבי בכל השקופיות' },
+      { id: uid(), label: 'רעיון אחד לכל שקופית' },
+      { id: uid(), label: 'התוכן שמיר (רשימה/צעדים)' },
+      { id: uid(), label: 'שקופית סיום עם קריאה לשמור/לעקוב' },
+    ],
+  };
+}
+
+function defaultStore() {
+  return {
+    _v: CONFIG_VERSION,
+    activeType: 'reel',
+    types: { reel: defaultReelType(), carousel: defaultCarouselType() },
     expertNotes: 'יוצרי רפרנס: @iamchrischung ("פסיכולוגיה של תשומת לב").\nעקרונות שאני אוהב:\n- כל שנייה קונה את הבאה — הפריים הראשון חייב לעצור גלילה.\n- פותחים "לולאה פתוחה" (open loop) ולא סוגרים מיד.\n- ספציפיות ומספרים במקום כלליות.\n(הוסף כאן טיפים/עקרונות נוספים ככל שתלמד — הם נכנסים לכל בדיקה חכמה.)',
   };
 }
 
-function loadConfig() {
+function loadStore() {
   try {
     const raw = localStorage.getItem('vs_config');
     if (raw) {
       let c = JSON.parse(raw);
-      // auto-upgrade to calibrated defaults for users who haven't created videos yet
-      if ((c._v || 1) < CONFIG_VERSION && loadVideos().length === 0) {
-        c = defaultConfig();
-      } else {
-        // backfill newly-added keys without clobbering the user's own data
-        const d = defaultConfig();
-        for (const k of Object.keys(d)) if (c[k] === undefined) c[k] = d[k];
+      if (c && c.types) {
+        // already multi-type structure
+        if ((c._v || 1) < CONFIG_VERSION && loadVideos().length === 0) {
+          c = defaultStore();
+        } else {
+          const d = defaultStore();
+          for (const k of Object.keys(d)) if (c[k] === undefined) c[k] = d[k];
+          if (!c.types.reel) c.types.reel = d.types.reel;
+          if (!c.types.carousel) c.types.carousel = d.types.carousel;
+          if (!c.activeType) c.activeType = 'reel';
+        }
+        localStorage.setItem('vs_config', JSON.stringify(c));
+        return c;
       }
-      localStorage.setItem('vs_config', JSON.stringify(c));
-      return c;
+      // migrate old flat config -> types.reel
+      const d = defaultStore();
+      if (c && c.blocks) {
+        d.types.reel = { name: 'ריל', blocks: c.blocks, localRules: c.localRules || d.types.reel.localRules, aiRules: c.aiRules || d.types.reel.aiRules, checklist: c.checklist || d.types.reel.checklist };
+        if (c.expertNotes) d.expertNotes = c.expertNotes;
+      }
+      localStorage.setItem('vs_config', JSON.stringify(d));
+      return d;
     }
   } catch (e) {}
-  const d = defaultConfig();
+  const d = defaultStore();
   localStorage.setItem('vs_config', JSON.stringify(d));
   return d;
 }
-function persistConfig() { localStorage.setItem('vs_config', JSON.stringify(config)); }
+function persistConfig() { localStorage.setItem('vs_config', JSON.stringify(store)); }
+
+// content-type helpers — `config` always points at the active type's working set
+function typeConf(t) { return (store.types && (store.types[t] || store.types.reel)) || config; }
+function typeName(t) { return (store.types[t] || {}).name || t; }
+function setActiveType(t) { if (store.types[t]) { store.activeType = t; config = store.types[t]; } }
 
 function loadVideos() {
   try { return JSON.parse(localStorage.getItem('vs_videos') || '[]'); } catch (e) { return []; }
 }
 function persistVideos() { localStorage.setItem('vs_videos', JSON.stringify(videos)); }
 
-let config = loadConfig();
+let store = loadStore();
+let config = store.types[store.activeType] || store.types.reel;
 let videos = loadVideos();
 let editingId = null; // id of video being edited, or null for new
 
@@ -641,7 +723,13 @@ function switchView(v) {
 
 function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+function switchCfgType(t) { setActiveType(t); renderConfig(); }
+
 function renderConfig() {
+  // Content-type switch
+  document.getElementById('cfgTypeSwitch').innerHTML = Object.keys(store.types).map(t =>
+    `<button class="tab ${store.activeType === t ? 'active' : ''}" style="border-radius:10px" onclick="switchCfgType('${t}')">${esc(typeName(t))}</button>`
+  ).join('');
   // Blocks
   document.getElementById('cfgBlocks').innerHTML = config.blocks.map((b, i) => `
     <div class="cfg-row">
@@ -698,7 +786,7 @@ function renderConfig() {
       <button class="icon-btn" title="מחק" onclick="delCheckItem(${i})">🗑</button>
     </div>`).join('') || '<div class="hint">אין פריטים עדיין.</div>';
 
-  document.getElementById('cfgExpertNotes').value = config.expertNotes || '';
+  document.getElementById('cfgExpertNotes').value = store.expertNotes || '';
 }
 
 function addBlock() { config.blocks.push({ id: uid(), name: '', guideline: '' }); renderConfig(); }
@@ -722,8 +810,10 @@ function saveConfig() {
   persistConfig(); renderConfig(); toast('ההגדרות נשמרו ✓');
 }
 function resetConfig() {
-  if (!confirm('לשחזר את התבנית, החוקים והצ\'קליסט לברירת המחדל? הסרטונים שלך לא יימחקו.')) return;
-  config = defaultConfig(); persistConfig(); renderConfig(); toast('שוחזר לברירת מחדל ✓');
+  if (!confirm('לשחזר את התבנית, החוקים והצ\'קליסט של הסוג הנוכחי לברירת המחדל? הסרטונים שלך לא יימחקו.')) return;
+  store.types[store.activeType] = store.activeType === 'carousel' ? defaultCarouselType() : defaultReelType();
+  config = store.types[store.activeType];
+  persistConfig(); renderConfig(); toast('שוחזר לברירת מחדל ✓');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -731,19 +821,19 @@ function resetConfig() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function wordCount(s) { return (s.trim().match(/\S+/g) || []).length; }
-function getTargetText(fields, target) {
-  if (target === '__all__') return config.blocks.map(b => fields[b.id] || '').join('\n').trim();
+function getTargetText(fields, target, conf = config) {
+  if (target === '__all__') return conf.blocks.map(b => fields[b.id] || '').join('\n').trim();
   return (fields[target] || '').trim();
 }
-function blockName(target) {
+function blockName(target, conf = config) {
   if (target === '__all__') return 'כל התסריט';
-  const b = config.blocks.find(x => x.id === target);
+  const b = conf.blocks.find(x => x.id === target);
   return b ? b.name : '(בלוק שנמחק)';
 }
 
-function evalRule(r, fields) {
-  const text = getTargetText(fields, r.target);
-  const where = blockName(r.target);
+function evalRule(r, fields, conf = config) {
+  const text = getTargetText(fields, r.target, conf);
+  const where = blockName(r.target, conf);
   const v = r.value;
   let passed = true, detail = '';
 
@@ -789,16 +879,16 @@ function evalRule(r, fields) {
   return { passed, detail };
 }
 
-function evalAllRules(fields) {
-  return config.localRules.map(r => ({ rule: r, ...evalRule(r, fields) }));
+function evalAllRules(fields, conf = config) {
+  return conf.localRules.map(r => ({ rule: r, ...evalRule(r, fields, conf) }));
 }
 
 // Readiness score: local must-rules + checklist coverage
-function computeReadiness(fields, checklistState) {
-  const results = evalAllRules(fields);
+function computeReadiness(fields, checklistState, conf = config) {
+  const results = evalAllRules(fields, conf);
   const must = results.filter(r => r.rule.severity === 'must');
   const nice = results.filter(r => r.rule.severity === 'nice');
-  const checkItems = config.checklist;
+  const checkItems = conf.checklist;
   const checkedCount = checkItems.filter(c => checklistState[c.id]).length;
 
   // weights: must rules 50%, nice rules 20%, checklist 30%
@@ -847,6 +937,9 @@ function newVideo() { openEditor(null); }
 function openEditor(id) {
   editingId = id;
   const vid = id ? videos.find(v => v.id === id) : null;
+  setActiveType(vid ? (vid.type || 'reel') : store.activeType);
+  document.getElementById('vidType').innerHTML = Object.keys(store.types).map(t =>
+    `<option value="${t}"${store.activeType === t ? ' selected' : ''}>${esc(typeName(t))}</option>`).join('');
 
   document.getElementById('vidTitle').value = vid ? vid.title : '';
   const av = vid?.actual || {};
@@ -860,26 +953,7 @@ function openEditor(id) {
   document.getElementById('vidLikes').value = av.likes ?? '';
   document.getElementById('vidComments').value = av.comments ?? '';
 
-  // Block fields
-  document.getElementById('blockFields').innerHTML = config.blocks.map(b => `
-    <div class="block-field">
-      <div class="field-head">
-        <div>
-          <span class="block-name">${esc(b.name)}</span>
-          ${b.guideline ? `<span class="block-guideline"> — ${esc(b.guideline)}</span>` : ''}
-        </div>
-        <span class="block-stat" id="stat-${b.id}"></span>
-      </div>
-      <textarea data-block="${b.id}" oninput="onEditorInput()" placeholder="כתוב כאן את ה${esc(b.name)}...">${esc(vid?.fields?.[b.id] || '')}</textarea>
-    </div>`).join('') || '<div class="hint">אין בלוקים בתבנית. הגדר אותם בלשונית "הגדרות".</div>';
-
-  // Checklist
-  const cl = vid?.checklist || {};
-  document.getElementById('checklistItems').innerHTML = config.checklist.map(c => `
-    <label class="check-item ${cl[c.id] ? 'checked' : ''}" data-check="${c.id}">
-      <input type="checkbox" ${cl[c.id] ? 'checked' : ''} onchange="onCheckToggle('${c.id}', this.checked)">
-      <span>${esc(c.label)}</span>
-    </label>`).join('') || '<div class="hint">אין פריטי צ\'קליסט. הגדר אותם בלשונית "הגדרות".</div>';
+  renderEditorTemplate(vid);
 
   // AI results (restore if exist)
   if (vid?.aiResult) renderAiResults(vid.aiResult);
@@ -896,6 +970,35 @@ function openEditor(id) {
   onEditorInput();
   updatePerfPreview();
   switchView('editor');
+}
+
+function renderEditorTemplate(vid) {
+  document.getElementById('blockFields').innerHTML = config.blocks.map(b => `
+    <div class="block-field">
+      <div class="field-head">
+        <div>
+          <span class="block-name">${esc(b.name)}</span>
+          ${b.guideline ? `<span class="block-guideline"> — ${esc(b.guideline)}</span>` : ''}
+        </div>
+        <span class="block-stat" id="stat-${b.id}"></span>
+      </div>
+      <textarea data-block="${b.id}" oninput="onEditorInput()" placeholder="כתוב כאן את ה${esc(b.name)}...">${esc(vid?.fields?.[b.id] || '')}</textarea>
+    </div>`).join('') || '<div class="hint">אין בלוקים בתבנית. הגדר אותם בלשונית "הגדרות".</div>';
+
+  const cl = vid?.checklist || {};
+  document.getElementById('checklistItems').innerHTML = config.checklist.map(c => `
+    <label class="check-item ${cl[c.id] ? 'checked' : ''}" data-check="${c.id}">
+      <input type="checkbox" ${cl[c.id] ? 'checked' : ''} onchange="onCheckToggle('${c.id}', this.checked)">
+      <span>${esc(c.label)}</span>
+    </label>`).join('') || '<div class="hint">אין פריטי צ\'קליסט. הגדר אותם בלשונית "הגדרות".</div>';
+}
+
+function changeEditorType(t) {
+  setActiveType(t);
+  renderEditorTemplate(editingId ? videos.find(v => v.id === editingId) : null);
+  document.getElementById('aiResults').innerHTML = '';
+  document.getElementById('genResult').innerHTML = '';
+  onEditorInput();
 }
 
 function readActual() {
@@ -1059,16 +1162,16 @@ async function callClaude(prompt, maxTokens = 3000) {
 }
 
 // ── Script generation ───────────────────────────────────────────────────────
-function firstBlockText(v) { const b = config.blocks[0]; return (v.fields?.[b.id] || '').slice(0, 140); }
+function firstBlockText(v) { const b = typeConf(v.type || 'reel').blocks[0]; return (v.fields?.[b.id] || '').slice(0, 140); }
 function showGenError(m) { const b = document.getElementById('genError'); b.textContent = m; b.classList.add('show'); }
 function hideGenError() { document.getElementById('genError').classList.remove('show'); }
 
 function buildGenPrompt(topic, goal) {
   const blockList = config.blocks.map(b => `- ${b.name}${b.guideline ? ` (${b.guideline})` : ''}`).join('\n');
-  const expertNotes = (config.expertNotes || '').trim();
+  const expertNotes = (store.expertNotes || '').trim();
   const notesBlock = expertNotes ? `\n\n## עקרונות אישיים (משקל גבוה):\n${expertNotes}` : '';
 
-  const scored = videos.filter(v => v.actual?.reach).map(v => ({ v, p: computePerformance(v.actual) })).filter(x => x.p).sort((a, b) => b.p.score - a.p.score);
+  const scored = videos.filter(v => (v.type || 'reel') === store.activeType && v.actual?.reach).map(v => ({ v, p: computePerformance(v.actual) })).filter(x => x.p).sort((a, b) => b.p.score - a.p.score);
   const fmt = x => `  ["${x.v.title}" — ציון ${x.p.score}/100, ${MODE_LABEL[x.p.mode]}] HOOK: ${firstBlockText(x.v)}`;
   const winners = scored.filter(x => x.p.score >= 60).slice(0, 5).map(fmt).join('\n') || '  (עדיין אין)';
   const flops = scored.filter(x => x.p.score < 40).slice(0, 5).map(fmt).join('\n') || '  (עדיין אין)';
@@ -1194,7 +1297,7 @@ function buildAiPrompt(fields) {
   const softRules = config.aiRules.map((r, i) => `${i+1}. ${r.text}`).join('\n') || '(לא הוגדרו)';
 
   // History of published videos with results
-  const withResults = videos.filter(v => v.actual?.published && v.actual?.reach != null && v.id !== editingId);
+  const withResults = videos.filter(v => (v.type || 'reel') === store.activeType && v.actual?.published && v.actual?.reach != null && v.id !== editingId);
   let historyBlock = '';
   if (withResults.length) {
     const examples = withResults.slice(0, 12).map(v => {
@@ -1209,7 +1312,7 @@ function buildAiPrompt(fields) {
     ? 'יש מספיק היסטוריה — בסס את הערכת הסיכוי בעיקר על דמיון לסרטונים שהצליחו בפועל, וסמן confidence לפי איכות ההתאמה.'
     : `יש מעט מאוד היסטוריה (${withResults.length} סרטונים עם תוצאות). לכן הערכת הסיכוי מבוססת בעיקר על עקרונות מקצועיים, לא על דאטה — סמן confidence כ-"low" והסבר זאת.`;
 
-  const expertNotes = (config.expertNotes || '').trim();
+  const expertNotes = (store.expertNotes || '').trim();
   const notesBlock = expertNotes ? `\n\n## בסיס ידע ועקרונות אישיים של היוצר (תן להם משקל גבוה):\n${expertNotes}` : '';
 
   return `אתה אסטרטג תוכן וידאו לרשתות חברתיות (Reels/TikTok/Shorts), מומחה ל-HOOKים ולשימור צופים.
@@ -1328,10 +1431,12 @@ function renderLibrary() {
     return;
   }
   list.innerHTML = videos.map(v => {
-    const readiness = computeReadiness(v.fields || {}, v.checklist || {});
+    const vType = v.type || 'reel';
+    const readiness = computeReadiness(v.fields || {}, v.checklist || {}, typeConf(vType));
     const rc = scoreColor(readiness.total);
     const prob = v.aiResult?.successProbability;
     const a = v.actual || {};
+    const typeBadge = `<span class="badge gray">${esc(typeName(vType))}</span>`;
     const publishedBadge = a.published ? `<span class="badge green">פורסם</span>` : `<span class="badge gray">טיוטה</span>`;
     const perf = computePerformance(a);
     const resultsBadge = (a.published && a.views != null)
@@ -1351,6 +1456,7 @@ function renderLibrary() {
         </div>
       </div>
       <div class="vid-badges">
+        ${typeBadge}
         ${publishedBadge}
         ${prob != null ? `<span class="badge" style="color:${scoreColor(prob)};border-color:${scoreColor(prob)}">🤖 סיכוי ${prob}%</span>` : ''}
         ${perfBadge}
@@ -1386,13 +1492,16 @@ function doImport() {
   if (!Array.isArray(arr)) { toast('צריך מערך של סרטונים', true); return; }
   let added = 0, skippedBlocks = 0;
   arr.forEach(item => {
+    const vType = (item.type && store.types[item.type]) ? item.type : (store.activeType || 'reel');
+    const conf = typeConf(vType);
     const fields = {};
     if (item.blocks) for (const [k, v] of Object.entries(item.blocks)) {
-      const id = nameToBlockId(k); if (id) fields[id] = v; else skippedBlocks++;
+      const b = conf.blocks.find(x => x.name.trim().toLowerCase() === String(k).trim().toLowerCase());
+      if (b) fields[b.id] = v; else skippedBlocks++;
     }
     const a = item.actual || {};
     videos.unshift({
-      id: uid(), title: item.title || '(ללא שם)', fields, checklist: {},
+      id: uid(), title: item.title || '(ללא שם)', type: vType, fields, checklist: {},
       actual: {
         published: a.published !== false,
         views: a.views ?? null, reach: a.reach ?? null, nonFollowerPct: a.nonFollowerPct ?? null,
@@ -1409,9 +1518,10 @@ function doImport() {
 function exportVideos() {
   if (!videos.length) { toast('אין סרטונים לייצוא', true); return; }
   const out = videos.map(v => {
+    const conf = typeConf(v.type || 'reel');
     const blocks = {};
-    config.blocks.forEach(b => { if (v.fields?.[b.id]) blocks[b.name] = v.fields[b.id]; });
-    return { title: v.title, blocks, actual: v.actual };
+    conf.blocks.forEach(b => { if (v.fields?.[b.id]) blocks[b.name] = v.fields[b.id]; });
+    return { title: v.title, type: v.type || 'reel', blocks, actual: v.actual };
   });
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1464,9 +1574,9 @@ saveVideo = function() {
   const actual = readActual();
   if (editingId) {
     const v = videos.find(x => x.id === editingId);
-    Object.assign(v, { title, fields, checklist, actual, updatedAt: Date.now() });
+    Object.assign(v, { title, fields, checklist, actual, type: store.activeType, updatedAt: Date.now() });
   } else {
-    videos.unshift({ id: uid(), title, fields, checklist, actual, aiResult: pendingAiResult || null, createdAt: Date.now(), updatedAt: Date.now() });
+    videos.unshift({ id: uid(), title, type: store.activeType, fields, checklist, actual, aiResult: pendingAiResult || null, createdAt: Date.now(), updatedAt: Date.now() });
     pendingAiResult = null;
   }
   persistVideos();
@@ -1523,12 +1633,16 @@ const SEED_VIDEOS = [
 function seedIfEmpty() {
   if (localStorage.getItem('vs_seeded')) return;
   if (videos.length) { localStorage.setItem('vs_seeded', '1'); return; }
+  const reelConf = typeConf('reel');
   SEED_VIDEOS.forEach(item => {
     const fields = {};
-    if (item.blocks) for (const [k, v] of Object.entries(item.blocks)) { const id = nameToBlockId(k); if (id) fields[id] = v; }
+    if (item.blocks) for (const [k, v] of Object.entries(item.blocks)) {
+      const b = reelConf.blocks.find(x => x.name.trim().toLowerCase() === String(k).trim().toLowerCase());
+      if (b) fields[b.id] = v;
+    }
     const a = item.actual || {};
     videos.push({
-      id: uid(), title: item.title, fields, checklist: {},
+      id: uid(), title: item.title, type: 'reel', fields, checklist: {},
       actual: { published: true, views: a.views ?? null, reach: a.reach ?? null, nonFollowerPct: a.nonFollowerPct ?? null, saves: a.saves ?? null, shares: a.shares ?? null, follows: a.follows ?? null, likes: a.likes ?? null, comments: a.comments ?? null },
       aiResult: null, createdAt: Date.now(), updatedAt: Date.now(),
     });
