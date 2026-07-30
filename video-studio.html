@@ -1476,6 +1476,7 @@ function renderLibrary() {
         ${resultsBadge}
       </div>
       <div class="vid-actions">
+        ${!a.published ? `<button class="btn btn-primary btn-sm" onclick="markPublished('${v.id}')">✅ סמן שפורסם</button>` : ''}
         <button class="btn btn-secondary btn-sm" onclick="openEditor('${v.id}')">✏️ ערוך</button>
         <button class="btn btn-ghost btn-sm" onclick="duplicateVideo('${v.id}')">⧉ שכפל</button>
         <button class="btn btn-danger btn-sm" onclick="deleteVideo('${v.id}')">🗑 מחק</button>
@@ -1542,6 +1543,15 @@ function exportVideos() {
   URL.revokeObjectURL(url);
 }
 document.getElementById('importModal').addEventListener('click', function(e){ if (e.target === this) closeImport(); });
+
+function markPublished(id) {
+  const v = videos.find(x => x.id === id); if (!v) return;
+  v.actual = v.actual || {};
+  v.actual.published = true;
+  v.updatedAt = Date.now();
+  persistVideos(); renderLibrary();
+  toast('סומן כפורסם ✓ — הזן את הנתונים אחרי שהמספרים יתייצבו');
+}
 
 function duplicateVideo(id) {
   const v = videos.find(x => x.id === id); if (!v) return;
