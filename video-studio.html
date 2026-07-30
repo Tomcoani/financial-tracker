@@ -297,9 +297,10 @@
 </header>
 
 <div class="tabs">
-  <div class="tab active" data-view="library" onclick="switchView('library')">🎬 הסרטונים שלי</div>
-  <div class="tab" data-view="editor" onclick="newVideo()">➕ סרטון חדש</div>
-  <div class="tab" data-view="config" onclick="switchView('config')">⚙️ הגדרות תבנית וחוקים</div>
+  <div class="tab active" data-view="library" data-type="reel" onclick="openLibraryType('reel')">🎬 רילים</div>
+  <div class="tab" data-view="library" data-type="carousel" onclick="openLibraryType('carousel')">🎠 קרוסלות</div>
+  <div class="tab" data-view="editor" onclick="newVideo()">➕ חדש</div>
+  <div class="tab" data-view="config" onclick="switchView('config')">⚙️ הגדרות</div>
 </div>
 
 <div class="main">
@@ -709,11 +710,20 @@ document.getElementById('apiModal').addEventListener('click', function(e){ if (e
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function switchView(v) {
+  if (v === 'library') { openLibraryType(store.activeType); return; }
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.getElementById('view-' + v).classList.add('active');
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
-  if (v === 'library') renderLibrary();
   if (v === 'config') renderConfig();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openLibraryType(t) {
+  setActiveType(t);
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-library').classList.add('active');
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === 'library' && tab.dataset.type === t));
+  renderLibrary();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1423,14 +1433,16 @@ function renderAiResults(r) {
 
 function renderLibrary() {
   const list = document.getElementById('libraryList');
-  if (!videos.length) {
-    list.innerHTML = `<div class="empty"><span class="emoji">🎬</span>
-      <div style="font-size:18px;font-weight:600;margin-bottom:8px">עדיין אין סרטונים</div>
-      <div style="margin-bottom:20px">צור את הסרטון הראשון שלך לפי התבנית.</div>
-      <button class="btn btn-primary" onclick="newVideo()">➕ סרטון חדש</button></div>`;
+  const items = videos.filter(v => (v.type || 'reel') === store.activeType);
+  if (!items.length) {
+    const emoji = store.activeType === 'carousel' ? '🎠' : '🎬';
+    list.innerHTML = `<div class="empty"><span class="emoji">${emoji}</span>
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px">עדיין אין ${esc(typeName(store.activeType))}</div>
+      <div style="margin-bottom:20px">צור את ה${esc(typeName(store.activeType))} הראשונה/ראשון שלך לפי התבנית.</div>
+      <button class="btn btn-primary" onclick="newVideo()">➕ חדש</button></div>`;
     return;
   }
-  list.innerHTML = videos.map(v => {
+  list.innerHTML = items.map(v => {
     const vType = v.type || 'reel';
     const readiness = computeReadiness(v.fields || {}, v.checklist || {}, typeConf(vType));
     const rc = scoreColor(readiness.total);
