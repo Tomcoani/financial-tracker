@@ -752,23 +752,30 @@ function planPickBuild(){
   D.planPrefs={order:_planPick.map(t=>t.name),excluded:_planPick.filter(t=>!t.use).map(t=>t.name)};
   const targets=_planPick.filter(t=>t.use).map(t=>({...t}));
   const zero=parseFloat(String(D.cfZero||'0').replace(/,/g,''))||0;
-  // Money already parked at goal locations — it stays put
-  const goalsAt={};
+  // Money already parked at goal locations — it stays put. Track which goal(s)
+  // each location holds so the row can show "X נשאר ל<goal>" instead of hiding it.
+  const goalsAt={},goalsAtDetail={};
   (D.goals||[]).filter(gl=>!gl.done).forEach(gl=>{
     (gl.goalLocs||[]).forEach(l=>{
       const k=(l.where||'').trim();if(!k)return;
-      goalsAt[k]=(goalsAt[k]||0)+toILS(parseFloat(l.amount)||0,gl.savedCurrency||'ILS');
+      const amt=toILS(parseFloat(l.amount)||0,gl.savedCurrency||'ILS');
+      if(amt<=0)return;
+      goalsAt[k]=(goalsAt[k]||0)+amt;
+      (goalsAtDetail[k]=goalsAtDetail[k]||[]).push({name:(gl.name||'מטרה').trim(),amt});
     });
   });
   // The user's explicit "מוקצה לתיק השקעות" is honored before goals
   let portReserve=Math.max(0,parseFloat(D.locPortfolioAllocILS)||0);
   let zeroReserved=false,filled=0;
   (D.locations||[]).filter(l=>!l._auto&&(l.name||'').trim()&&parseFloat(l.amount)>0).forEach(l=>{
+    const key=(l.name||'').trim();
     let avail=toILS(parseFloat(l.amount)||0,l.currency||'ILS');
-    const parked=goalsAt[(l.name||'').trim()]||0;
+    const parked=goalsAt[key]||0;
     if(parked>0)avail-=parked;
-    if(avail<=0){l.whereTo=parked>0?fmt(Math.round(parked))+' כבר משויך למטרות':'';return;}
     const parts=[];let toPort=0;
+    // The portion tied to a goal stays where it is — show it, don't hide it
+    (goalsAtDetail[key]||[]).forEach(d=>parts.push(fmt(Math.round(d.amt))+' נשאר ל'+d.name));
+    if(avail<=0){l.whereTo=parts.join(' · ');if(parts.length)filled++;return;}
     if(!zeroReserved&&l.name.includes('עו"ש')&&zero>0){
       const stay=Math.min(zero,avail);avail-=stay;zeroReserved=true;
       parts.push(fmt(Math.round(stay))+' נשאר בעו"ש (אפס חדש)');
