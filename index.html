@@ -300,20 +300,16 @@
         </div>
         <div class="card">
           <div class="ch-title">תכנית העברת כספים</div>
-          <div class="ch-hint">לכל נכס מהרשימה למעלה — ציין לאן הכסף עובר. לדוגמה: גמל להשקעה ← תיק השקעות עצמאי. הכסף שלא הוקצה עדיין יוצג בסוף.</div>
+          <div class="ch-hint">לכל נכס — לאן הכסף עובר. אפשר לכתוב ידנית, או לתת למערכת <strong>למלא אוטומטית</strong> לפי המטרות והעדיפויות: קודם נשמר ה"אפס החדש" בעו"ש, אחר כך מה שהקצית לתיק ההשקעות, ואז השלמת מטרות לפי דחיפות — והעודף לתיק. תמיד אפשר לערוך אחר כך.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+            <button class="btnadd" style="margin:0" onclick="buildTransferPlan()">✨ מלא אוטומטית לפי המטרות</button>
+            <button onclick="resetTransferPlan()"
+              style="background:transparent;border:1.5px dashed rgba(239,68,68,.4);color:var(--red);border-radius:10px;padding:8px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">↺ נקה</button>
+          </div>
+          <div id="locs-plan"></div>
           <div id="locs-auto-summary" style="margin-bottom:10px"></div>
           <div id="locs-transfer"></div>
           <div id="loc-footer"></div>
-          <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
-            <div class="ch-title" style="font-size:14px">✨ תוכנית מומלצת אוטומטית</div>
-            <div class="ch-hint">המערכת מחשבת לפי המטרות למעלה — כמה כסף להעביר מכל נכס לכל יעד: קודם משאירים את ה"אפס החדש" בעו"ש, אחר כך משלימים מטרות לפי דחיפות, והעודף עובר לתיק ההשקעות.</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <button class="btnadd" style="margin:0" onclick="buildTransferPlan()">✨ חשב תוכנית מומלצת</button>
-              <button onclick="resetTransferPlan()"
-                style="background:transparent;border:1.5px dashed rgba(239,68,68,.4);color:var(--red);border-radius:10px;padding:8px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">↺ איפוס תוכנית</button>
-            </div>
-            <div id="locs-plan"></div>
-          </div>
         </div>
         </div>
       </div>
@@ -747,15 +743,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=29"></script>
-<script defer src="js/cashflow-goals.js?v=29"></script>
-<script defer src="js/pension.js?v=29"></script>
-<script defer src="js/networth.js?v=29"></script>
-<script defer src="js/portfolio.js?v=29"></script>
-<script defer src="js/dashboard.js?v=29"></script>
-<script defer src="js/settings.js?v=29"></script>
-<script defer src="js/admin.js?v=29"></script>
-<script defer src="js/misc.js?v=29"></script>
-<script defer src="js/budget.js?v=29"></script>
+<script defer src="js/core.js?v=30"></script>
+<script defer src="js/cashflow-goals.js?v=30"></script>
+<script defer src="js/pension.js?v=30"></script>
+<script defer src="js/networth.js?v=30"></script>
+<script defer src="js/portfolio.js?v=30"></script>
+<script defer src="js/dashboard.js?v=30"></script>
+<script defer src="js/settings.js?v=30"></script>
+<script defer src="js/admin.js?v=30"></script>
+<script defer src="js/misc.js?v=30"></script>
+<script defer src="js/budget.js?v=30"></script>
 </body>
 </html>

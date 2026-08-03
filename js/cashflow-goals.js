@@ -744,12 +744,15 @@ function planPickMove(i,dir){
   [_planPick[i],_planPick[j]]=[_planPick[j],_planPick[i]];
   renderPlanPicker();
 }
+// Compute the allocation and write a readable summary into each asset's
+// "לאן מועבר הכסף" field. Order per asset: keep the אפס חדש in עו"ש → honor the
+// manual "מוקצה לתיק השקעות" from the summary → fill selected goal gaps by
+// priority → any remainder to the portfolio. Fields stay fully editable.
 function planPickBuild(){
-  // Remember the user's priorities for next time
   D.planPrefs={order:_planPick.map(t=>t.name),excluded:_planPick.filter(t=>!t.use).map(t=>t.name)};
   const targets=_planPick.filter(t=>t.use).map(t=>({...t}));
   const zero=parseFloat(String(D.cfZero||'0').replace(/,/g,''))||0;
-  // Money already assigned to goals, keyed by the location it sits in — it stays put
+  // Money already parked at goal locations — it stays put
   const goalsAt={};
   (D.goals||[]).filter(gl=>!gl.done).forEach(gl=>{
     (gl.goalLocs||[]).forEach(l=>{
@@ -757,95 +760,43 @@ function planPickBuild(){
       goalsAt[k]=(goalsAt[k]||0)+toILS(parseFloat(l.amount)||0,gl.savedCurrency||'ILS');
     });
   });
-  const plan=[];
-  let zeroReserved=false;
+  // The user's explicit "מוקצה לתיק השקעות" is honored before goals
+  let portReserve=Math.max(0,parseFloat(D.locPortfolioAllocILS)||0);
+  let zeroReserved=false,filled=0;
   (D.locations||[]).filter(l=>!l._auto&&(l.name||'').trim()&&parseFloat(l.amount)>0).forEach(l=>{
     let avail=toILS(parseFloat(l.amount)||0,l.currency||'ILS');
     const parked=goalsAt[(l.name||'').trim()]||0;
-    if(parked>0)avail-=parked; // goal money already there doesn't move
-    if(avail<=0)return;
-    // Reserve the "new zero" in the first עו"ש account
+    if(parked>0)avail-=parked;
+    if(avail<=0){l.whereTo=parked>0?fmt(Math.round(parked))+' כבר משויך למטרות':'';return;}
+    const parts=[];let toPort=0;
     if(!zeroReserved&&l.name.includes('עו"ש')&&zero>0){
-      const stay=Math.min(zero,avail);
-      avail-=stay;zeroReserved=true;
-      plan.push({from:l.name,to:'נשאר בעו"ש — האפס החדש',amount:Math.round(stay),keep:true});
+      const stay=Math.min(zero,avail);avail-=stay;zeroReserved=true;
+      parts.push(fmt(Math.round(stay))+' נשאר בעו"ש (אפס חדש)');
     }
+    if(portReserve>0&&avail>0){const mv=Math.min(portReserve,avail);avail-=mv;portReserve-=mv;toPort+=mv;}
     targets.forEach(t=>{
       if(avail<=0||t.gap<=0)return;
-      const mv=Math.min(avail,t.gap);
-      plan.push({from:l.name,to:t.name,amount:Math.round(mv)});
-      avail-=mv;t.gap-=mv;
+      const mv=Math.min(avail,t.gap);avail-=mv;t.gap-=mv;
+      parts.push(fmt(Math.round(mv))+' ← '+t.name);
     });
-    // Whatever is left after the goals goes to the investment portfolio.
-    // Flagged with port:true so it renders as one dedicated card.
-    if(avail>=100)plan.push({from:l.name,to:'תיק השקעות',amount:Math.round(avail),port:true});
+    if(avail>=1){toPort+=avail;avail=0;}
+    if(toPort>=1)parts.push(fmt(Math.round(toPort))+' ← 📈 תיק השקעות');
+    l.whereTo=parts.join(' · ');
+    if(parts.length)filled++;
   });
-  if(!plan.length){showToast('אין נכסים פנויים לתכנון — מלא את רשימת הנכסים והמטרות');return;}
-  D.transferPlan=plan;
-  renderTransferPlan();
-  markDirty();
+  const el=document.getElementById('locs-plan');if(el)el.innerHTML=''; // close the picker
+  if(!filled){showToast('אין נכסים פנויים לחלוקה — מלא את רשימת הנכסים');return;}
+  renderLocs();markDirty();
+  showToast('התוכנית מולאה בשדות "לאן מועבר הכסף" — אפשר לערוך ✓');
 }
-function renderTransferPlan(){
-  const el=document.getElementById('locs-plan');
-  if(!el)return;
-  const plan=D.transferPlan||[];
-  if(!plan.length){el.innerHTML='';return;}
-  let html=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:10px 0 8px">
-    <span style="font-size:11px;color:var(--t3);line-height:1.6">מחושב לפי סדר העדיפויות שבחרת, ה"אפס החדש" מהתזרים, והכסף שכבר משויך למטרות. אפשר לערוך כל סכום או למחוק שורה.</span>
-    <button onclick="buildTransferPlan()" style="background:transparent;border:1px solid var(--teal-border);color:var(--teal);border-radius:8px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">שנה עדיפויות</button>
-  </div>`;
-  const row=(p,i)=>`<div style="display:grid;grid-template-columns:1fr 22px 1fr 92px 24px;gap:6px;align-items:center;margin-bottom:6px">
-      <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.from)}</div>
-      <div style="text-align:center;color:${p.keep?'var(--amber)':'var(--teal)'};font-size:15px">⟵</div>
-      <div style="background:${p.keep?'rgba(245,158,11,.07)':'rgba(66,235,214,.06)'};border:1px solid ${p.keep?'rgba(245,158,11,.3)':'var(--teal-border)'};border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:${p.keep?'var(--amber)':'var(--teal)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.keep?'🏦 ':'🎯 '}${esc(p.to)}</div>
-      <input type="number" value="${p.amount||''}" data-no-fmt
-        oninput="D.transferPlan[${i}].amount=parseFloat(this.value)||0;markDirty();updatePlanTotal()"
-        style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 8px;color:var(--white);font-family:var(--font);font-size:12px;font-weight:700;text-align:right;width:100%"/>
-      <button class="bdel" onclick="D.transferPlan.splice(${i},1);renderTransferPlan();markDirty()">×</button>
-    </div>`;
-  // A row is a portfolio row if flagged, or (for plans built before the flag
-  // existed) if its destination is the portfolio.
-  const isPort=p=>p.port||(!p.keep&&(p.to==='תיק השקעות'||p.to==='שוק ההון'));
-  // Goal / keep rows first, then the portfolio card collecting the leftovers
-  plan.forEach((p,i)=>{if(!isPort(p))html+=row(p,i);});
-  const portIdx=plan.map((p,i)=>({p,i})).filter(x=>isPort(x.p));
-  if(portIdx.length){
-    const portTotal=portIdx.reduce((s,x)=>s+(parseFloat(x.p.amount)||0),0);
-    html+=`<div style="margin-top:12px;background:linear-gradient(135deg,rgba(66,235,214,.10),rgba(66,235,214,.03));border:1.5px solid rgba(66,235,214,.35);border-radius:14px;padding:12px 14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-        <div style="min-width:0">
-          <div style="font-size:13.5px;font-weight:800;color:var(--teal)">📈 העברה לתיק השקעות</div>
-          <div style="font-size:11px;color:var(--t2);margin-top:2px">כל היתרה שלא הוקצתה למטרה מגיעה לכאן</div>
-        </div>
-        <div id="plan-port-total" style="font-size:17px;font-weight:800;color:var(--teal);white-space:nowrap">${fmt(portTotal)}</div>
-      </div>
-      ${portIdx.map(({p,i})=>`<div style="display:grid;grid-template-columns:1fr 92px 24px;gap:6px;align-items:center;margin-bottom:6px">
-        <div style="font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">מ${esc(p.from)}</div>
-        <input type="number" value="${p.amount||''}" data-no-fmt
-          oninput="D.transferPlan[${i}].amount=parseFloat(this.value)||0;markDirty();updatePlanTotal()"
-          style="background:var(--s2);border:1px solid var(--teal-border);border-radius:8px;padding:7px 8px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;text-align:right;width:100%"/>
-        <button class="bdel" onclick="D.transferPlan.splice(${i},1);renderTransferPlan();markDirty()">×</button>
-      </div>`).join('')}
-    </div>`;
-  }
-  html+=`<div id="plan-total" style="display:flex;justify-content:space-between;padding:8px 0 2px;margin-top:10px;border-top:1px solid var(--border);font-size:12px">
-    <span style="color:var(--t3)">סה"כ מועבר</span>
-    <span style="font-weight:800;color:var(--teal)">${fmt(planMovedTotal())}</span>
-  </div>`;
-  el.innerHTML=html;
-}
-function planMovedTotal(){return (D.transferPlan||[]).filter(p=>!p.keep).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);}
-// Clears all plan rows (keeps the saved goal priorities for next time)
+// The recommended plan now fills the whereTo fields directly, so there is no
+// separate plan block to render — just clear the picker area.
+function renderTransferPlan(){const el=document.getElementById('locs-plan');if(el)el.innerHTML='';}
+// Clear all the "לאן מועבר הכסף" fields (keeps saved goal priorities for next time)
 function resetTransferPlan(){
-  const had=(D.transferPlan||[]).length;
-  D.transferPlan=[];
-  const el=document.getElementById('locs-plan');
-  if(el)el.innerHTML='';
-  if(had){markDirty();showToast('התוכנית אופסה ↺');}
-}
-function updatePlanTotal(){
-  const el=document.querySelector('#plan-total span:last-child');
-  if(el)el.textContent=fmt(planMovedTotal());
-  const pt=document.getElementById('plan-port-total');
-  if(pt)pt.textContent=fmt((D.transferPlan||[]).filter(p=>p.port||(!p.keep&&(p.to==='תיק השקעות'||p.to==='שוק ההון'))).reduce((s,p)=>s+(parseFloat(p.amount)||0),0));
+  const had=(D.locations||[]).some(l=>!l._auto&&(l.whereTo||'').trim());
+  (D.locations||[]).forEach(l=>{if(!l._auto)l.whereTo='';});
+  const el=document.getElementById('locs-plan');if(el)el.innerHTML='';
+  renderLocs();
+  if(had){markDirty();showToast('שדות ההעברה נוקו ↺');}
 }
