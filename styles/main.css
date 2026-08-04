@@ -4,10 +4,11 @@
   --white:#f1f5f9; --t2:#94a3b8; --t3:#64748b;
   --red:#ef4444; --amber:#f59e0b; --blue:#3b82f6; --green:#10b981; --purple:#8b5cf6;
   --r:14px; --font:'Heebo',sans-serif;
+  --ui-zoom:1.08; /* global text/UI scale — bump for larger text everywhere */
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;direction:rtl;}
-body{font-family:var(--font);background:var(--bg);color:var(--white);overflow-x:hidden;}
+body{font-family:var(--font);background:var(--bg);color:var(--white);overflow-x:hidden;zoom:var(--ui-zoom);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 
