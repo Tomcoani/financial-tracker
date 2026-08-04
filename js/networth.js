@@ -35,21 +35,15 @@ function syncNWFromPension(){
     return row;
   };
 
-  // ── Portfolios → "שוק ההון": fully automatic mirror ───────────────────────
-  // ALL portfolios (one or many) are summed into a single "שוק ההון" row.
-  const portTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-  if(portTotal>0){
-    // Migration: remove leftover per-broker rows the old sync auto-created
-    const brokerNames=new Set((D.portfolios||[]).map(p=>(p.brokerName||'').trim()).filter(Boolean));
-    D.nwData.investments.rows=D.nwData.investments.rows.filter(r=>!brokerNames.has(r.name));
-    // Find the target row: "שוק ההון", or rename the legacy "תיק השקעות"/"תיק" row (keeps its history)
+  // ── "שוק ההון" row: MANUAL — not auto-updated from the portfolio tab. ──────
+  // The row keeps whatever value already exists (or the user types); we only
+  // normalise its name and lock it so location-sync doesn't auto-fill it.
+  {
     let portRow=D.nwData.investments.rows.find(r=>r.name==='שוק ההון');
     if(!portRow){
       portRow=D.nwData.investments.rows.find(r=>r.name==='תיק השקעות'||r.name==='תיק');
       if(portRow)portRow.name='שוק ההון';
     }
-    if(!portRow)portRow=findOrMakeRow('investments','שוק ההון');
-    overwrite(portRow,portTotal,'טאב תיק השקעות');
     lockedRows.add('שוק ההון');lockedRows.add('תיק השקעות');lockedRows.add('תיק');
   }
 
