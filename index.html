@@ -85,6 +85,12 @@
 
     <!-- DASHBOARD -->
     <div class="panel on" id="p-dash">
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--t3)">💱 מטבע תצוגה:</span>
+        <select id="dash-currency" onchange="setDisplayCurrency(this)"
+          style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:5px 10px;cursor:pointer"></select>
+        <span style="font-size:10.5px;color:var(--t3)">משנה את כל התצוגה במערכת — הנתונים עצמם נשמרים כפי שהם</span>
+      </div>
       <div id="snap-trigger-area"></div>
       <div id="update-alerts" style="margin-bottom:8px"></div>
       <div id="cmp-area"></div>
@@ -743,15 +749,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=34"></script>
-<script defer src="js/cashflow-goals.js?v=34"></script>
-<script defer src="js/pension.js?v=34"></script>
-<script defer src="js/networth.js?v=34"></script>
-<script defer src="js/portfolio.js?v=34"></script>
-<script defer src="js/dashboard.js?v=34"></script>
-<script defer src="js/settings.js?v=34"></script>
-<script defer src="js/admin.js?v=34"></script>
-<script defer src="js/misc.js?v=34"></script>
-<script defer src="js/budget.js?v=34"></script>
+<script defer src="js/core.js?v=35"></script>
+<script defer src="js/cashflow-goals.js?v=35"></script>
+<script defer src="js/pension.js?v=35"></script>
+<script defer src="js/networth.js?v=35"></script>
+<script defer src="js/portfolio.js?v=35"></script>
+<script defer src="js/dashboard.js?v=35"></script>
+<script defer src="js/settings.js?v=35"></script>
+<script defer src="js/admin.js?v=35"></script>
+<script defer src="js/misc.js?v=35"></script>
+<script defer src="js/budget.js?v=35"></script>
 </body>
 </html>

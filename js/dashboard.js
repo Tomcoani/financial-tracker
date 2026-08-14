@@ -27,6 +27,8 @@ async function submitFeedback(){
 }
 function renderDash(){
   collectAll();
+  const dcSel=document.getElementById('dash-currency');
+  if(dcSel)dcSel.innerHTML=buildCurrOptions(dispCur());
   const cur=calcCurrent(),snaps=D.snapshots||[],prev=snaps.length?snaps[snaps.length-1]:null;
   // Best-estimate NW: each row uses its own most-recent non-empty value.
   // Prevents the common case where updating only investments in a new period

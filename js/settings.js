@@ -11,6 +11,36 @@ function buildCurrOptions(selected){
 }
 function getCurrSymbol(c){return CURR_SYMBOLS[c]||c;}
 
+// ── Global display currency ──
+// Changes only how amounts are shown across the app; stored values stay as-is.
+function setDisplayCurrency(el){
+  let cur=el.value;
+  if(cur==='__add__'){
+    const code=prompt('קוד מטבע (לדוגמה: CHF, JPY, CAD):','');
+    if(!code||!code.trim()){el.value=dispCur();return;}
+    cur=code.trim().toUpperCase();
+  }
+  // Make sure we have a rate before switching to a non-ILS currency
+  if(cur!=='ILS'&&!(D.exchangeRates&&D.exchangeRates[cur])){
+    const rate=parseFloat(prompt('שער חליפין — כמה ₪ שווה 1 '+cur+'?',''));
+    if(isNaN(rate)||rate<=0){el.value=dispCur();return;}
+    if(!D.exchangeRates)D.exchangeRates={};
+    D.exchangeRates[cur]=rate;
+    if(!CURR_SYMBOLS[cur])CURR_SYMBOLS[cur]=cur;
+  }
+  if(!D.settings)D.settings={};
+  D.settings.displayCurrency=cur;
+  markDirty();
+  refreshMoneyViews();
+  showToast('התצוגה עברה ל'+getCurrSymbol(cur)+' '+cur+' ✓');
+}
+// Re-render every money-bearing view so the new currency shows immediately
+function refreshMoneyViews(){
+  [renderDash,renderGoals,renderNW,renderNWSummary,renderPortfolio,updatePortStats,
+   renderBudget,renderHistory,renderPension,renderPenSum,renderLocs,renderSettings]
+   .forEach(fn=>{try{if(typeof fn==='function')fn();}catch(e){}});
+}
+
 
 function toILS(amount,currency){
   if(!currency||currency==='ILS')return parseFloat(amount)||0;

@@ -249,11 +249,22 @@ function renderAnalysis(snaps){
 
 
 // sumSec replaced by currency-aware version above
+// Global display currency (a preference; defaults to ILS so existing users see
+// no change). fmt() always receives an ILS-denominated value and converts it
+// for display — stored amounts are never rewritten.
+function dispCur(){
+  let c=(typeof D==='object'&&D&&D.settings&&D.settings.displayCurrency)||'ILS';
+  // Guard: never display in a currency that has no exchange rate
+  if(c!=='ILS'&&!(D.exchangeRates&&D.exchangeRates[c]))c='ILS';
+  return c;
+}
 function fmt(n){
-  if(n===null||n===undefined||isNaN(n))return '₪0';
-  const a=Math.abs(Math.round(n));
-  const s='₪'+a.toLocaleString('he-IL');
-  return n<0?'('+s+')':s;
+  const cur=dispCur(),sym=getCurrSymbol(cur);
+  if(n===null||n===undefined||isNaN(n))return sym+'0';
+  const val=cur==='ILS'?n:fromILS(n,cur);
+  const a=Math.abs(Math.round(val));
+  const s=sym+a.toLocaleString('he-IL');
+  return val<0?'('+s+')':s;
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
