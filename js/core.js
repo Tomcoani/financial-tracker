@@ -85,6 +85,13 @@ async function saveDataFS(uid,d){
 // ══ AUTH STATE ══
 auth.onAuthStateChanged(async user=>{
   if(user){
+    // Auto-logout: a restored session idle for >24h is signed out before it loads.
+    // (Fresh logins set lastTouch=now, so they're never caught here.)
+    if(idleExpired()){
+      localStorage.removeItem('lastTouch');
+      await auth.signOut();
+      return; // fires again with null → shows the login screen
+    }
     CU=user.uid;
     // Ensure parent /users/{uid} doc exists for admin listing
     db.collection('users').doc(CU).set({email:user.email||'',firstSeen:user.metadata.creationTime||null},{merge:true}).catch(()=>{});
@@ -143,6 +150,7 @@ auth.onAuthStateChanged(async user=>{
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
     renderAll();
     goTo('dash',document.querySelector('.nbtn'));
+    startIdleWatch(); // begin 24h idle-logout tracking
     // Prompt for name on first login if not set
     if(!D.settings.displayName){
       setTimeout(()=>{
@@ -154,6 +162,7 @@ auth.onAuthStateChanged(async user=>{
     }
   }else{
     CU=null;D={};
+    stopIdleWatch();
     document.getElementById('init-loader').style.display='none';
     document.getElementById('app').style.display='none';
     document.getElementById('auth').style.display='flex';
@@ -202,6 +211,7 @@ async function doLogin(){
   if(!e||!p)return showErr('נא למלא את כל השדות');
   const btn=document.querySelector('#lf .btnmain');
   if(btn){btn.disabled=true;btn.textContent='מתחבר...';}
+  localStorage.setItem('lastTouch',String(Date.now())); // fresh login — reset idle timer
   try{await auth.signInWithEmailAndPassword(e,p);}
   catch(err){showErr(fbErr(err.code)||'שגיאת התחברות — בדוק אימייל וסיסמה');}
   finally{if(btn){btn.disabled=false;btn.textContent='כניסה →';}}
@@ -210,13 +220,14 @@ async function doReg(){
   const name=v('rn'),e=v('ru'),p=v('rp');
   if(!name||!e||!p)return showErr('נא למלא את כל השדות');
   if(p.length<6)return showErr('סיסמה חייבת להיות לפחות 6 תווים');
+  localStorage.setItem('lastTouch',String(Date.now())); // fresh registration — reset idle timer
   try{
     const cred=await auth.createUserWithEmailAndPassword(e,p);
     await cred.user.updateProfile({displayName:name});
     await saveDataFS(cred.user.uid,defData());
   }catch(err){showErr(fbErr(err.code));}
 }
-async function doLogout(){await auth.signOut();}
+async function doLogout(){localStorage.removeItem('lastTouch');await auth.signOut();}
 async function doForgotPassword(){
   const email=document.getElementById('lu').value.trim();
   if(!email){
@@ -274,6 +285,40 @@ function flushSave(){clearTimeout(autoSaveTimer);if(dirty)manualSave(true);}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushSave();});
 window.addEventListener('pagehide',flushSave);
 window.addEventListener('blur',flushSave);
+
+// ══ IDLE AUTO-LOGOUT ══
+// Sign the user out after 24h with no interaction (covers a tab left open AND
+// a session reopened later — the on-load check in the auth handler catches that).
+const IDLE_LOGOUT_MS=24*60*60*1000;
+let _idleIv=null,_lastTouchWrite=0,_idleWired=false;
+function markActivity(){
+  const now=Date.now();
+  if(now-_lastTouchWrite>30000){localStorage.setItem('lastTouch',String(now));_lastTouchWrite=now;} // throttle writes
+}
+function idleExpired(){
+  const last=parseInt(localStorage.getItem('lastTouch')||'0',10);
+  return last>0&&(Date.now()-last)>IDLE_LOGOUT_MS;
+}
+function idleCheck(){
+  if(!CU)return;
+  if(idleExpired()){
+    localStorage.removeItem('lastTouch');
+    try{flushSave();}catch(e){}
+    try{showToast('התנתקת אוטומטית לאחר 24 שעות ללא פעילות');}catch(e){}
+    auth.signOut();
+  }
+}
+function startIdleWatch(){
+  _lastTouchWrite=Date.now();localStorage.setItem('lastTouch',String(Date.now()));
+  if(!_idleWired){
+    _idleWired=true;
+    ['mousedown','keydown','touchstart','scroll','click'].forEach(ev=>window.addEventListener(ev,markActivity,{passive:true,capture:true}));
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')idleCheck();});
+  }
+  if(_idleIv)clearInterval(_idleIv);
+  _idleIv=setInterval(idleCheck,60000); // re-check every minute
+}
+function stopIdleWatch(){if(_idleIv){clearInterval(_idleIv);_idleIv=null;}}
 function collectAll(){
   D.monthly=document.getElementById('monthly').value;
   D.penNotes=document.getElementById('pen-notes').value;
