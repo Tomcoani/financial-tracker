@@ -29,6 +29,14 @@ function renderDash(){
   collectAll();
   const dcSel=document.getElementById('dash-currency');
   if(dcSel)dcSel.innerHTML=buildCurrOptions(dispCur());
+  const rateBtn=document.getElementById('dash-rate-btn');
+  if(rateBtn){
+    const c=dispCur();
+    if(c!=='ILS'&&D.exchangeRates&&D.exchangeRates[c]){
+      rateBtn.style.display='inline-block';
+      rateBtn.textContent='🔄 1 '+c+' = ₪'+D.exchangeRates[c];
+    }else rateBtn.style.display='none';
+  }
   const cur=calcCurrent(),snaps=D.snapshots||[],prev=snaps.length?snaps[snaps.length-1]:null;
   // Best-estimate NW: each row uses its own most-recent non-empty value.
   // Prevents the common case where updating only investments in a new period

@@ -89,6 +89,8 @@
         <span style="font-size:12px;color:var(--t3)">💱 מטבע תצוגה:</span>
         <select id="dash-currency" onchange="setDisplayCurrency(this)"
           style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:5px 10px;cursor:pointer"></select>
+        <button id="dash-rate-btn" onclick="updateDisplayRate()" title="עדכן את שער החליפין לפי היום"
+          style="display:none;background:transparent;border:1px solid var(--teal-border);color:var(--teal);border-radius:8px;padding:5px 10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"></button>
         <span style="font-size:10.5px;color:var(--t3)">משנה את כל התצוגה במערכת — הנתונים עצמם נשמרים כפי שהם</span>
       </div>
       <div id="snap-trigger-area"></div>
@@ -749,15 +751,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=35"></script>
-<script defer src="js/cashflow-goals.js?v=35"></script>
-<script defer src="js/pension.js?v=35"></script>
-<script defer src="js/networth.js?v=35"></script>
-<script defer src="js/portfolio.js?v=35"></script>
-<script defer src="js/dashboard.js?v=35"></script>
-<script defer src="js/settings.js?v=35"></script>
-<script defer src="js/admin.js?v=35"></script>
-<script defer src="js/misc.js?v=35"></script>
-<script defer src="js/budget.js?v=35"></script>
+<script defer src="js/core.js?v=36"></script>
+<script defer src="js/cashflow-goals.js?v=36"></script>
+<script defer src="js/pension.js?v=36"></script>
+<script defer src="js/networth.js?v=36"></script>
+<script defer src="js/portfolio.js?v=36"></script>
+<script defer src="js/dashboard.js?v=36"></script>
+<script defer src="js/settings.js?v=36"></script>
+<script defer src="js/admin.js?v=36"></script>
+<script defer src="js/misc.js?v=36"></script>
+<script defer src="js/budget.js?v=36"></script>
 </body>
 </html>

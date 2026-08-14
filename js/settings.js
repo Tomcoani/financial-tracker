@@ -13,6 +13,19 @@ function getCurrSymbol(c){return CURR_SYMBOLS[c]||c;}
 
 // ── Global display currency ──
 // Changes only how amounts are shown across the app; stored values stay as-is.
+// Ask for the CURRENT rate — rates drift, so we prompt on every switch (with
+// the last value pre-filled). Returns true if a valid rate was set.
+function promptRate(cur){
+  const prev=(D.exchangeRates&&D.exchangeRates[cur])||'';
+  const input=prompt('שער חליפין נוכחי — כמה ₪ שווה 1 '+cur+'?\n(עדכנו לפי השער היום)',prev?String(prev):'');
+  if(input===null)return false; // cancelled
+  const rate=parseFloat(String(input).replace(/,/g,''));
+  if(isNaN(rate)||rate<=0){alert('שער לא תקין');return false;}
+  if(!D.exchangeRates)D.exchangeRates={};
+  D.exchangeRates[cur]=rate;
+  if(!CURR_SYMBOLS[cur])CURR_SYMBOLS[cur]=cur;
+  return true;
+}
 function setDisplayCurrency(el){
   let cur=el.value;
   if(cur==='__add__'){
@@ -20,19 +33,21 @@ function setDisplayCurrency(el){
     if(!code||!code.trim()){el.value=dispCur();return;}
     cur=code.trim().toUpperCase();
   }
-  // Make sure we have a rate before switching to a non-ILS currency
-  if(cur!=='ILS'&&!(D.exchangeRates&&D.exchangeRates[cur])){
-    const rate=parseFloat(prompt('שער חליפין — כמה ₪ שווה 1 '+cur+'?',''));
-    if(isNaN(rate)||rate<=0){el.value=dispCur();return;}
-    if(!D.exchangeRates)D.exchangeRates={};
-    D.exchangeRates[cur]=rate;
-    if(!CURR_SYMBOLS[cur])CURR_SYMBOLS[cur]=cur;
+  // Every switch to a foreign currency asks for the current rate
+  if(cur!=='ILS'){
+    if(!promptRate(cur)){el.value=dispCur();return;} // cancelled/invalid → keep current
   }
   if(!D.settings)D.settings={};
   D.settings.displayCurrency=cur;
   markDirty();
   refreshMoneyViews();
   showToast('התצוגה עברה ל'+getCurrSymbol(cur)+' '+cur+' ✓');
+}
+// Update the rate of the currently displayed currency, any time (button on home)
+function updateDisplayRate(){
+  const cur=dispCur();
+  if(cur==='ILS'){showToast('בחרו מטבע זר קודם');return;}
+  if(promptRate(cur)){markDirty();refreshMoneyViews();showToast('שער '+cur+' עודכן ✓');}
 }
 // Re-render every money-bearing view so the new currency shows immediately
 function refreshMoneyViews(){
