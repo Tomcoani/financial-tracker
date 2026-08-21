@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=37">
+<link rel="stylesheet" href="styles/main.css?v=38">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
@@ -719,6 +719,20 @@
   </div>
 </div>
 
+<!-- WHAT'S NEW MODAL -->
+<div class="overlay" id="update-modal" style="display:none">
+  <div class="modal" style="text-align:right;width:min(520px,94vw);max-height:88vh;display:flex;flex-direction:column">
+    <h2 style="margin-bottom:8px">✨ מה חדש במערכת</h2>
+    <div style="overflow-y:auto;min-height:0;font-size:13.5px;color:var(--t2);line-height:1.85">
+      <p id="update-intro" style="margin-bottom:8px">היי! רציתי לעדכן שהוספנו כמה דברים חדשים 🙂</p>
+      <ul id="update-items" style="margin:0;padding:0;list-style:none"></ul>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btnsnap primary" style="flex:1" onclick="closeUpdateModal()">מגניב, הבנתי ✓</button>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE HELP MODAL -->
 <div class="overlay" id="page-help-modal" style="display:none">
   <div class="modal" style="text-align:right;width:min(560px,94vw);max-height:88vh;display:flex;flex-direction:column">
@@ -762,15 +776,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=37"></script>
-<script defer src="js/cashflow-goals.js?v=37"></script>
-<script defer src="js/pension.js?v=37"></script>
-<script defer src="js/networth.js?v=37"></script>
-<script defer src="js/portfolio.js?v=37"></script>
-<script defer src="js/dashboard.js?v=37"></script>
-<script defer src="js/settings.js?v=37"></script>
-<script defer src="js/admin.js?v=37"></script>
-<script defer src="js/misc.js?v=37"></script>
-<script defer src="js/budget.js?v=37"></script>
+<script defer src="js/core.js?v=38"></script>
+<script defer src="js/cashflow-goals.js?v=38"></script>
+<script defer src="js/pension.js?v=38"></script>
+<script defer src="js/networth.js?v=38"></script>
+<script defer src="js/portfolio.js?v=38"></script>
+<script defer src="js/dashboard.js?v=38"></script>
+<script defer src="js/settings.js?v=38"></script>
+<script defer src="js/admin.js?v=38"></script>
+<script defer src="js/misc.js?v=38"></script>
+<script defer src="js/budget.js?v=38"></script>
 </body>
 </html>

@@ -343,6 +343,39 @@ function showPageHelp(id){
   document.getElementById('page-help-modal').style.display='flex';
 }
 function closePageHelp(){document.getElementById('page-help-modal').style.display='none';}
+
+// ══ "מה חדש" — one-time update notice ══
+// ⬇⬇ בכל שחרור גרסה: שנו את id (למשל לתאריך החדש) ועדכנו את רשימת items ⬇⬇
+const LATEST_UPDATE={
+  id:'2026-08',
+  intro:'היי! רציתי לעדכן שהוספנו כמה דברים חדשים למערכת 🙂',
+  items:[
+    '💱 בחירת מטבע תצוגה — אפשר להציג את כל המערכת בכל מטבע (עם שער חליפין שמעדכנים לפי היום)',
+    '💡 כפתור "הסבר עמוד" בכל עמוד — הדרכה קצרה איך למלא אותו',
+    '📄 עמוד "התנהלות חודשית" חדש — מעקב הכנסות והוצאות פשוט',
+    '🔒 התנתקות אוטומטית אחרי 24 שעות ללא פעילות, לאבטחה',
+    '🔎 טקסט גדול וברור יותר בכל המערכת'
+  ]
+};
+// Show the notice once per account per update. New/onboarding users are marked
+// caught-up silently so they never get an old changelog.
+function maybeShowUpdate(){
+  if(!LATEST_UPDATE||!LATEST_UPDATE.id||typeof D!=='object'||!D.settings)return;
+  if((D.settings.lastSeenUpdate||'')===LATEST_UPDATE.id)return;
+  const established=D.settings.displayName&&localStorage.getItem('tour_done_'+CU);
+  if(!established){D.settings.lastSeenUpdate=LATEST_UPDATE.id;markDirty();return;}
+  setTimeout(showUpdateModal,700);
+}
+function showUpdateModal(){
+  const intro=document.getElementById('update-intro');
+  if(intro&&LATEST_UPDATE.intro)intro.textContent=LATEST_UPDATE.intro;
+  const ul=document.getElementById('update-items');
+  if(ul)ul.innerHTML=(LATEST_UPDATE.items||[]).map(t=>`<li style="padding:5px 0;display:flex;gap:8px;align-items:flex-start"><span style="color:var(--teal)">✓</span><span>${esc(t)}</span></li>`).join('');
+  const m=document.getElementById('update-modal');if(m)m.style.display='flex';
+  // Mark seen immediately so it won't reappear even if they don't click close
+  if(D.settings){D.settings.lastSeenUpdate=LATEST_UPDATE.id;markDirty();try{manualSave();}catch(e){}}
+}
+function closeUpdateModal(){const m=document.getElementById('update-modal');if(m)m.style.display='none';}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}

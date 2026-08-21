@@ -160,6 +160,7 @@ auth.onAuthStateChanged(async user=>{
     } else if(!localStorage.getItem('tour_done_'+CU)){
       setTimeout(()=>startTour(),900);
     }
+    if(typeof maybeShowUpdate==='function')maybeShowUpdate(); // one-time "what's new"
   }else{
     CU=null;D={};
     stopIdleWatch();
