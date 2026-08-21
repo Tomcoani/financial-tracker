@@ -311,11 +311,11 @@ function mkGoal(g,i){
           style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:6px 10px;width:100%"/>
         <button onclick="removeGoalLoc(${i},${li})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0;line-height:1">×</button>
       </div>`).join('');
-    const emptyHint=!g.goalLocs.length?`<div style="font-size:12px;color:var(--t3);padding:4px 0;text-align:right">לחץ + כדי לפרט איפה הכסף נמצא</div>`:'';
+    const emptyHint=!g.goalLocs.length?`<div style="font-size:12px;color:var(--t3);padding:4px 0;text-align:right">לחץ + כדי לפרט מאיזו השקעה הכסף נלקח</div>`:'';
     const totalDisplay=locsTotal>0?`<span class="goal-locs-total" style="font-size:13px;font-weight:800;color:var(--teal)">${fmtCur(locsTotal,cur)}</span>`:'';
     bodyContent=`
       <div class="mf" style="margin-bottom:10px">
-        <label>איפה הכסף נמצא?<span class="q-tip">?<span class="q-popup">פרט את המיקומים שבהם הכסף נמצא וכמה יש בכל אחד. הסכום הכולל הוא "כמה חסכת".</span></span></label>
+        <label>מאיזו השקעה הכסף נלקח?<span class="q-tip">?<span class="q-popup">מאיזה מקום/השקעה מגיע הכסף שמיועד למטרה הזו — כלומר היכן הוא מופקד כרגע? לדוגמה: עו"ש, תיק השקעות, קרן כספית. אפשר לפרט כמה מקומות עם הסכום בכל אחד.</span></span></label>
         <div id="goal-locs-${i}" style="margin-top:6px">${locsRows}${emptyHint}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <button onclick="addGoalLoc(${i})" style="background:none;border:1px dashed var(--border);border-radius:8px;color:var(--t2);font-family:var(--font);font-size:12px;padding:4px 10px;cursor:pointer">+ הוסף מיקום</button>
@@ -334,7 +334,7 @@ function mkGoal(g,i){
         </div>
         ${neededBlock}
       </div>
-      <div class="mf" style="margin-bottom:9px"><label>איפה הכסף<span class="q-tip">?<span class="q-popup">היכן הכסף הזה מופקד? לדוגמה: עו"ש, תיק השקעות, קרן כספית.</span></span></label>
+      <div class="mf" style="margin-bottom:9px"><label>מאיזו השקעה הכסף נלקח<span class="q-tip">?<span class="q-popup">מאיזה מקום/השקעה מגיע הכסף שמיועד למטרה הזו — היכן הוא מופקד כרגע? לדוגמה: עו"ש, תיק השקעות, קרן כספית.</span></span></label>
         <input value="${esc(g.where)}" placeholder="עובר ושב / קרן כספית וכד׳" data-i="${i}" data-f="where" oninput="gu(this)"
           style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
       </div>`;
@@ -428,7 +428,7 @@ function toggleDone(i){// also refresh locations
     if(!gl.name||!gl.name.trim())missing.push('שם המטרה');
     if(!gl.saved||parseFloat(gl.saved)<=0)missing.push('כמה חסכת');
     if(!gl.needed||parseFloat(gl.needed)<=0)missing.push('סכום יעד');
-    if(!gl.goalLocs&&(!gl.where||!gl.where.trim()))missing.push('איפה הכסף');
+    if(!gl.goalLocs&&(!gl.where||!gl.where.trim()))missing.push('מאיזו השקעה הכסף נלקח');
     // h is always set (0-3), so horizon is always valid
     if(missing.length>0){
       showGoalError(i,'לא ניתן לסמן כהושלם — חסרים הפרטים הבאים: '+missing.join(', '));

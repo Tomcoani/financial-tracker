@@ -266,6 +266,83 @@ function fmt(n){
   const s=sym+a.toLocaleString('he-IL');
   return val<0?'('+s+')':s;
 }
+// ══ PAGE HELP (light per-page guide) ══
+const PAGE_HELP={
+  dash:{title:'🏠 עמוד הבית',html:`
+    <p>זו <strong>תמונת המצב הכללית</strong> שלכם — סיכום של כל המערכת במקום אחד.</p>
+    <ul style="margin:8px 12px 0;padding:0;list-style:none">
+      <li>📊 <strong>האריחים למעלה</strong> — שווי נטו, נכסים, פנסיה והשקעות נזילות, כל אחד עם תאריך העדכון האחרון שלו.</li>
+      <li>💱 <strong>מטבע תצוגה</strong> — אפשר לבחור מטבע והכל יוצג בו (הנתונים עצמם נשמרים כפי שהם).</li>
+      <li>📸 <strong>"שמור תמונת מצב"</strong> — פעם בחודש, כדי לתעד את המצב ולעקוב אחרי ההתקדמות לאורך זמן.</li>
+      <li>💡 בתחתית — קריאה למשוב אם מצאתם תקלה או רעיון.</li>
+    </ul>
+    <p style="margin-top:8px;color:var(--t3);font-size:12px">הכי טוב למלא קודם את שאר הטאבים, ואז לחזור לכאן ולראות את התמונה המלאה.</p>`},
+  budget:{title:'💵 התנהלות חודשית',html:`
+    <p>כאן רושמים <strong>פעם בחודש</strong> את ההכנסות וההוצאות — כדי לראות כמה באמת נשאר בסוף החודש.</p>
+    <ul style="margin:8px 12px 0;padding:0;list-style:none">
+      <li>💰 <strong>הכנסות</strong> — כל הכסף שנכנס (משכורות, עסק, קצבאות).</li>
+      <li>🏠 <strong>צרכים</strong> — הוצאות חובה: דיור, חשבונות, אוכל, תחבורה.</li>
+      <li>🎉 <strong>כיף</strong> — מותרות שאפשר לוותר עליהן: בילויים, קניות, חופשות.</li>
+      <li>📅 אפשר <strong>לעבור בין חודשים</strong> למעלה, ולהעתיק סכומים מהחודש הקודם בלחיצה.</li>
+    </ul>
+    <p style="margin-top:8px">למעלה תראו כמה נשאר, שיעור החיסכון, וגרף התקדמות אחרי כמה חודשים.</p>`},
+  goals:{title:'🎯 מטרות',html:`
+    <p>המקום להגדיר את <strong>המטרות הכלכליות</strong> שלכם ולעקוב אחרי ההתקדמות.</p>
+    <ul style="margin:8px 12px 0;padding:0;list-style:none">
+      <li>💰 <strong>"כמה חסכתי החודש"</strong> (למעלה) — כמה כסף פנוי נשאר להשקעה החודש.</li>
+      <li>🎯 <strong>לכל מטרה</strong>: שם, סכום היעד, כמה כבר נחסך, ו<strong>מאיזו השקעה הכסף נלקח</strong> (איפה הכסף מופקד כרגע).</li>
+      <li>⏱️ בחרו לכל מטרה <strong>טווח זמן</strong> — והן יסתדרו אוטומטית לפי דחיפות.</li>
+      <li>🤝 בתחתית ("דברים שעשיתם בפגישה עם תום") — רשימת הנכסים ותוכנית להעברת הכסף למטרות ולתיק.</li>
+    </ul>`},
+  pension:{title:'🏦 פנסיה וקרן השתלמות',html:`
+    <p>מזינים כאן את <strong>מוצרי הפנסיה וקרן ההשתלמות</strong> שלכם.</p>
+    <ul style="margin:8px 12px 0;padding:0;list-style:none">
+      <li>לכל מוצר: <strong>כמה כסף</strong> יש בו, <strong>בית ההשקעות</strong>, ו<strong>דמי הניהול</strong> (מהפקדה ומצבירה).</li>
+      <li>🚦 המערכת <strong>מסמנת בצבע</strong> אם דמי הניהול גבוהים מהמומלץ — שווה לבדוק.</li>
+      <li>אפשר להוסיף כמה מוצרים (גם של בן/בת זוג) ואת מסלולי ההשקעה בכל אחד.</li>
+    </ul>
+    <p style="margin-top:8px;color:var(--t3);font-size:12px">את היתרות אפשר למצוא באזור האישי של בית ההשקעות או במסלקה הפנסיונית.</p>`},
+  portfolio:{title:'📈 תיק השקעות',html:`
+    <p>ניהול <strong>ניירות הערך</strong> שבתיק ההשקעות שלכם.</p>
+    <ul style="margin:8px 12px 0;padding:0;list-style:none">
+      <li>לכל נייר: <strong>שם, קטגוריה, שווי נוכחי</strong>, ו<strong>אחוז יעד</strong> מהתיק.</li>
+      <li>📊 המערכת מציגה <strong>פיזור</strong> התיק ו<strong>המלצת איזון</strong> אם הוא סטה מהיעד.</li>
+      <li>אפשר לקבץ כל תיק לשורה אחת (▾) ולנהל כמה תיקים בנפרד.</li>
+    </ul>`},
+  nw:{title:'📊 שווי נטו',html:`
+    <p>הטבלה שמראה את <strong>השווי הנקי</strong> שלכם (נכסים פחות חובות) <strong>לאורך זמן</strong>.</p>
+    <ul style="margin:8px 12px 0;padding:0;list-style:none">
+      <li>כל <strong>עמודה = תקופה</strong>. מזינים את התאריך הראשון והשאר ממשיך אוטומטית.</li>
+      <li>ממלאים <strong>נכסים</strong> (דירה, רכב, עו"ש), <strong>השקעות</strong>, <strong>חסכונות</strong> ו<strong>חובות</strong>.</li>
+      <li>🔵 ערכים שסומנו ב-"?" נלקחו אוטומטית ממקום אחר (פנסיה/תיק) — אפשר לתקן ידנית.</li>
+      <li>המספרים מוצגים במרכז, וכל תקופה מחושבת רק לפי מה שהוזן בה.</li>
+    </ul>`},
+  history:{title:'🕐 היסטוריה',html:`
+    <p>כל <strong>תמונות המצב</strong> ששמרתם לאורך הזמן, במקום אחד.</p>
+    <ul style="margin:8px 12px 0;padding:0;list-style:none">
+      <li>📈 גרף של השווי נטו לאורך זמן.</li>
+      <li>השוואה בין תקופות — כמה השתנה שווי נטו, פנסיה והמטרות.</li>
+      <li>ככל שתשמרו יותר תמונות מצב (מעמוד הבית), הניתוח יהיה מדויק יותר.</li>
+    </ul>`}
+};
+function ensurePageHelpBtn(id){
+  if(!PAGE_HELP[id])return;
+  const panel=document.getElementById('p-'+id);
+  if(!panel||panel.querySelector(':scope > .page-help-btn'))return;
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='page-help-btn';
+  btn.innerHTML='💡 הסבר עמוד';
+  btn.onclick=()=>showPageHelp(id);
+  panel.insertBefore(btn,panel.firstChild);
+}
+function showPageHelp(id){
+  const help=PAGE_HELP[id]||PAGE_HELP[_lastTab];
+  if(!help)return;
+  document.getElementById('page-help-title').innerHTML=help.title;
+  document.getElementById('page-help-body').innerHTML=help.html;
+  document.getElementById('page-help-modal').style.display='flex';
+}
+function closePageHelp(){document.getElementById('page-help-modal').style.display='none';}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}
@@ -387,7 +464,7 @@ function getTourSteps(){
     {
       el:'nav-goals',
       title:'מטרות פיננסיות 🎯',
-      text:`${g('הגדר','הגדירי')} כאן את המטרות הכלכליות שלך — קרן חירום, רכישת דירה, חופשה, רכב וכל מה שחשוב לך.<br><br>לכל מטרה ${g('הכנס','הכניסי')}: שם, כמה חסכת עד כה, סכום יעד ואיפה הכסף נמצא. ${g('לחץ','לחצי')} <strong>"הוספת מטרה חדשה"</strong> כדי להתחיל — המטרות יסתדרו אוטומטית לפי אופק הזמן שת${g('בחר','בחרי')} לכל אחת.`
+      text:`${g('הגדר','הגדירי')} כאן את המטרות הכלכליות שלך — קרן חירום, רכישת דירה, חופשה, רכב וכל מה שחשוב לך.<br><br>לכל מטרה ${g('הכנס','הכניסי')}: שם, כמה חסכת עד כה, סכום יעד ומאיזו השקעה הכסף נלקח. ${g('לחץ','לחצי')} <strong>"הוספת מטרה חדשה"</strong> כדי להתחיל — המטרות יסתדרו אוטומטית לפי אופק הזמן שת${g('בחר','בחרי')} לכל אחת.`
     },
     {
       el:'nav-pension',

@@ -345,6 +345,7 @@ function goTo(id,btn){
   btn.classList.add('on');
   _lastTab=id;
   syncMobileNav(id);
+  if(typeof ensurePageHelpBtn==='function')ensurePageHelpBtn(id);
   if(id==='dash')renderDash();
   if(id==='budget')renderBudget();
   if(id==='history')renderHistory();
