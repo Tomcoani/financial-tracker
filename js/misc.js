@@ -376,6 +376,29 @@ function showUpdateModal(){
   if(D.settings){D.settings.lastSeenUpdate=LATEST_UPDATE.id;markDirty();try{manualSave();}catch(e){}}
 }
 function closeUpdateModal(){const m=document.getElementById('update-modal');if(m)m.style.display='none';}
+
+// ══ IN-APP "YOU HAVEN'T UPDATED IN A WHILE" REMINDER ══
+// A gentle top banner shown when the account's data hasn't been saved for a
+// while. This is the in-app half of the reminder; the email half (for people
+// who aren't logging in at all) runs server-side — see functions/.
+const STALE_REMINDER_DAYS=30;
+function maybeShowStaleReminder(){
+  if(typeof D!=='object'||!D||!D.lastSaved)return;            // brand-new account: nothing to nudge yet
+  if(sessionStorage.getItem('stale_dismissed'))return;        // dismissed this session
+  // Let the one-time "what's new" notice go first; the banner waits for next login.
+  if(typeof LATEST_UPDATE==='object'&&LATEST_UPDATE&&D.settings&&(D.settings.lastSeenUpdate||'')!==LATEST_UPDATE.id)return;
+  const days=Math.floor((Date.now()-new Date(D.lastSaved).getTime())/86400000);
+  if(isNaN(days)||days<STALE_REMINDER_DAYS)return;
+  showStaleBanner(days);
+}
+function showStaleBanner(days){
+  let b=document.getElementById('stale-banner');
+  if(!b){b=document.createElement('div');b.id='stale-banner';b.className='stale-banner';document.body.appendChild(b);}
+  b.innerHTML='<span>⏰ עברו '+days+' ימים מאז שעדכנת את הנתונים — שווה להיכנס ולרענן כדי שהתמונה תישאר מדויקת.</span>'
+    +'<button type="button" onclick="dismissStaleBanner()" aria-label="סגור">✕</button>';
+  b.style.display='flex';
+}
+function dismissStaleBanner(){sessionStorage.setItem('stale_dismissed','1');const b=document.getElementById('stale-banner');if(b)b.style.display='none';}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}

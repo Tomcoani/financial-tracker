@@ -11,6 +11,13 @@
   background:rgba(66,235,214,.10);border:1px solid var(--teal-border);color:var(--teal);
   border-radius:10px;padding:7px 14px;font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:background .15s;}
 .page-help-btn:hover{background:rgba(66,235,214,.2);}
+.stale-banner{position:fixed;top:0;left:0;right:0;z-index:900;display:none;align-items:center;justify-content:center;gap:12px;
+  padding:10px 16px;background:linear-gradient(90deg,#f59e0b,#f97316);color:#1a1204;
+  font-family:var(--font);font-size:13px;font-weight:700;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.stale-banner span{max-width:900px;text-align:center;}
+.stale-banner button{flex:0 0 auto;background:rgba(0,0,0,.15);border:none;color:#1a1204;
+  width:26px;height:26px;border-radius:50%;font-size:14px;font-weight:800;cursor:pointer;line-height:1;}
+.stale-banner button:hover{background:rgba(0,0,0,.28);}
 html,body{height:100%;direction:rtl;}
 body{font-family:var(--font);background:var(--bg);color:var(--white);overflow-x:hidden;zoom:var(--ui-zoom);}
 ::-webkit-scrollbar{width:4px;}

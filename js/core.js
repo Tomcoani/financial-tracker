@@ -71,13 +71,17 @@ async function saveDataFS(uid,d){
   try{
     // Write full data to subcollection
     await db.collection('users').doc(uid).collection('data').doc('main').set(d);
-    // Also update parent /users/{uid} doc so admin listing works
-    await db.collection('users').doc(uid).set({
-      email: d.settings?.email||'',
+    // Also update parent /users/{uid} doc so admin listing + email reminders work.
+    // Never overwrite a known email with an empty string — keep the address the
+    // scheduled reminder function relies on. Prefer settings, fall back to auth.
+    const parent={
       displayName: d.settings?.displayName||'',
       lastSaved: d.lastSaved||null,
       lastUpdated: d.lastUpdated||{}
-    },{merge:true});
+    };
+    const em=(d.settings&&d.settings.email)||(auth.currentUser&&auth.currentUser.email)||'';
+    if(em)parent.email=em;
+    await db.collection('users').doc(uid).set(parent,{merge:true});
   }
   catch(e){console.error(e);}
 }
@@ -161,6 +165,7 @@ auth.onAuthStateChanged(async user=>{
       setTimeout(()=>startTour(),900);
     }
     if(typeof maybeShowUpdate==='function')maybeShowUpdate(); // one-time "what's new"
+    if(typeof maybeShowStaleReminder==='function')setTimeout(maybeShowStaleReminder,1200); // "you haven't updated in a while"
   }else{
     CU=null;D={};
     stopIdleWatch();
