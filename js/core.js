@@ -37,6 +37,7 @@ function defData(){
     monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',cfLastUpdated:'',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
+    updateMonths:[],bestStreak:0,
     goals:[{name:'קרן חירום',where:'',saved:'',needed:'',h:0,done:false,goalLocs:[]}],
     locations:[{name:'עו"ש',amount:''},{name:'תיק השקעות',amount:''}],
     pension:[
@@ -152,6 +153,8 @@ auth.onAuthStateChanged(async user=>{
     if(!D.settings)D.settings={displayName:'',email:user.email||'',age:'',notifyEmail:user.email||'',gender:'male'};
     if(!D.settings.gender)D.settings.gender='male'; // migrate existing users
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
+    if(!Array.isArray(D.updateMonths))D.updateMonths=[]; // monthly-streak history (migrate)
+    if(typeof D.bestStreak!=='number')D.bestStreak=0;
     renderAll();
     goTo('dash',document.querySelector('.nbtn'));
     startIdleWatch(); // begin 24h idle-logout tracking
@@ -278,6 +281,8 @@ async function manualSave(silent){
   try{
     collectAll();
     D.lastSaved=new Date().toISOString();
+    // Record this month for the update streak (a save only happens on a real change).
+    if(typeof recordUpdateMonth==='function')recordUpdateMonth();
     await saveDataFS(CU,D);
     dirty=false;_firstDirtyAt=0;
     document.getElementById('save-bar').style.display='none';

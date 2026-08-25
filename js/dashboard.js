@@ -59,6 +59,7 @@ function renderDash(){
   }).map(p=>p.name);
 
   document.getElementById('snap-trigger-area').innerHTML=`
+    <div id="streak-badge-host"></div>
     ${staleProducts.length?`<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:11px;padding:13px 18px;margin-bottom:12px;font-size:13px;color:#fcd34d;text-align:right">
       <i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;color:#fcd34d"></i> <strong>לא נבדקה כבר חצי שנה:</strong> ${staleProducts.join('، ')} — כדאי לבדוק מה היתרה הנוכחית
     </div>`:''}
@@ -294,6 +295,7 @@ function renderDash(){
 
   renderAnalysis(snaps);
   renderUpdateAlerts();
+  if(typeof renderStreak==='function')renderStreak();
 }
 
 // ══ LAST UPDATED BADGE ══

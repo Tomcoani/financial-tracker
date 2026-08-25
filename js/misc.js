@@ -399,6 +399,54 @@ function showStaleBanner(days){
   b.style.display='flex';
 }
 function dismissStaleBanner(){sessionStorage.setItem('stale_dismissed','1');const b=document.getElementById('stale-banner');if(b)b.style.display='none';}
+
+// ══ MONTHLY UPDATE STREAK ══
+// Rewards consistency: counts consecutive months in which the client saved a
+// real change. recordUpdateMonth() is called from manualSave; the badge renders
+// on the home page (see renderStreak).
+function _ym(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function _prevYm(key){let[y,m]=key.split('-').map(Number);m--;if(m<1){m=12;y--;}return y+'-'+String(m).padStart(2,'0');}
+function recordUpdateMonth(){
+  if(typeof D!=='object'||!D)return;
+  if(!Array.isArray(D.updateMonths))D.updateMonths=[];
+  const cur=_ym(new Date());
+  if(!D.updateMonths.includes(cur))D.updateMonths.push(cur);
+  const s=computeStreak();
+  if(typeof D.bestStreak!=='number')D.bestStreak=0;
+  if(s.count>D.bestStreak)D.bestStreak=s.count;
+}
+// Returns {count, active}: count = length of the consecutive-month run ending at
+// this month (or last month, as grace); active = true if this month is included.
+function computeStreak(){
+  const set=new Set((D&&D.updateMonths)||[]);
+  const cur=_ym(new Date());
+  let anchor=null;
+  if(set.has(cur))anchor=cur;
+  else{const p=_prevYm(cur);if(set.has(p))anchor=p;}
+  if(!anchor)return{count:0,active:false};
+  let count=0,k=anchor;
+  while(set.has(k)){count++;k=_prevYm(k);}
+  return{count,active:set.has(cur)};
+}
+// Injects/updates the streak badge into a host element (id="streak-badge-host").
+function renderStreak(){
+  const host=document.getElementById('streak-badge-host');
+  if(!host)return;
+  const s=computeStreak();
+  const best=(D&&D.bestStreak)||0;
+  let html='';
+  if(s.count>=2&&s.active){
+    html='<div class="streak-badge on"><span class="flame">🔥</span><b>'+s.count+' חודשים ברצף!</b>'
+      +(best>s.count?'<small>שיא: '+best+'</small>':'<small>שיא אישי 🏆</small>')+'</div>';
+  }else if(s.count>=1&&s.active){
+    html='<div class="streak-badge on"><span class="flame">🔥</span><b>התחלת רצף!</b><small>חזרה לעדכן בחודש הבא תשמור עליו</small></div>';
+  }else if(s.count>=1&&!s.active){
+    html='<div class="streak-badge warn"><span class="flame">⏳</span><b>אל תשבור את הרצף</b><small>עדכון החודש ישמור על רצף של '+s.count+' חודשים</small></div>';
+  }else{
+    html='<div class="streak-badge off"><span class="flame">🔥</span><b>התחל רצף חודשי</b><small>עדכן החודש כדי להתחיל</small></div>';
+  }
+  host.innerHTML=html;
+}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}

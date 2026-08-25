@@ -18,6 +18,18 @@
 .stale-banner button{flex:0 0 auto;background:rgba(0,0,0,.15);border:none;color:#1a1204;
   width:26px;height:26px;border-radius:50%;font-size:14px;font-weight:800;cursor:pointer;line-height:1;}
 .stale-banner button:hover{background:rgba(0,0,0,.28);}
+.streak-badge{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 16px;margin-bottom:12px;
+  font-family:var(--font);border:1px solid transparent;}
+.streak-badge b{font-size:14px;font-weight:800;}
+.streak-badge small{font-size:11px;opacity:.85;margin-inline-start:auto;}
+.streak-badge .flame{font-size:20px;line-height:1;}
+.streak-badge.on{background:linear-gradient(90deg,rgba(249,115,22,.14),rgba(245,158,11,.10));border-color:rgba(249,115,22,.35);color:#fcd34d;}
+.streak-badge.on b{color:#fdba74;}
+.streak-badge.warn{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.3);color:#fcd34d;}
+.streak-badge.off{background:rgba(66,235,214,.07);border-color:var(--teal-border);color:var(--t2);}
+.streak-badge.off b{color:var(--t1);}
+.streak-badge.on .flame{animation:flamePulse 1.8s ease-in-out infinite;}
+@keyframes flamePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 html,body{height:100%;direction:rtl;}
 body{font-family:var(--font);background:var(--bg);color:var(--white);overflow-x:hidden;zoom:var(--ui-zoom);}
 ::-webkit-scrollbar{width:4px;}
