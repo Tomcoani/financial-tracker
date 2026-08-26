@@ -14,6 +14,14 @@ function renderPortfolio(){
   if(!D.portfolios||!D.portfolios.length){
     D.portfolios=[{id:Date.now(),brokerName:'',items:[{name:'',category:'מניות חו"ל',value:'',targetPct:''}]}];
   }
+  // Pending-transfer reminder (set from the goals page). Clears itself once the
+  // portfolio value has grown, i.e. the money was actually deposited.
+  maybeClearPendingTransfer();
+  if(D.pendingPortfolioTransfer){
+    const holder=document.createElement('div');
+    holder.innerHTML=portTransferBannerHtml(D.pendingPortfolioTransfer);
+    if(holder.firstElementChild)container.appendChild(holder.firstElementChild);
+  }
   D.portfolios.forEach((port,pi)=>{
     const portTotal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
     const collapsed=_collapsedPorts.has(pi);
@@ -88,7 +96,67 @@ function portItemUpdate(el){
   });
   updatePortStats();syncNWFromPension();
   if(document.getElementById('nw-investments'))renderNWSection('nw-investments','investments');
+  maybeClearPendingTransfer(); // deposit reflected → drop the reminder
   touchSection('portfolio');markDirty();
+}
+
+// ══ PENDING TRANSFER (savings → portfolio) ══
+// Sum of all portfolio item values (stored in ₪).
+function portGrandTotalILS(){
+  return (D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+}
+// Called by the goals page: record an intended deposit and remind on the portfolio.
+function startPortfolioTransfer(){
+  let def=0;
+  try{
+    const total=(D.locations||[]).filter(l=>!l._auto).reduce((s,l)=>s+toILS(parseFloat(l.amount)||0,l.currency||'ILS'),0);
+    const goals=(D.goals||[]).filter(g=>!g.done).reduce((s,g)=>s+toILS(parseFloat(g.saved)||0,g.savedCurrency||'ILS'),0);
+    const portAlloc=Math.max(0,parseFloat(D.locPortfolioAllocILS)||0);
+    def=Math.round(Math.max(0,total-goals-portAlloc)||portAlloc||0);
+  }catch(e){}
+  const input=prompt('כמה כסף אתה מעביר החודש לתיק ההשקעות בשוק ההון? (₪)',def?String(def):'');
+  if(input===null)return; // cancelled
+  const amt=parseFloat(String(input).replace(/,/g,''));
+  if(isNaN(amt)||amt<=0){alert('סכום לא תקין');return;}
+  D.pendingPortfolioTransfer={amountILS:amt,createdAt:new Date().toISOString(),baselineILS:portGrandTotalILS()};
+  touchSection('goals'); // counts as a goals-page update
+  if(typeof recordUpdateMonth==='function')recordUpdateMonth(); // + monthly streak
+  markDirty();try{manualSave();}catch(e){}
+  if(typeof showToast==='function')showToast('נרשם! תזכורת להפקדה תופיע בעמוד תיק השקעות 📈');
+  const pbtn=Array.from(document.querySelectorAll('.nbtn')).find(b=>/portfolio/.test(b.getAttribute('onclick')||''));
+  if(pbtn)goTo('portfolio',pbtn); else renderPortfolio();
+}
+// Remove the reminder once the portfolio value has grown by ~the deposit (money added).
+function maybeClearPendingTransfer(){
+  const t=D&&D.pendingPortfolioTransfer;
+  if(!t)return false;
+  const grown=portGrandTotalILS()-(t.baselineILS||0);
+  if(grown>=Math.max(1,(t.amountILS||0)*0.5)){
+    delete D.pendingPortfolioTransfer;
+    const b=document.getElementById('port-transfer-banner');if(b)b.remove();
+    return true;
+  }
+  return false;
+}
+// Manual dismiss (X on the banner).
+function dismissPendingTransfer(){
+  if(!D.pendingPortfolioTransfer)return;
+  delete D.pendingPortfolioTransfer;markDirty();
+  const b=document.getElementById('port-transfer-banner');if(b)b.remove();
+}
+function portTransferBannerHtml(t){
+  const when=(typeof fmtDate==='function')?fmtDate(t.createdAt):'';
+  return `<div id="port-transfer-banner" class="card" style="margin-bottom:16px;background:rgba(66,235,214,.08);border:1px solid var(--teal-border);position:relative">
+    <button onclick="dismissPendingTransfer()" title="הסר תזכורת" style="position:absolute;top:10px;left:12px;background:transparent;border:none;color:var(--t3);font-size:16px;cursor:pointer;line-height:1">✕</button>
+    <div style="display:flex;align-items:flex-start;gap:11px">
+      <span style="font-size:22px;flex-shrink:0">📥</span>
+      <div style="font-size:13px;line-height:1.75;color:var(--t2)">
+        <b style="color:var(--teal)">תזכורת: הפקדה לתיק ההשקעות</b><br>
+        רשמת ${when?`(${when}) `:''}שאתה מעביר <b style="color:var(--white)">${fmt(t.amountILS)}</b> מהחיסכון שלך לתיק ההשקעות בשוק ההון.<br>
+        זו תזכורת <b>להפקיד את הכסף בפועל</b> — היא תיעלם אוטומטית ברגע שתעדכן כאן את שווי ההשקעות אחרי ההפקדה.
+      </div>
+    </div>
+  </div>`;
 }
 function addPortItem(pi){
   if(!D.portfolios[pi])return;
