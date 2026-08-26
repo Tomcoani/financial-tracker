@@ -662,7 +662,6 @@ function updateLocFooter(){
       <span style="font-size:12px;color:var(--t3)">💼 סה"כ הכסף שלך בחשבונות</span>
       <span style="font-size:14px;font-weight:800;color:var(--teal);direction:ltr">${fmtMulti(assetsByCur)}</span>
     </div>
-    <button type="button" onclick="startPortfolioTransfer()" style="width:100%;margin-top:12px;background:rgba(66,235,214,.10);border:1px solid var(--teal-border);color:var(--teal);border-radius:10px;padding:10px;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(66,235,214,.2)'" onmouseout="this.style.background='rgba(66,235,214,.10)'">📈 החודש אני מעביר כסף לתיק ההשקעות בשוק ההון</button>
     <button type="button" onclick="toggleLocSourceHelp()" style="margin-top:8px;background:transparent;border:none;color:var(--t3);font-family:var(--font);font-size:11.5px;cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:2px">ℹ️ מאיפה המספרים האלה?</button>
     <div id="loc-src-help" style="display:none;margin-top:6px;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-size:11.5px;line-height:1.7;color:var(--t2)">
       <div style="font-weight:800;color:var(--t1);margin-bottom:5px">מאיפה כל מספר מגיע:</div>
