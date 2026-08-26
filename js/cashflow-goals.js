@@ -620,7 +620,10 @@ function updateLocFooter(){
   const portInputVal=portAllocILS>0?Math.round(fromILS(portAllocILS,domGoalCur)):'';
   const portLine=(unallocBeforePort>100||portAllocILS>0)?`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:13px;flex-wrap:wrap">
-      <span style="color:var(--teal);display:flex;align-items:center;gap:5px">📈 מוקצה לתיק השקעות</span>
+      <span style="display:flex;flex-direction:column;gap:1px">
+        <span style="color:var(--teal);display:flex;align-items:center;gap:5px">📈 מיועד להשקעה בשוק ההון</span>
+        <span style="font-size:10px;color:var(--t3)">כסף שמושקע או שמיועד להשקעה בתיק</span>
+      </span>
       <span style="display:flex;align-items:center;gap:6px">
         ${unallocatedILS>100?`<button onclick="allocRestToPort()" title="הקצה את כל היתרה לתיק"
           style="background:transparent;border:1px solid var(--teal-border);color:var(--teal);border-radius:7px;padding:3px 9px;font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">הקצה את היתרה</button>`:''}
@@ -630,20 +633,40 @@ function updateLocFooter(){
     </div>`:'';
   el.innerHTML=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
     ${allocatedILS>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;flex-wrap:wrap;gap:4px">
-      <span style="color:var(--t2)">מוקצה למטרות</span>
+      <span style="display:flex;flex-direction:column;gap:1px">
+        <span style="color:var(--t2)">💰 שמור למטרות שלך</span>
+        <span style="font-size:10px;color:var(--t3)">כסף שכבר נחסך עבור המטרות (קרן חירום, חופשה…)</span>
+      </span>
       <span style="color:var(--teal);font-weight:700;direction:ltr">${fmtMulti(goalsByCur)}</span>
     </div>`:''}
     ${portLine}
-    ${unallocatedILS>100?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px">
-      <span style="color:var(--amber)">⚠ טרם הוקצה</span>
+    ${unallocatedILS>100?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;gap:8px">
+      <span style="display:flex;flex-direction:column;gap:1px">
+        <span style="color:var(--amber)">⚠ כסף חופשי — עדיין לא שויך</span>
+        <span style="font-size:10px;color:var(--t3)">קיים בחשבון אך לא סומן למטרה או לתיק</span>
+      </span>
       <span style="color:var(--amber);font-weight:700">${fmtCur(fromILS(unallocatedILS,domGoalCur),domGoalCur)}</span>
-    </div>`:((allocatedILS>0||portAllocILS>0)?'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף הוקצה</div>':'')}
+    </div>`:((allocatedILS>0||portAllocILS>0)?'<div style="font-size:12px;color:var(--teal);padding:5px 0">✓ כל הכסף שויך למטרות או לתיק</div>':'')}
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;margin-top:2px;border-top:1px solid var(--border);flex-wrap:wrap;gap:4px">
-      <span style="font-size:12px;color:var(--t3)">סה"כ נכסים</span>
+      <span style="font-size:12px;color:var(--t3)">💼 סה"כ הכסף שלך בחשבונות</span>
       <span style="font-size:14px;font-weight:800;color:var(--teal);direction:ltr">${fmtMulti(assetsByCur)}</span>
+    </div>
+    <button type="button" onclick="toggleLocSourceHelp()" style="margin-top:8px;background:transparent;border:none;color:var(--t3);font-family:var(--font);font-size:11.5px;cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:2px">ℹ️ מאיפה המספרים האלה?</button>
+    <div id="loc-src-help" style="display:none;margin-top:6px;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-size:11.5px;line-height:1.7;color:var(--t2)">
+      <div style="font-weight:800;color:var(--t1);margin-bottom:5px">מאיפה כל מספר מגיע:</div>
+      <div>• <b>💼 סה"כ הכסף בחשבונות</b> — סכום כל החשבונות שרשומים למעלה (עו"ש, תיק, חסכונות): <b>${fmt(totalILS)}</b>.</div>
+      <div>• <b>💰 שמור למטרות</b> — סכום "כמה כבר נחסך" מכל המטרות הפעילות: <b>${fmt(allocatedILS)}</b>.</div>
+      <div>• <b>📈 מיועד להשקעה</b> — הסכום שהוקלד ידנית בתיבה למעלה: <b>${fmt(portAllocILS)}</b>.</div>
+      <div>• <b>⚠ כסף חופשי (טרם שויך)</b> — מה שנשאר אחרי שתי ההקצאות: <b>${fmt(totalILS)}</b> − <b>${fmt(allocatedILS)}</b> − <b>${fmt(portAllocILS)}</b> = <b style="color:var(--amber)">${fmt(unallocatedILS)}</b>.</div>
+      ${unallocatedILS>100?`<div style="margin-top:6px;color:var(--t3)">כסף שמופיע כ"טרם הוקצה" באמת קיים באחד החשבונות — הוא פשוט עדיין לא שויך למטרה או לתיק. שייך אותו למטרה, הגדל את המספר בתיבה, או לחץ <b>"הקצה את היתרה"</b>.</div>`:''}
     </div>
   </div>`;
   setTimeout(attachAllNumFormats,0);
+}
+// Toggle the "where do these numbers come from" explainer under the assets summary
+function toggleLocSourceHelp(){
+  const el=document.getElementById('loc-src-help');
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
 }
 // Mark how much of the unallocated money goes to the investment portfolio
 function setLocPortAlloc(val,cur){
