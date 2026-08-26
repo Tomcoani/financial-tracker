@@ -277,22 +277,7 @@ function renderDash(){
       scales:{x:{ticks:{color:'#64748b',font:{family:'Heebo',size:11}},grid:{color:'#1a2235'}},
         y:{ticks:{color:'#64748b',font:{family:'Heebo',size:11},callback:val=>'₪'+Math.round(val/1000)+'k'},grid:{color:'#1a2235'}}},
       maintainAspectRatio:false}});
-  // Goals
-  document.getElementById('dash-goals').innerHTML=(D.goals||[]).filter(g=>!g.done).map(g=>{
-    const sv=parseFloat(g.saved)||0,nd=parseFloat(g.needed)||0,pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
-    return `<div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:600;text-align:right">${esc(g.name)||'מטרה'}</span>
-        <span style="font-size:11px;color:var(--t2);direction:ltr">${fmt(sv)} / ${fmt(nd)}</span>
-      </div>
-      <div class="pbar" style="height:9px"><div class="pfill" style="width:${pct}%"></div></div>
-      <div style="display:flex;justify-content:space-between;margin-top:3px">
-        <span style="font-size:10px;color:var(--t3)">${HZ[Math.max(0,g.h||0)]}</span>
-        <span style="font-size:10px;color:var(--t2)">${pct}%</span>
-      </div>
-    </div>`;
-  }).join('')||`<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">${g('לחץ','לחצי')} על "מטרות" להוספת מטרות</p>`;
-
+  // Goals status card was removed from the home page (rendered on the מטרות page).
   renderAnalysis(snaps);
   renderUpdateAlerts();
   if(typeof renderStreak==='function')renderStreak();

@@ -7,6 +7,15 @@ function togglePortCollapse(pi){
   else _collapsedPorts.add(pi);
   renderPortfolio();
 }
+// Collapse all portfolios if any is open, otherwise expand them all.
+function toggleAllPortfolios(){
+  const n=(D.portfolios||[]).length;
+  let anyOpen=false;
+  for(let i=0;i<n;i++){if(!_collapsedPorts.has(i)){anyOpen=true;break;}}
+  if(anyOpen){for(let i=0;i<n;i++)_collapsedPorts.add(i);}
+  else _collapsedPorts.clear();
+  renderPortfolio();
+}
 function renderPortfolio(){
   const container=document.getElementById('portfolios-container');
   if(!container)return;

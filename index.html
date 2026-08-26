@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=45">
+<link rel="stylesheet" href="styles/main.css?v=46">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
@@ -114,10 +114,6 @@
           <div class="ch"><span class="dot dg"></span>שווי נטו לאורך זמן</div>
           <div class="chwrap"><canvas id="ch-nw"></canvas></div>
         </div>
-      <div class="card">
-        <div class="ch"><span class="dot da"></span>סטטוס מטרות</div>
-        <div id="dash-goals"></div>
-      </div>
       <!-- ANALYSIS SUMMARY -->
       <div class="card card-teal" id="dash-analysis" style="display:none">
         <div class="ch"><span class="dot dt"></span>ניתוח תקופתי — מה השתנה</div>
@@ -368,6 +364,9 @@
     <!-- PORTFOLIO -->
     <div class="panel" id="p-portfolio">
       <div class="last-updated-bar" id="lup-p-portfolio"><span class="lup-dot"></span><span></span></div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        <button onclick="toggleAllPortfolios()" style="background:none;border:none;color:var(--t2);font-family:var(--font);font-size:12px;cursor:pointer;padding:0">▾ קווץ / פרוש הכל</button>
+      </div>
       <div id="portfolios-container"></div>
       <button class="btnadd" style="margin-bottom:16px" onclick="addPortfolio()">+ הוספת תיק השקעות חדש</button>
       <div id="portfolio-selector" style="margin-bottom:12px"></div>
@@ -770,15 +769,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=45"></script>
-<script defer src="js/cashflow-goals.js?v=45"></script>
-<script defer src="js/pension.js?v=45"></script>
-<script defer src="js/networth.js?v=45"></script>
-<script defer src="js/portfolio.js?v=45"></script>
-<script defer src="js/dashboard.js?v=45"></script>
-<script defer src="js/settings.js?v=45"></script>
-<script defer src="js/admin.js?v=45"></script>
-<script defer src="js/misc.js?v=45"></script>
-<script defer src="js/budget.js?v=45"></script>
+<script defer src="js/core.js?v=46"></script>
+<script defer src="js/cashflow-goals.js?v=46"></script>
+<script defer src="js/pension.js?v=46"></script>
+<script defer src="js/networth.js?v=46"></script>
+<script defer src="js/portfolio.js?v=46"></script>
+<script defer src="js/dashboard.js?v=46"></script>
+<script defer src="js/settings.js?v=46"></script>
+<script defer src="js/admin.js?v=46"></script>
+<script defer src="js/misc.js?v=46"></script>
+<script defer src="js/budget.js?v=46"></script>
 </body>
 </html>
