@@ -618,6 +618,16 @@ function updateLocFooter(){
   const portAllocILS=Math.min(Math.max(0,parseFloat(D.locPortfolioAllocILS)||0),unallocBeforePort);
   const unallocatedILS=unallocBeforePort-portAllocILS;
   const portInputVal=portAllocILS>0?Math.round(fromILS(portAllocILS,domGoalCur)):'';
+  // Mismatch: goals claim more money than actually exists in the accounts above.
+  // Usually means money moved elsewhere (e.g. into the stock portfolio) without
+  // the goals being updated — the scenario we want to catch.
+  const overGoalILS=allocatedILS-totalILS;
+  const mismatchLine=overGoalILS>100?`
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;line-height:1.65;color:#fca5a5">
+      <div style="font-weight:800;color:#f87171;margin-bottom:3px">⚠️ אי-התאמה במספרים</div>
+      סימנת <b>${fmt(allocatedILS)}</b> כ"שמור למטרות", אבל בחשבונות שלמעלה יש רק <b>${fmt(totalILS)}</b> — פער של <b>${fmt(overGoalILS)}</b>.<br>
+      כנראה חלק מהכסף עבר למקום אחר (למשל לשוק ההון) והמטרות עדיין לא עודכנו. עדכן את "כמה כבר נחסך" בכל מטרה, או הוסף/עדכן את החשבון החסר למעלה.
+    </div>`:'';
   const portLine=(unallocBeforePort>100||portAllocILS>0)?`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:13px;flex-wrap:wrap">
       <span style="display:flex;flex-direction:column;gap:1px">
@@ -632,6 +642,7 @@ function updateLocFooter(){
       </span>
     </div>`:'';
   el.innerHTML=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+    ${mismatchLine}
     ${allocatedILS>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;flex-wrap:wrap;gap:4px">
       <span style="display:flex;flex-direction:column;gap:1px">
         <span style="color:var(--t2)">💰 שמור למטרות שלך</span>
