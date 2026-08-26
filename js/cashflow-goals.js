@@ -5,9 +5,8 @@ function calcCashFlow(){
   const balance=parseFloat((document.getElementById('cf-balance')?.value||'').replace(/,/g,''))||0;
   const zero=parseFloat((document.getElementById('cf-zero')?.value||'').replace(/,/g,''))||0;
   const fixedTotal=(D.cfFixedExpenses||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
-  const credit=parseFloat((document.getElementById('cf-credit')?.value||'').replace(/,/g,''))||0;
   const additional=parseFloat((document.getElementById('cf-expenses')?.value||'').replace(/,/g,''))||0;
-  const expenses=fixedTotal+credit+additional;
+  const expenses=fixedTotal+additional;
   const cur=(document.getElementById('cf-currency')?.value)||D.cfCurrency||'ILS';
   const el=document.getElementById('cf-result');
   if(!balance&&!zero&&!expenses){el.style.display='none';return;}
@@ -60,10 +59,7 @@ function renderCfFixed(){
   if(!el)return;
   if(!D.cfFixedExpenses)D.cfFixedExpenses=[];
   el.innerHTML='';
-  if(!D.cfFixedExpenses.length){
-    el.innerHTML='<div style="font-size:12px;color:var(--t3);padding:3px 0">לא הוגדרו הוצאות קבועות עדיין</div>';
-    return;
-  }
+  if(!D.cfFixedExpenses.length)return; // optional — show nothing until the user adds one
   D.cfFixedExpenses.forEach((row,i)=>{
     const div=document.createElement('div');
     div.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px';

@@ -155,6 +155,13 @@ auth.onAuthStateChanged(async user=>{
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
     if(!Array.isArray(D.updateMonths))D.updateMonths=[]; // monthly-streak history (migrate)
     if(typeof D.bestStreak!=='number')D.bestStreak=0;
+    // The "הוצאות באשראי" field was removed; fold any saved value into the
+    // optional fixed-expenses list so existing users' numbers don't change.
+    if(D.cfCredit&&parseFloat(String(D.cfCredit).replace(/,/g,''))>0){
+      if(!Array.isArray(D.cfFixedExpenses))D.cfFixedExpenses=[];
+      D.cfFixedExpenses.push({name:'הוצאות באשראי',amount:String(D.cfCredit).replace(/,/g,'')});
+      D.cfCredit='';
+    }
     renderAll();
     goTo('dash',document.querySelector('.nbtn'));
     startIdleWatch(); // begin 24h idle-logout tracking
@@ -339,11 +346,6 @@ function collectAll(){
     const raw=(cfZeroEl.dataset.numRaw||cfZeroEl.value).replace(/,/g,'');
     if(raw)D.cfZero=raw;
   }
-  const cfCreditEl=document.getElementById('cf-credit');
-  if(cfCreditEl){
-    const raw=(cfCreditEl.dataset.numRaw||cfCreditEl.value).replace(/,/g,'');
-    D.cfCredit=raw||'';
-  }
 }
 
 // ══ NAV ══
@@ -381,12 +383,6 @@ function renderAll(){
   if(cfCurEl&&D.cfCurrency)cfCurEl.value=D.cfCurrency;
   const cfLuEl=document.getElementById('cf-last-updated');
   if(cfLuEl)cfLuEl.value=D.cfLastUpdated||'';
-  const cfCreditEl=document.getElementById('cf-credit');
-  if(cfCreditEl){
-    const n=D.cfCredit?parseFloat(String(D.cfCredit).replace(/,/g,'')):0;
-    if(n){cfCreditEl.value=n;cfCreditEl.dataset.numRaw=String(n);}
-    else{cfCreditEl.value='';delete cfCreditEl.dataset.numRaw;}
-  }
   const cfBalEl=document.getElementById('cf-balance');
   if(cfBalEl){cfBalEl.value='';delete cfBalEl.dataset.numRaw;}
   const cfExpEl=document.getElementById('cf-expenses');
