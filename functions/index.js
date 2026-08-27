@@ -11,6 +11,7 @@
  * — see functions/README-reminders.md for the one-time setup.
  */
 const {onSchedule} = require('firebase-functions/v2/scheduler');
+const {onDocumentCreated} = require('firebase-functions/v2/firestore');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
@@ -23,6 +24,9 @@ const REMIND_AFTER_DAYS = 30;   // remind once data is this stale
 const COOLDOWN_DAYS      = 14;   // never email the same person more often than this
 const APP_URL   = 'https://tomcoani.github.io/financial-tracker/';
 const FROM_NAME = 'מעקב פיננסי';
+
+// Where new tax-refund leads get emailed to.
+const LEADS_TO  = 'info@tomani.co';
 
 // ── SMTP secrets (set once via the Firebase CLI — see README) ─
 const SMTP_HOST = defineSecret('SMTP_HOST');
@@ -93,5 +97,85 @@ exports.remindInactiveUsers = onSchedule(
       }
     }
     console.log(`reminders: sent=${sent} skipped=${skipped} total=${snap.size}`);
+  }
+);
+
+/* ──────────────────────────────────────────────────────────
+ * Tax-refund leads → email notification
+ *
+ * Fires whenever tax-refund.html writes a new document to /taxLeads.
+ * Emails LEADS_TO a readable summary so nothing gets missed. Reuses the
+ * same SMTP secrets as the reminder job. Files (if any) are uploaded to
+ * Storage under taxLeads/{id}/ and the doc is updated afterwards — this
+ * first email captures the lead the moment it lands.
+ * ────────────────────────────────────────────────────────── */
+const YN = v => v === true ? 'כן' : (v === false ? 'לא' : '—');
+const Q_LABELS = {
+  kids: 'ילדים', jobChange: 'החלפת עבודה / אבטלה / חל"ד', selfEmployed: 'היה עצמאי',
+  degree: 'סיום תואר (4 שנים)', mortgage: 'משכנתא', propertySale: 'מכירת נכס + מס שבח',
+  withdrawal: 'משיכה מגמל/השתלמות/פנסיה', periphery: 'יישוב ספר', capitalMkt: 'שוק ההון',
+  donations: 'תרומות', discharge: 'שחרור משירות סדיר', disability: 'נטול יכולת / לקות למידה',
+  immigrant: 'עולה / תושב חוזר', alreadyFiled: 'כבר הגיש בקשת החזר (שנתיים)', bankAccount: 'חשבון בנק פעיל',
+};
+const TIER_HE = {high: 'סיכוי גבוה', mid: 'יש בסיס לבדיקה', low: 'סיכוי נמוך'};
+
+function leadEmailHtml(d) {
+  const a = d.answers || {};
+  const rows = Object.keys(Q_LABELS)
+    .map(k => `<tr><td style="padding:4px 10px;border-bottom:1px solid #eee">${Q_LABELS[k]}</td>
+      <td style="padding:4px 10px;border-bottom:1px solid #eee;font-weight:bold;color:${a[k] === true ? '#0a8f79' : '#8a94a6'}">${YN(a[k])}</td></tr>`)
+    .join('');
+  const triggers = (d.triggers && d.triggers.length)
+    ? '<ul style="margin:6px 0 0;padding-inline-start:18px">' + d.triggers.map(t => `<li>${t}</li>`).join('') + '</ul>'
+    : '—';
+  return `<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;color:#1a2233;font-size:14px;line-height:1.6;max-width:600px;margin:auto">
+    <h2 style="margin:0 0 4px">ליד חדש — בדיקת החזר מס 🎯</h2>
+    <p style="color:#7a869a;margin:0 0 16px">${d.wantsContact ? 'הלקוח ביקש שייצרו איתו קשר עם שאלה.' : 'הלקוח בחר להתקדם עם הבדיקה.'}</p>
+    <table style="border-collapse:collapse;width:100%;margin-bottom:16px">
+      <tr><td style="padding:4px 10px;color:#7a869a">שם</td><td style="padding:4px 10px;font-weight:bold">${d.name || '—'}</td></tr>
+      <tr><td style="padding:4px 10px;color:#7a869a">טלפון</td><td style="padding:4px 10px;font-weight:bold"><a href="tel:${d.phone || ''}">${d.phone || '—'}</a></td></tr>
+      <tr><td style="padding:4px 10px;color:#7a869a">אימייל</td><td style="padding:4px 10px;font-weight:bold">${d.email || '—'}</td></tr>
+      <tr><td style="padding:4px 10px;color:#7a869a">מין / לידה</td><td style="padding:4px 10px">${d.gender || '—'} · ${d.birth || '—'}</td></tr>
+      <tr><td style="padding:4px 10px;color:#7a869a">מצב משפחתי</td><td style="padding:4px 10px">${d.marital || '—'}${d.marriageYear ? ' · נישואים ' + d.marriageYear : ''}</td></tr>
+      <tr><td style="padding:4px 10px;color:#7a869a">שכר</td><td style="padding:4px 10px">${d.salary || '—'}${d.spouseSalary ? ' · בן/בת זוג: ' + d.spouseSalary : ''}</td></tr>
+      <tr><td style="padding:4px 10px;color:#7a869a">אישור יצירת קשר</td><td style="padding:4px 10px">${d.consent || '—'}</td></tr>
+    </table>
+    <p style="margin:0 0 4px"><b>תוצאת זכאות:</b> ${TIER_HE[d.eligibilityTier] || d.eligibilityTier || '—'} (score ${d.eligibilityScore ?? '—'})</p>
+    <p style="margin:0 0 4px"><b>עילות שזוהו:</b></p>${triggers}
+    <h3 style="margin:16px 0 6px">תשובות מלאות</h3>
+    <table style="border-collapse:collapse;width:100%">${rows}</table>
+  </div>`;
+}
+
+exports.notifyTaxLead = onDocumentCreated(
+  {
+    document: 'taxLeads/{leadId}',
+    region: 'us-central1',
+    secrets: [SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS],
+  },
+  async (event) => {
+    const d = event.data && event.data.data();
+    if (!d) return;
+
+    const port = parseInt(SMTP_PORT.value() || '465', 10);
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST.value(),
+      port,
+      secure: port === 465,
+      auth: {user: SMTP_USER.value(), pass: SMTP_PASS.value()},
+    });
+
+    try {
+      await transporter.sendMail({
+        from: `"בדיקת החזר מס" <${SMTP_USER.value()}>`,
+        to: LEADS_TO,
+        replyTo: d.email || undefined,
+        subject: `ליד חדש — החזר מס: ${d.name || 'ללא שם'} (${TIER_HE[d.eligibilityTier] || ''})`,
+        html: leadEmailHtml(d),
+      });
+      console.log('tax lead email sent for', event.params.leadId);
+    } catch (e) {
+      console.error('tax lead email failed for', event.params.leadId, e);
+    }
   }
 );

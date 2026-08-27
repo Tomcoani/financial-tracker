@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול לידים · החזר מס | Tom Ani</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#060a0f; --surface:#0d1117; --card:#111c26; --border:#1a2e2e;
+    --teal:#2dd4bf; --teal-dim:rgba(45,212,191,0.12); --text:#fff; --muted:#7a9090;
+    --amber:#f5b942; --red:#f87171;
+  }
+  body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:0 1rem 4rem;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45,212,191,0.08) 0%, transparent 60%); }
+  .wrap { max-width:1000px; margin:0 auto; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:1.2rem 0; border-bottom:1px solid rgba(45,212,191,0.15); margin-bottom:1.5rem; flex-wrap:wrap; gap:0.6rem; }
+  .topbar h1 { font-size:1.3rem; font-weight:700; }
+  .topbar h1 span { color:var(--teal); }
+  .who { font-size:0.8rem; color:var(--muted); }
+  .who a { color:var(--teal); cursor:pointer; text-decoration:none; margin-inline-start:0.6rem; }
+
+  input, select { width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; color:var(--text);
+    font-family:'Heebo',sans-serif; font-size:1rem; padding:0.75rem 0.9rem; outline:none; }
+  input:focus { border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-dim); }
+  .btn { padding:0.8rem 1.2rem; border:none; border-radius:10px; background:linear-gradient(135deg,var(--teal),#5eead4);
+    color:#0a0e1a; font-family:'Heebo',sans-serif; font-weight:700; font-size:0.95rem; cursor:pointer; }
+  .btn:hover { opacity:0.92; }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  /* login */
+  #login { max-width:380px; margin:12vh auto 0; }
+  #login .card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:2rem; }
+  #login h2 { font-size:1.3rem; margin-bottom:0.4rem; }
+  #login p { color:var(--muted); font-size:0.88rem; margin-bottom:1.4rem; }
+  #login .field { margin-bottom:1rem; }
+  #login .btn { width:100%; margin-top:0.5rem; }
+  .login-err { color:var(--red); font-size:0.85rem; margin-top:0.8rem; text-align:center; display:none; }
+
+  /* stats */
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:0.8rem; margin-bottom:1.4rem; }
+  @media (max-width:640px){ .stats { grid-template-columns:1fr 1fr; } }
+  .stat { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1rem; text-align:center; }
+  .stat .n { font-size:1.7rem; font-weight:800; color:var(--teal); }
+  .stat.warn .n { color:var(--amber); }
+  .stat .l { font-size:0.72rem; color:var(--muted); margin-top:0.2rem; }
+
+  .filters { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .filter { padding:0.5rem 1rem; border-radius:100px; border:1.5px solid var(--border); background:var(--surface); color:var(--muted);
+    font-size:0.85rem; font-weight:600; cursor:pointer; font-family:'Heebo',sans-serif; }
+  .filter.active { border-color:var(--teal); color:var(--teal); background:var(--teal-dim); }
+
+  .lead { background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:0.8rem; overflow:hidden; }
+  .lead-head { display:flex; align-items:center; gap:0.8rem; padding:1rem 1.2rem; cursor:pointer; flex-wrap:wrap; }
+  .lead-head:hover { background:rgba(45,212,191,0.03); }
+  .lead-name { font-weight:700; font-size:1.02rem; }
+  .lead-meta { color:var(--muted); font-size:0.82rem; }
+  .badge { font-size:0.7rem; font-weight:700; padding:0.2rem 0.65rem; border-radius:100px; white-space:nowrap; }
+  .b-high { background:rgba(45,212,191,0.15); color:var(--teal); }
+  .b-mid { background:rgba(245,185,66,0.15); color:var(--amber); }
+  .b-low { background:rgba(122,144,144,0.15); color:var(--muted); }
+  .b-contact { background:rgba(248,113,113,0.15); color:var(--red); }
+  .spacer { flex:1; }
+  .lead-phone { color:var(--teal); font-weight:700; font-size:0.9rem; text-decoration:none; }
+  .status-pill { font-size:0.72rem; font-weight:700; padding:0.2rem 0.6rem; border-radius:6px; border:1px solid var(--border); color:var(--muted); }
+
+  .lead-body { display:none; padding:0 1.2rem 1.2rem; border-top:1px solid var(--border); }
+  .lead.open .lead-body { display:block; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem 1.5rem; margin:1rem 0; }
+  @media (max-width:640px){ .grid2 { grid-template-columns:1fr; } }
+  .kv { display:flex; justify-content:space-between; gap:1rem; font-size:0.88rem; padding:0.35rem 0; border-bottom:1px solid rgba(38,48,69,0.4); }
+  .kv .k { color:var(--muted); }
+  .kv .v { font-weight:600; text-align:left; }
+  .sec-title { font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal); margin:1.2rem 0 0.7rem; }
+  .ans { display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; padding:0.3rem 0; }
+  .ans .yn { font-weight:800; }
+  .ans .yes { color:var(--teal); }
+  .ans .no { color:var(--muted); }
+  .trigs { display:flex; flex-wrap:wrap; gap:0.4rem; }
+  .trig { background:var(--teal-dim); border:1px solid rgba(45,212,191,0.25); color:var(--teal); font-size:0.78rem; padding:0.25rem 0.6rem; border-radius:8px; }
+  .files { display:flex; flex-wrap:wrap; gap:0.5rem; }
+  .file-link { display:inline-flex; align-items:center; gap:0.4rem; text-decoration:none; background:var(--surface); border:1px solid var(--border);
+    border-radius:9px; padding:0.45rem 0.8rem; color:var(--text); font-size:0.82rem; }
+  .file-link:hover { border-color:var(--teal); color:var(--teal); }
+  .no-files { color:var(--muted); font-size:0.85rem; }
+  .status-row { display:flex; align-items:center; gap:0.6rem; margin-top:1.2rem; flex-wrap:wrap; }
+  .status-row label { font-size:0.82rem; color:var(--muted); }
+  .status-row select { width:auto; min-width:160px; padding:0.5rem 0.8rem; }
+  .empty { text-align:center; color:var(--muted); padding:3rem 1rem; }
+  .loading { text-align:center; color:var(--muted); padding:2rem; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="hidden">
+  <div class="card">
+    <h2>ניהול לידים · <span style="color:var(--teal)">החזר מס</span></h2>
+    <p>כניסת מנהל בלבד.</p>
+    <div class="field"><input type="email" id="li-email" placeholder="אימייל" dir="ltr" style="text-align:right" autocomplete="username"></div>
+    <div class="field"><input type="password" id="li-pass" placeholder="סיסמה" autocomplete="current-password"></div>
+    <button class="btn" id="li-btn" onclick="doLogin()">כניסה</button>
+    <div class="login-err" id="li-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="wrap hidden">
+  <div class="topbar">
+    <h1>לידים · <span>החזר מס</span></h1>
+    <div class="who"><span id="whoami"></span><a onclick="doLogout()">התנתקות</a></div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div class="filters" id="filters"></div>
+  <div id="list"><div class="loading">טוען לידים…</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyBnOXqkwvlm68LR9RooSljYwkcTLYYEemc",
+  authDomain:"clientworth-91908.firebaseapp.com",
+  projectId:"clientworth-91908",
+  storageBucket:"clientworth-91908.firebasestorage.app",
+  messagingSenderId:"545565599965",
+  appId:"1:545565599965:web:ef6d77db89af07530c9334"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const ADMIN_EMAIL = 'info@tomani.co';   // same admin as the finance app
+
+const Q_LABELS = {
+  kids:'ילדים', jobChange:'החלפת עבודה / אבטלה / חל"ד', selfEmployed:'היה עצמאי',
+  degree:'סיום תואר (4 שנים)', mortgage:'משכנתא', propertySale:'מכירת נכס + מס שבח',
+  withdrawal:'משיכה מגמל/השתלמות/פנסיה', periphery:'יישוב ספר', capitalMkt:'שוק ההון',
+  donations:'תרומות', discharge:'שחרור משירות סדיר', disability:'נטול יכולת / לקות למידה',
+  immigrant:'עולה / תושב חוזר', alreadyFiled:'כבר הגיש בקשה (שנתיים)', bankAccount:'חשבון בנק פעיל'
+};
+const FILE_LABELS = { id:'ת"ז + ספח', license:'רישיון נהיגה', form106:'טופס 106', form2279:'טופס 2279א' };
+const TIER = { high:{t:'סיכוי גבוה', c:'b-high'}, mid:{t:'יש בסיס', c:'b-mid'}, low:{t:'סיכוי נמוך', c:'b-low'} };
+const STATUS_HE = { 'new':'חדש', 'awaiting-docs':'ממתין למסמכים', 'docs-received':'מסמכים התקבלו', 'contacted':'יצרנו קשר', 'done':'טופל' };
+
+let allLeads = [];
+let activeFilter = 'all';
+
+/* ── auth ── */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+async function doLogin(){
+  const email=document.getElementById('li-email').value.trim();
+  const pass=document.getElementById('li-pass').value;
+  const err=document.getElementById('li-err'); err.style.display='none';
+  const btn=document.getElementById('li-btn'); btn.disabled=true; btn.textContent='מתחבר…';
+  try { await auth.signInWithEmailAndPassword(email,pass); }
+  catch(e){ err.textContent='התחברות נכשלה — בדוק אימייל וסיסמה.'; err.style.display='block'; }
+  finally { btn.disabled=false; btn.textContent='כניסה'; }
+}
+function doLogout(){ auth.signOut(); }
+
+auth.onAuthStateChanged(async user=>{
+  if(user && user.email===ADMIN_EMAIL){
+    hide('login'); show('app');
+    document.getElementById('whoami').textContent=user.email;
+    loadLeads();
+  } else if(user){
+    // signed in but not the admin
+    document.getElementById('li-err').textContent='המשתמש הזה אינו מנהל.';
+    document.getElementById('li-err').style.display='block';
+    hide('app'); show('login');
+    auth.signOut();
+  } else {
+    hide('app'); show('login');
+  }
+});
+
+/* ── data ── */
+async function loadLeads(){
+  const list=document.getElementById('list');
+  try {
+    const snap=await db.collection('taxLeads').orderBy('createdAt','desc').get();
+    allLeads=snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    renderStats(); renderFilters(); renderList();
+  } catch(e){
+    console.error(e);
+    list.innerHTML='<div class="empty">שגיאה בטעינה. ודא שכללי האבטחה של Firestore מאפשרים למנהל לקרוא את taxLeads.<br><small>'+esc(e.message)+'</small></div>';
+  }
+}
+
+function fmtDate(ts){
+  if(!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('he-IL')+' '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderStats(){
+  const total=allLeads.length;
+  const high=allLeads.filter(l=>l.eligibilityTier==='high').length;
+  const awaiting=allLeads.filter(l=>l.filesPending).length;
+  const open=allLeads.filter(l=>!['done'].includes(l.status)).length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="n">${total}</div><div class="l">סה"כ לידים</div></div>
+    <div class="stat"><div class="n">${high}</div><div class="l">סיכוי גבוה</div></div>
+    <div class="stat warn"><div class="n">${awaiting}</div><div class="l">ממתינים למסמכים</div></div>
+    <div class="stat"><div class="n">${open}</div><div class="l">פתוחים לטיפול</div></div>`;
+}
+
+function renderFilters(){
+  const defs=[['all','הכל'],['new','חדשים'],['awaiting-docs','ממתין למסמכים'],['high','סיכוי גבוה'],['done','טופלו']];
+  document.getElementById('filters').innerHTML=defs.map(([k,l])=>
+    `<button class="filter${activeFilter===k?' active':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
+}
+function setFilter(k){ activeFilter=k; renderFilters(); renderList(); }
+
+function matchFilter(l){
+  if(activeFilter==='all') return true;
+  if(activeFilter==='high') return l.eligibilityTier==='high';
+  if(activeFilter==='awaiting-docs') return !!l.filesPending;
+  if(activeFilter==='new') return l.status==='new' || !l.status;
+  if(activeFilter==='done') return l.status==='done';
+  return true;
+}
+
+function renderList(){
+  const list=document.getElementById('list');
+  const rows=allLeads.filter(matchFilter);
+  if(!rows.length){ list.innerHTML='<div class="empty">אין לידים להצגה.</div>'; return; }
+  list.innerHTML=rows.map(l=>{
+    const tier=TIER[l.eligibilityTier]||{t:'—',c:'b-low'};
+    const contact=l.wantsContact?'<span class="badge b-contact">רוצה שיחזרו אליו</span>':'';
+    const status=STATUS_HE[l.status]||l.status||'חדש';
+    const fileCount=l.filesUploaded||0;
+    return `
+    <div class="lead" id="lead-${l.id}">
+      <div class="lead-head" onclick="toggleLead('${l.id}')">
+        <span class="lead-name">${esc(l.name)||'ללא שם'}</span>
+        <span class="badge ${tier.c}">${tier.t}</span>
+        ${contact}
+        <span class="spacer"></span>
+        <a class="lead-phone" href="tel:${esc(l.phone)}" onclick="event.stopPropagation()">${esc(l.phone)||''}</a>
+        <span class="status-pill">${esc(status)}</span>
+      </div>
+      <div class="lead-body">
+        <div class="grid2">
+          <div class="kv"><span class="k">אימייל</span><span class="v">${esc(l.email)}</span></div>
+          <div class="kv"><span class="k">טלפון</span><span class="v"><a class="lead-phone" href="tel:${esc(l.phone)}">${esc(l.phone)}</a></span></div>
+          <div class="kv"><span class="k">נשלח</span><span class="v">${fmtDate(l.createdAt)}</span></div>
+          <div class="kv"><span class="k">מין / לידה</span><span class="v">${esc(l.gender)} · ${esc(l.birth)}</span></div>
+          <div class="kv"><span class="k">מצב משפחתי</span><span class="v">${esc(l.marital)}${l.marriageYear?' · '+esc(l.marriageYear):''}</span></div>
+          <div class="kv"><span class="k">שכר</span><span class="v">${esc(l.salary)}${l.spouseSalary?' · בן/בת זוג: '+esc(l.spouseSalary):''}</span></div>
+          <div class="kv"><span class="k">אישור יצירת קשר</span><span class="v">${esc(l.consent)}</span></div>
+          <div class="kv"><span class="k">ניקוד זכאות</span><span class="v">${l.eligibilityScore ?? '—'}</span></div>
+        </div>
+
+        ${(l.triggers&&l.triggers.length)?`<div class="sec-title">עילות שזוהו</div><div class="trigs">${l.triggers.map(t=>`<span class="trig">${esc(t)}</span>`).join('')}</div>`:''}
+
+        <div class="sec-title">תשובות מלאות</div>
+        <div class="grid2">
+          ${Object.keys(Q_LABELS).map(k=>{
+            const v=l.answers?l.answers[k]:undefined;
+            const yn=v===true?'<span class="yn yes">כן</span>':(v===false?'<span class="yn no">לא</span>':'—');
+            return `<div class="ans">${yn}<span>${Q_LABELS[k]}</span></div>`;
+          }).join('')}
+        </div>
+
+        <div class="sec-title">מסמכים ${fileCount?`(${fileCount})`:''}</div>
+        ${renderFiles(l)}
+
+        <div class="status-row">
+          <label>סטטוס:</label>
+          <select onchange="changeStatus('${l.id}', this.value)">
+            ${['new','contacted','docs-received','done'].map(s=>`<option value="${s}"${(l.status||'new')===s?' selected':''}>${STATUS_HE[s]}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFiles(l){
+  const f=l.files||{};
+  const parts=[];
+  Object.keys(FILE_LABELS).forEach(kind=>{
+    (f[kind]||[]).forEach(file=>{
+      parts.push(`<a class="file-link" href="${esc(file.url)}" target="_blank" rel="noopener">📄 ${FILE_LABELS[kind]} — ${esc(file.name)}</a>`);
+    });
+  });
+  return parts.length ? `<div class="files">${parts.join('')}</div>` : '<div class="no-files">טרם הועלו מסמכים.</div>';
+}
+
+function toggleLead(id){ document.getElementById('lead-'+id).classList.toggle('open'); }
+
+async function changeStatus(id, status){
+  try {
+    await db.collection('taxLeads').doc(id).set({status, statusUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    const l=allLeads.find(x=>x.id===id); if(l) l.status=status;
+    renderStats();
+  } catch(e){ alert('עדכון הסטטוס נכשל: '+e.message); }
+}
+</script>
+</body>
+</html>
