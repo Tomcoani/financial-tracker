@@ -87,6 +87,9 @@
   .status-row { display:flex; align-items:center; gap:0.6rem; margin-top:1.2rem; flex-wrap:wrap; }
   .status-row label { font-size:0.82rem; color:var(--muted); }
   .status-row select { width:auto; min-width:160px; padding:0.5rem 0.8rem; }
+  .del-btn { margin-inline-start:auto; background:transparent; border:1px solid rgba(248,113,113,0.4); color:var(--red);
+    font-family:'Heebo',sans-serif; font-size:0.8rem; font-weight:600; padding:0.5rem 0.9rem; border-radius:8px; cursor:pointer; }
+  .del-btn:hover { background:rgba(248,113,113,0.12); }
   .empty { text-align:center; color:var(--muted); padding:3rem 1rem; }
   .loading { text-align:center; color:var(--muted); padding:2rem; }
   .hidden { display:none !important; }
@@ -279,6 +282,7 @@ function renderList(){
           <select onchange="changeStatus('${l.id}', this.value)">
             ${['new','contacted','docs-received','done'].map(s=>`<option value="${s}"${(l.status||'new')===s?' selected':''}>${STATUS_HE[s]}</option>`).join('')}
           </select>
+          <button class="del-btn" onclick="deleteLead('${l.id}')">🗑 מחיקת ליד</button>
         </div>
       </div>
     </div>`;
@@ -309,6 +313,23 @@ async function openFile(path, btn){
 }
 
 function toggleLead(id){ document.getElementById('lead-'+id).classList.toggle('open'); }
+
+async function deleteLead(id){
+  const l = allLeads.find(x=>x.id===id);
+  if(!confirm('למחוק לצמיתות את הליד של "'+((l&&l.name)||id)+'"?\nכולל המסמכים שהועלו. פעולה זו אינה הפיכה.')) return;
+  try {
+    // Best-effort: delete the uploaded files too (requires admin delete on Storage).
+    const f = (l && l.files) || {};
+    for(const kind of Object.keys(f)){
+      for(const file of (f[kind]||[])){
+        if(file && file.path){ try { await storage.ref(file.path).delete(); } catch(e){ console.warn('file delete skipped', e.code); } }
+      }
+    }
+    await db.collection('taxLeads').doc(id).delete();
+    allLeads = allLeads.filter(x=>x.id!==id);
+    renderStats(); renderList();
+  } catch(e){ alert('מחיקת הליד נכשלה: '+e.message); }
+}
 
 async function changeStatus(id, status){
   try {
