@@ -81,7 +81,7 @@
   .trig { background:var(--teal-dim); border:1px solid rgba(45,212,191,0.25); color:var(--teal); font-size:0.78rem; padding:0.25rem 0.6rem; border-radius:8px; }
   .files { display:flex; flex-wrap:wrap; gap:0.5rem; }
   .file-link { display:inline-flex; align-items:center; gap:0.4rem; text-decoration:none; background:var(--surface); border:1px solid var(--border);
-    border-radius:9px; padding:0.45rem 0.8rem; color:var(--text); font-size:0.82rem; }
+    border-radius:9px; padding:0.45rem 0.8rem; color:var(--text); font-size:0.82rem; font-family:'Heebo',sans-serif; cursor:pointer; }
   .file-link:hover { border-color:var(--teal); color:var(--teal); }
   .no-files { color:var(--muted); font-size:0.85rem; }
   .status-row { display:flex; align-items:center; gap:0.6rem; margin-top:1.2rem; flex-wrap:wrap; }
@@ -121,6 +121,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyBnOXqkwvlm68LR9RooSljYwkcTLYYEemc",
@@ -132,6 +133,7 @@ firebase.initializeApp({
 });
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 const ADMIN_EMAIL = 'info@tomani.co';   // same admin as the finance app
 
 const Q_LABELS = {
@@ -288,10 +290,22 @@ function renderFiles(l){
   const parts=[];
   Object.keys(FILE_LABELS).forEach(kind=>{
     (f[kind]||[]).forEach(file=>{
-      parts.push(`<a class="file-link" href="${esc(file.url)}" target="_blank" rel="noopener">📄 ${FILE_LABELS[kind]} — ${esc(file.name)}</a>`);
+      // Files are readable by admin only, so resolve the download URL on click.
+      const ref = file.path ? `openFile('${esc(file.path)}', this)` : `window.open('${esc(file.url)}','_blank')`;
+      parts.push(`<button class="file-link" onclick="${ref}">📄 ${FILE_LABELS[kind]} — ${esc(file.name)}</button>`);
     });
   });
   return parts.length ? `<div class="files">${parts.join('')}</div>` : '<div class="no-files">טרם הועלו מסמכים.</div>';
+}
+
+async function openFile(path, btn){
+  const orig = btn ? btn.textContent : '';
+  if(btn) btn.textContent = 'פותח…';
+  try {
+    const url = await storage.ref(path).getDownloadURL();
+    window.open(url, '_blank', 'noopener');
+  } catch(e){ alert('פתיחת הקובץ נכשלה: '+e.message); }
+  finally { if(btn) btn.textContent = orig; }
 }
 
 function toggleLead(id){ document.getElementById('lead-'+id).classList.toggle('open'); }

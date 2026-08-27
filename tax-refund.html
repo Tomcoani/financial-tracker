@@ -828,8 +828,9 @@ async function finish(skip){
           const path='taxLeads/'+state.leadId+'/'+kind+'/'+Date.now()+'_'+safe;
           const ref=storage.ref().child(path);
           await ref.put(f);
-          const url=await ref.getDownloadURL();
-          uploaded[kind].push({name:f.name, path, url});
+          // Store only the path — anonymous users can't read (admin-only),
+          // so the admin page resolves the download URL when viewing.
+          uploaded[kind].push({name:f.name, path});
         }
       }
     }
