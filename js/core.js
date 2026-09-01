@@ -340,7 +340,8 @@ function stopIdleWatch(){if(_idleIv){clearInterval(_idleIv);_idleIv=null;}}
 function collectAll(){
   D.monthly=document.getElementById('monthly').value;
   D.penNotes=document.getElementById('pen-notes').value;
-  D.gnotes=document.getElementById('gnotes').value;
+  const ge=document.getElementById('gnotes-editor');
+  if(ge)D.gnotes=(typeof sanitizeNotesHtml==='function')?sanitizeNotesHtml(ge.innerHTML):ge.innerHTML;
   const cfZeroEl=document.getElementById('cf-zero');
   if(cfZeroEl){
     const raw=(cfZeroEl.dataset.numRaw||cfZeroEl.value).replace(/,/g,'');
@@ -375,7 +376,7 @@ function goTo(id,btn){
 function renderAll(){
   document.getElementById('monthly').value=D.monthly||'';
   document.getElementById('pen-notes').value=D.penNotes||'';
-  document.getElementById('gnotes').value=D.gnotes||'';
+  if(typeof loadNotesEditor==='function')loadNotesEditor();
   const cfZeroEl=document.getElementById('cf-zero');
   if(cfZeroEl){
     const n=D.cfZero?parseFloat(String(D.cfZero).replace(/,/g,'')):0;

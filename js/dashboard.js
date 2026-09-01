@@ -629,7 +629,7 @@ async function exportPDF(){
   <!-- CLIENT NOTES -->
   ${D.gnotes?`<div class="section" style="break-inside:avoid">
     <div class="section-title">הערות חופשיות</div>
-    <div style="font-size:13px;color:#1e293b;line-height:1.8;white-space:pre-wrap;background:#f8fafc;border-radius:8px;padding:14px 16px;border-right:3px solid #42ebd6">${esc(D.gnotes)}</div>
+    <div style="font-size:13px;color:#1e293b;line-height:1.8;background:#f8fafc;border-radius:8px;padding:14px 16px;border-right:3px solid #42ebd6">${(typeof sanitizeNotesHtml==='function'?sanitizeNotesHtml(D.gnotes):esc(D.gnotes))}</div>
   </div>`:''}
 
   <!-- ADVISOR NOTES -->

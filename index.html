@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=49">
+<link rel="stylesheet" href="styles/main.css?v=50">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
@@ -417,10 +417,18 @@
       <div class="last-updated-bar" id="lup-p-notes"><span class="lup-dot"></span><span></span></div>
       <div class="card">
         <div class="ch-title">הערות חופשיות</div>
-        <textarea id="gnotes" rows="20" style="width:100%;background:var(--s2);border:1.5px solid var(--border);
-          border-radius:12px;padding:18px;color:var(--white);font-family:var(--font);font-size:15px;
-          resize:vertical;outline:none;direction:rtl;line-height:1.9;text-align:right"
-          placeholder="כל מה שעל הלב..." oninput="markDirty()"></textarea>
+        <div id="notes-toolbar">
+          <button type="button" class="nt-btn" title="מודגש" onmousedown="event.preventDefault()" onclick="notesExec('bold')"><b>B</b></button>
+          <button type="button" class="nt-btn" title="נטוי" onmousedown="event.preventDefault()" onclick="notesExec('italic')"><i>I</i></button>
+          <button type="button" class="nt-btn" title="קו תחתון" onmousedown="event.preventDefault()" onclick="notesExec('underline')"><u>U</u></button>
+          <span class="nt-sep"></span>
+          <button type="button" class="nt-btn" title="רשימת תבליטים" onmousedown="event.preventDefault()" onclick="notesExec('insertUnorderedList')">• רשימה</button>
+          <button type="button" class="nt-btn" title="רשימה ממוספרת" onmousedown="event.preventDefault()" onclick="notesExec('insertOrderedList')">1. רשימה</button>
+          <span class="nt-sep"></span>
+          <button type="button" class="nt-btn" title="נקה עיצוב" onmousedown="event.preventDefault()" onclick="notesExec('removeFormat')">נקה עיצוב</button>
+        </div>
+        <div id="gnotes-editor" contenteditable="true" oninput="notesInput()" onpaste="notesPaste(event)"
+          data-placeholder="כל מה שעל הלב..."></div>
       </div>
     </div>
 
@@ -769,15 +777,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=49"></script>
-<script defer src="js/cashflow-goals.js?v=49"></script>
-<script defer src="js/pension.js?v=49"></script>
-<script defer src="js/networth.js?v=49"></script>
-<script defer src="js/portfolio.js?v=49"></script>
-<script defer src="js/dashboard.js?v=49"></script>
-<script defer src="js/settings.js?v=49"></script>
-<script defer src="js/admin.js?v=49"></script>
-<script defer src="js/misc.js?v=49"></script>
-<script defer src="js/budget.js?v=49"></script>
+<script defer src="js/core.js?v=50"></script>
+<script defer src="js/cashflow-goals.js?v=50"></script>
+<script defer src="js/pension.js?v=50"></script>
+<script defer src="js/networth.js?v=50"></script>
+<script defer src="js/portfolio.js?v=50"></script>
+<script defer src="js/dashboard.js?v=50"></script>
+<script defer src="js/settings.js?v=50"></script>
+<script defer src="js/admin.js?v=50"></script>
+<script defer src="js/misc.js?v=50"></script>
+<script defer src="js/budget.js?v=50"></script>
 </body>
 </html>

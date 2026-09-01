@@ -448,6 +448,55 @@ function renderStreak(){
   host.innerHTML=html;
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+// ══ RICH-TEXT NOTES (הערות חופשיות) ══
+// Whitelist-sanitize the notes HTML: keep only basic formatting tags, drop all
+// attributes and any dangerous elements. Runs on save and on every render, so
+// nothing unsafe is ever stored or shown (paste is also forced to plain text).
+const NOTES_ALLOWED={B:1,STRONG:1,I:1,EM:1,U:1,UL:1,OL:1,LI:1,BR:1,DIV:1,P:1,SPAN:1};
+function sanitizeNotesHtml(html){
+  if(!html)return '';
+  const tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  tmp.querySelectorAll('script,style,iframe,object,embed,link,meta,img,svg').forEach(n=>n.remove());
+  tmp.querySelectorAll('*').forEach(el=>{while(el.attributes.length)el.removeAttribute(el.attributes[0].name);});
+  let changed=true;
+  while(changed){
+    changed=false;
+    tmp.querySelectorAll('*').forEach(el=>{
+      if(!NOTES_ALLOWED[el.tagName]){
+        const p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);p.removeChild(el);changed=true;
+      }
+    });
+  }
+  return tmp.innerHTML;
+}
+// Load D.gnotes into the editor: old plain-text notes → escaped with line breaks;
+// already-formatted notes → sanitized HTML.
+function loadNotesEditor(){
+  const ge=document.getElementById('gnotes-editor');
+  if(!ge)return;
+  const v=D&&D.gnotes||'';
+  ge.innerHTML=/<[a-z][\s\S]*>/i.test(v)?sanitizeNotesHtml(v):esc(v).replace(/\n/g,'<br>');
+}
+function notesInput(){
+  const ge=document.getElementById('gnotes-editor');
+  if(!ge)return;
+  D.gnotes=ge.innerHTML; // toolbar-only + plain-text paste → safe; sanitized again on save
+  markDirty();
+}
+function notesExec(cmd){
+  try{document.execCommand('styleWithCSS',false,false);}catch(e){}
+  document.execCommand(cmd,false,null);
+  const ge=document.getElementById('gnotes-editor');
+  if(ge){ge.focus();notesInput();}
+}
+// Force pasted content to plain text so no foreign markup enters the notes.
+function notesPaste(e){
+  e.preventDefault();
+  const t=((e.clipboardData||window.clipboardData).getData('text/plain'))||'';
+  document.execCommand('insertText',false,t);
+}
 function autoResize(el){el.style.height='auto';const h=el.scrollHeight;el.style.height=h>0?h+'px':'';}
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}
 function v(id){return document.getElementById(id).value.trim();}
