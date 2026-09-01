@@ -488,29 +488,37 @@ function renderLocsInventory(){
         <option value="USD"${lc==='USD'?' selected':''}>$</option>
         <option value="EUR"${lc==='EUR'?' selected':''}>€</option>
       </select>
-      <input type="number" value="${l.amount||''}" placeholder="0" data-i="${ri}" data-f="amount" oninput="lu(this);renderLocsTransfer()"
+      <input type="number" value="${l.amount||''}" placeholder="0" data-i="${ri}" data-f="amount" oninput="lu(this);updateLocsInventoryTotal();renderLocsTransfer()"
         style="width:110px;background:transparent;border:none;outline:none;font-family:var(--font);font-size:14px;font-weight:800;color:var(--teal);text-align:right;direction:rtl"/>
       <button class="bdel" onclick="delLoc(${ri})" style="flex-shrink:0;width:28px">×</button>`;
     el.appendChild(row);
   });
-  // total per currency
+  // Live total footer — a stable element updated on every keystroke (see
+  // updateLocsInventoryTotal), so the סה"כ recalculates as you type, not only
+  // when a row is added.
+  const ftr=document.createElement('div');
+  ftr.id='locs-inv-total';
+  el.appendChild(ftr);
+  updateLocsInventoryTotal();
+  setTimeout(attachAllNumFormats,0);
+}
+// Recompute the assets-inventory total(s) in place, without re-rendering the
+// input rows (which would drop keyboard focus).
+function updateLocsInventoryTotal(){
+  const ftr=document.getElementById('locs-inv-total');
+  if(!ftr)return;
   const totByCur={};
-  manualLocs.forEach(l=>{
-    const c=l.currency||'ILS',a=parseFloat(l.amount)||0;
+  (D.locations||[]).filter(l=>!l._auto).forEach(l=>{
+    const c=l.currency||'ILS',a=parseFloat(String(l.amount||'').replace(/,/g,''))||0;
     if(a)totByCur[c]=(totByCur[c]||0)+a;
   });
-  if(Object.keys(totByCur).length){
-    const ftr=document.createElement('div');
-    ftr.style.cssText='padding:9px 0 2px;margin-top:2px;border-top:1px solid var(--border)';
-    const rows=Object.entries(totByCur).map(([c,a])=>
-      `<div style="display:flex;justify-content:space-between;padding:3px 0">
-        <span style="font-size:12px;color:var(--t3)">סה"כ ${c==='ILS'?'שקל':c==='USD'?'דולר':'אירו'}</span>
-        <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmtCur(a,c)}</span>
-      </div>`).join('');
-    ftr.innerHTML=rows;
-    el.appendChild(ftr);
-  }
-  setTimeout(attachAllNumFormats,0);
+  if(!Object.keys(totByCur).length){ftr.removeAttribute('style');ftr.innerHTML='';return;}
+  ftr.style.cssText='padding:9px 0 2px;margin-top:2px;border-top:1px solid var(--border)';
+  ftr.innerHTML=Object.entries(totByCur).map(([c,a])=>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0">
+      <span style="font-size:12px;color:var(--t3)">סה"כ ${c==='ILS'?'שקל':c==='USD'?'דולר':'אירו'}</span>
+      <span style="font-size:14px;font-weight:800;color:var(--teal)">${fmtCur(a,c)}</span>
+    </div>`).join('');
 }
 function renderLocsTransfer(){
   const el=document.getElementById('locs-transfer');
