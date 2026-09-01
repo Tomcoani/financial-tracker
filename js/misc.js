@@ -448,7 +448,7 @@ function renderStreak(){
   host.innerHTML=html;
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
-function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
+function autoResize(el){el.style.height='auto';const h=el.scrollHeight;el.style.height=h>0?h+'px':'';}
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch{return iso;}}
 function v(id){return document.getElementById(id).value.trim();}
 function deltaBadge(d){

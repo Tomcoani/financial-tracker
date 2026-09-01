@@ -542,7 +542,7 @@ function renderLocsTransfer(){
         padding:9px 12px;display:flex;align-items:center">
         <textarea placeholder="לאן מועבר הכסף" data-i="${ri}" data-f="whereTo"
           oninput="lu(this);autoResize(this)" ondragstart="event.stopPropagation()"
-          rows="1"
+          rows="${Math.max(1,(l.whereTo||'').split('\n').length)}"
           style="background:transparent;border:none;outline:none;resize:none;overflow:hidden;
             color:${hasTo?'var(--teal)':'var(--t2)'};font-family:var(--font);font-size:13px;
             font-weight:${hasTo?'600':'400'};text-align:right;width:100%;line-height:1.55;
@@ -805,7 +805,7 @@ function planPickBuild(){
     const parts=[];let toPort=0;
     // The portion tied to a goal stays where it is — show it, don't hide it
     (goalsAtDetail[key]||[]).forEach(d=>parts.push(fmt(Math.round(d.amt))+' נשאר ל'+d.name));
-    if(avail<=0){l.whereTo=parts.join(' · ');if(parts.length)filled++;return;}
+    if(avail<=0){l.whereTo=parts.join('\n');if(parts.length)filled++;return;}
     if(!zeroReserved&&l.name.includes('עו"ש')&&zero>0){
       const stay=Math.min(zero,avail);avail-=stay;zeroReserved=true;
       parts.push(fmt(Math.round(stay))+' נשאר בעו"ש (אפס חדש)');
@@ -818,7 +818,7 @@ function planPickBuild(){
     });
     if(avail>=1){toPort+=avail;avail=0;}
     if(toPort>=1)parts.push(fmt(Math.round(toPort))+' ← 📈 תיק השקעות');
-    l.whereTo=parts.join(' · ');
+    l.whereTo=parts.join('\n');
     if(parts.length)filled++;
   });
   const el=document.getElementById('locs-plan');if(el)el.innerHTML=''; // close the picker

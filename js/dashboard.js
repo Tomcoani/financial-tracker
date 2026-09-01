@@ -589,7 +589,7 @@ async function exportPDF(){
   ${(()=>{
     const transfers=(D.locations||[]).filter(l=>!l._auto&&l.name&&(l.whereTo||'').trim());
     if(!transfers.length)return '';
-    const rows=transfers.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">${fmtCur(parseFloat(l.amount)||0,l.currency||'ILS')}</td><td>${esc(l.whereTo)}</td></tr>`).join('');
+    const rows=transfers.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">${fmtCur(parseFloat(l.amount)||0,l.currency||'ILS')}</td><td>${esc((l.whereTo||'').replace(/\n/g,' · '))}</td></tr>`).join('');
     return `<div class="section"><div class="section-title">תכנית העברת כספים</div>
     <table><thead><tr><th>נכס נוכחי</th><th>סכום</th><th>לאן מועבר</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
