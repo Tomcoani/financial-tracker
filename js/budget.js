@@ -73,6 +73,33 @@ function budgetSavedOf(month){
   const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
   return {inc:sum(month.income),exp:sum(month.needs)+sum(month.wants)};
 }
+// Net savings accumulated across every tracked month (income − expenses).
+function budgetAccumulatedSaved(){
+  let net=0,months=0;
+  Object.values(D.budgetMonths||{}).forEach(m=>{
+    const s=budgetSavedOf(m);
+    if((s.inc||s.exp)>0){net+=(s.inc-s.exp);months++;}
+  });
+  return {net,months};
+}
+// A tile at the top of the goals page that auto-records how much the client has
+// saved so far according to the monthly-budget page. Shown only once there's a
+// positive accumulated amount, so someone who saved sees it front-and-center.
+function renderGoalsSavingsTile(){
+  const el=document.getElementById('goals-savings-tile');
+  if(!el)return;
+  const {net,months}=budgetAccumulatedSaved();
+  if(net<=0){el.innerHTML='';return;}
+  el.innerHTML=`<div style="margin-bottom:16px;background:linear-gradient(135deg,rgba(66,235,214,.14),rgba(66,235,214,.03));border:1.5px solid var(--teal-border);border-radius:14px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div style="min-width:0">
+      <div style="font-size:14px;font-weight:800;color:var(--teal)">💰 חסכת עד היום</div>
+      <div style="font-size:11.5px;color:var(--t2);margin-top:3px;line-height:1.6">נצבר לאורך ${months} ${months===1?'חודש':'חודשים'} לפי מעקב ההתנהלות החודשית — כל הכבוד! 🎉</div>
+    </div>
+    <div style="text-align:left;flex-shrink:0">
+      <div style="font-size:26px;font-weight:800;color:var(--teal);direction:ltr">${fmt(net)}</div>
+    </div>
+  </div>`;
+}
 function renderBudget(){
   migrateBudget();
   renderBudgetMonthSelect();

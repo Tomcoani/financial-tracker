@@ -367,7 +367,10 @@ function goTo(id,btn){
   if(id==='nw'){syncNWFromPension();renderNW();}
   // The goals panel is rendered once (while hidden), so its auto-sizing textareas
   // measured 0 height. Re-fit the transfer "לאן מועבר הכסף" fields now that it's visible.
-  if(id==='goals')setTimeout(()=>document.querySelectorAll('#locs-transfer textarea[data-f="whereTo"]').forEach(t=>{if(typeof autoResize==='function')autoResize(t);}),0);
+  if(id==='goals'){
+    if(typeof renderGoalsSavingsTile==='function')renderGoalsSavingsTile(); // accumulated savings from the budget page
+    setTimeout(()=>document.querySelectorAll('#locs-transfer textarea[data-f="whereTo"]').forEach(t=>{if(typeof autoResize==='function')autoResize(t);}),0);
+  }
   if(id==='settings')renderSettings();
   if(id==='admin')renderAdmin();
 }
