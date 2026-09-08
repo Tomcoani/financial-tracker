@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=52">
+<link rel="stylesheet" href="styles/main.css?v=53">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
@@ -339,6 +339,7 @@
     <!-- NET WORTH -->
     <div class="panel" id="p-nw">
       <div class="last-updated-bar" id="lup-p-nw"><span class="lup-dot"></span><span></span></div>
+      <button onclick="showNWChange()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,rgba(66,235,214,.16),rgba(66,235,214,.04));border:1.5px solid var(--teal-border);color:var(--teal);border-radius:12px;padding:12px;font-family:var(--font);font-size:13.5px;font-weight:800;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(66,235,214,.24)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(66,235,214,.16),rgba(66,235,214,.04))'">📸 הצג את השינוי בשווי נטו (לצילום מסך)</button>
       <div id="nw-summary-stats" class="g4" style="display:none;margin-bottom:16px"></div>
       <div class="card">
         <div class="ch-title">תקופות מעקב</div>
@@ -748,6 +749,17 @@
   </div>
 </div>
 
+<!-- NET-WORTH CHANGE CARD (screenshot-ready) -->
+<div class="overlay" id="nwchange-modal" style="display:none">
+  <div style="width:min(480px,94vw);display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div id="nwchange-card"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btnsnap primary" onclick="closeNWChange()">סגור ✓</button>
+    </div>
+    <div style="font-size:11px;color:var(--t3)">צלם מסך של הכרטיס למעלה לשימוש בתוכן "לפני / אחרי"</div>
+  </div>
+</div>
+
 <!-- RESET MODAL -->
 <div class="overlay" id="reset-modal" style="display:none">
   <div class="modal">
@@ -780,15 +792,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=52"></script>
-<script defer src="js/cashflow-goals.js?v=52"></script>
-<script defer src="js/pension.js?v=52"></script>
-<script defer src="js/networth.js?v=52"></script>
-<script defer src="js/portfolio.js?v=52"></script>
-<script defer src="js/dashboard.js?v=52"></script>
-<script defer src="js/settings.js?v=52"></script>
-<script defer src="js/admin.js?v=52"></script>
-<script defer src="js/misc.js?v=52"></script>
-<script defer src="js/budget.js?v=52"></script>
+<script defer src="js/core.js?v=53"></script>
+<script defer src="js/cashflow-goals.js?v=53"></script>
+<script defer src="js/pension.js?v=53"></script>
+<script defer src="js/networth.js?v=53"></script>
+<script defer src="js/portfolio.js?v=53"></script>
+<script defer src="js/dashboard.js?v=53"></script>
+<script defer src="js/settings.js?v=53"></script>
+<script defer src="js/admin.js?v=53"></script>
+<script defer src="js/misc.js?v=53"></script>
+<script defer src="js/budget.js?v=53"></script>
 </body>
 </html>

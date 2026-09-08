@@ -421,6 +421,53 @@ function nwPeriodChange(el){
   // Don't re-render while typing - only update period labels display
   document.querySelectorAll('.nw-period-header-'+i).forEach(h=>h.textContent=el.value||'ת'+(i+1));
 }
+// ══ NET-WORTH CHANGE CARD (screenshot-ready before/after) ══
+// Builds a clean "before → after" card of the net-worth change over ~6 months,
+// designed to be screenshotted for before/after marketing content.
+function showNWChange(){
+  const cnt=D.nwPeriodsCount||(D.nwPeriods||[]).length||6;
+  const filled=[];
+  for(let c=0;c<cnt;c++){
+    const p=D.nwPeriods[c];
+    if(!p||isFuturePeriod(p))continue;
+    const nw=sumSec('assets',c)+sumSec('investments',c)+sumSec('savings',c)-sumSec('debts',c);
+    if(nw===0)continue;
+    const pd=parsePeriodDate(p);
+    filled.push({label:p,nw,date:pd?new Date(pd.y,pd.m-1,1):null});
+  }
+  if(filled.length<2){alert('צריך לפחות שתי תקופות עם נתונים בשווי נטו כדי להציג שינוי.');return;}
+  const after=filled[filled.length-1];
+  // "before" = the filled period closest to 6 months before "after"
+  let before=null;
+  if(after.date){
+    const target=new Date(after.date.getFullYear(),after.date.getMonth()-6,1);
+    const earlier=filled.filter(x=>x.date&&x.date<after.date);
+    if(earlier.length)before=earlier.reduce((b,x)=>Math.abs(x.date-target)<Math.abs(b.date-target)?x:b);
+  }
+  if(!before)before=filled[filled.length-2];
+  const delta=after.nw-before.nw, up=delta>=0;
+  const pct=before.nw>0?Math.round(delta/before.nw*100):null;
+  let months=null;
+  if(before.date&&after.date)months=Math.round((after.date-before.date)/(30.44*86400000));
+  const spanTxt=months==null?'':((months>=5&&months<=7)?'חצי שנה אחרונה':(months+' חודשים אחרונים'));
+  const nm=(D.settings&&D.settings.displayName)||'';
+  const logo=(document.getElementById('app-logo')||{}).src||'';
+  const card=document.getElementById('nwchange-card');
+  card.innerHTML=`
+    <div class="nwc-title">📈 השינוי בשווי הנטו שלי</div>
+    ${spanTxt?`<div class="nwc-span">${spanTxt} · ${esc(before.label)} ← ${esc(after.label)}</div>`:''}
+    <div class="nwc-delta ${up?'up':'down'}">${up?'↑ +':'↓ −'}${fmt(Math.abs(delta))}</div>
+    ${pct!=null?`<div class="nwc-pct ${up?'up':'down'}">${up?'+':'−'}${Math.abs(pct)}%</div>`:''}
+    <div class="nwc-ba">
+      <div class="col"><div class="lbl">לפני</div><div class="num">${fmt(before.nw)}</div><div class="mon">${esc(before.label)}</div></div>
+      <div class="arrow">←</div>
+      <div class="col"><div class="lbl">אחרי</div><div class="num">${fmt(after.nw)}</div><div class="mon">${esc(after.label)}</div></div>
+    </div>
+    <div class="nwc-foot">${logo?`<img src="${logo}" alt=""/>`:''}${nm?`<span class="nwc-name">${esc(nm)}</span>`:''}</div>`;
+  document.getElementById('nwchange-modal').style.display='flex';
+}
+function closeNWChange(){const m=document.getElementById('nwchange-modal');if(m)m.style.display='none';}
+
 function parsePeriodDate(val){
   if(!val)return null;
   val=val.trim();
