@@ -467,6 +467,22 @@ function showNWChange(){
   document.getElementById('nwchange-modal').style.display='flex';
 }
 function closeNWChange(){const m=document.getElementById('nwchange-modal');if(m)m.style.display='none';}
+// Render the change card to a PNG the client can save, instead of a manual screenshot.
+function downloadNWChange(){
+  const card=document.getElementById('nwchange-card');
+  const btn=document.getElementById('nwc-dl-btn');
+  if(!card)return;
+  if(typeof html2canvas!=='function'){alert('כלי יצירת התמונה עדיין נטען — נסה שוב עוד רגע.');return;}
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.textContent='מכין תמונה…';btn.disabled=true;}
+  html2canvas(card,{scale:2,backgroundColor:'#0c1622',useCORS:true,logging:false}).then(canvas=>{
+    const a=document.createElement('a');
+    a.download='שינוי-שווי-נטו.png';
+    a.href=canvas.toDataURL('image/png');
+    document.body.appendChild(a);a.click();a.remove();
+  }).catch(e=>{console.error(e);alert('לא הצלחתי לייצר את התמונה. אפשר לצלם מסך במקום.');})
+  .finally(()=>{if(btn){btn.textContent=orig;btn.disabled=false;}});
+}
 
 function parsePeriodDate(val){
   if(!val)return null;

@@ -10,9 +10,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=53">
+<link rel="stylesheet" href="styles/main.css?v=54">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -754,9 +755,10 @@
   <div style="width:min(480px,94vw);display:flex;flex-direction:column;align-items:center;gap:14px">
     <div id="nwchange-card"></div>
     <div style="display:flex;gap:10px">
-      <button class="btnsnap primary" onclick="closeNWChange()">סגור ✓</button>
+      <button class="btnsnap primary" id="nwc-dl-btn" onclick="downloadNWChange()">⬇️ הורד כתמונה</button>
+      <button class="btnsnap" onclick="closeNWChange()">סגור ✓</button>
     </div>
-    <div style="font-size:11px;color:var(--t3)">צלם מסך של הכרטיס למעלה לשימוש בתוכן "לפני / אחרי"</div>
+    <div style="font-size:11px;color:var(--t3)">הורד כתמונה, או צלם מסך של הכרטיס — לשימוש בתוכן "לפני / אחרי"</div>
   </div>
 </div>
 
@@ -792,15 +794,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=53"></script>
-<script defer src="js/cashflow-goals.js?v=53"></script>
-<script defer src="js/pension.js?v=53"></script>
-<script defer src="js/networth.js?v=53"></script>
-<script defer src="js/portfolio.js?v=53"></script>
-<script defer src="js/dashboard.js?v=53"></script>
-<script defer src="js/settings.js?v=53"></script>
-<script defer src="js/admin.js?v=53"></script>
-<script defer src="js/misc.js?v=53"></script>
-<script defer src="js/budget.js?v=53"></script>
+<script defer src="js/core.js?v=54"></script>
+<script defer src="js/cashflow-goals.js?v=54"></script>
+<script defer src="js/pension.js?v=54"></script>
+<script defer src="js/networth.js?v=54"></script>
+<script defer src="js/portfolio.js?v=54"></script>
+<script defer src="js/dashboard.js?v=54"></script>
+<script defer src="js/settings.js?v=54"></script>
+<script defer src="js/admin.js?v=54"></script>
+<script defer src="js/misc.js?v=54"></script>
+<script defer src="js/budget.js?v=54"></script>
 </body>
 </html>
