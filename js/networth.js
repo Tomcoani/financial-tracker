@@ -422,8 +422,11 @@ function nwPeriodChange(el){
   document.querySelectorAll('.nw-period-header-'+i).forEach(h=>h.textContent=el.value||'ת'+(i+1));
 }
 // ══ NET-WORTH CHANGE CARD (screenshot-ready before/after) ══
-// Builds a clean "before → after" card of the net-worth change over ~6 months,
-// designed to be screenshotted for before/after marketing content.
+// A clean "before → after" card of the net-worth change, designed to be
+// screenshotted / downloaded for before/after marketing content. The two
+// periods are user-selectable (controls sit outside the card so the image
+// stays clean).
+let _nwcPeriods=[], _nwcBeforeIdx=0, _nwcAfterIdx=0;
 function showNWChange(){
   const cnt=D.nwPeriodsCount||(D.nwPeriods||[]).length||6;
   const filled=[];
@@ -436,26 +439,47 @@ function showNWChange(){
     filled.push({label:p,nw,date:pd?new Date(pd.y,pd.m-1,1):null});
   }
   if(filled.length<2){alert('צריך לפחות שתי תקופות עם נתונים בשווי נטו כדי להציג שינוי.');return;}
-  const after=filled[filled.length-1];
-  // "before" = the filled period closest to 6 months before "after"
-  let before=null;
+  _nwcPeriods=filled;
+  _nwcAfterIdx=filled.length-1;
+  // Default "before" = the filled period closest to 6 months before "after".
+  _nwcBeforeIdx=filled.length-2;
+  const after=filled[_nwcAfterIdx];
   if(after.date){
     const target=new Date(after.date.getFullYear(),after.date.getMonth()-6,1);
-    const earlier=filled.filter(x=>x.date&&x.date<after.date);
-    if(earlier.length)before=earlier.reduce((b,x)=>Math.abs(x.date-target)<Math.abs(b.date-target)?x:b);
+    let best=-1,bestDiff=Infinity;
+    filled.forEach((x,i)=>{if(i<_nwcAfterIdx&&x.date){const d=Math.abs(x.date-target);if(d<bestDiff){bestDiff=d;best=i;}}});
+    if(best>=0)_nwcBeforeIdx=best;
   }
-  if(!before)before=filled[filled.length-2];
+  buildNWCControls();
+  renderNWChangeCard();
+  document.getElementById('nwchange-modal').style.display='flex';
+}
+function nwcSetBefore(i){_nwcBeforeIdx=+i;renderNWChangeCard();}
+function nwcSetAfter(i){_nwcAfterIdx=+i;renderNWChangeCard();}
+function buildNWCControls(){
+  const el=document.getElementById('nwc-controls');
+  if(!el)return;
+  const opts=sel=>_nwcPeriods.map((p,i)=>`<option value="${i}"${i===sel?' selected':''}>${esc(p.label)}</option>`).join('');
+  el.innerHTML=`
+    <div class="nwc-ctrl"><span>לפני</span><select onchange="nwcSetBefore(this.value)">${opts(_nwcBeforeIdx)}</select></div>
+    <div class="nwc-ctrl"><span>אחרי</span><select onchange="nwcSetAfter(this.value)">${opts(_nwcAfterIdx)}</select></div>`;
+}
+function renderNWChangeCard(){
+  const before=_nwcPeriods[_nwcBeforeIdx], after=_nwcPeriods[_nwcAfterIdx];
+  const card=document.getElementById('nwchange-card');
+  if(!before||!after||!card)return;
   const delta=after.nw-before.nw, up=delta>=0;
   const pct=before.nw>0?Math.round(delta/before.nw*100):null;
-  let months=null;
-  if(before.date&&after.date)months=Math.round((after.date-before.date)/(30.44*86400000));
-  const spanTxt=months==null?'':((months>=5&&months<=7)?'חצי שנה אחרונה':(months+' חודשים אחרונים'));
+  let spanTxt='';
+  if(before.date&&after.date){
+    const gap=Math.abs((after.date.getFullYear()*12+after.date.getMonth())-(before.date.getFullYear()*12+before.date.getMonth()));
+    if(gap>0)spanTxt='פער של '+gap+(gap===1?' חודש':' חודשים');
+  }
   const nm=(D.settings&&D.settings.displayName)||'';
   const logo=(document.getElementById('app-logo')||{}).src||'';
-  const card=document.getElementById('nwchange-card');
   card.innerHTML=`
     <div class="nwc-title">📈 השינוי בשווי הנטו שלי</div>
-    ${spanTxt?`<div class="nwc-span">${spanTxt} · ${esc(before.label)} ← ${esc(after.label)}</div>`:''}
+    ${spanTxt?`<div class="nwc-span">${esc(before.label)} ← ${esc(after.label)} · ${spanTxt}</div>`:''}
     <div class="nwc-delta ${up?'up':'down'}">${up?'↑ +':'↓ −'}${fmt(Math.abs(delta))}</div>
     ${pct!=null?`<div class="nwc-pct ${up?'up':'down'}">${up?'+':'−'}${Math.abs(pct)}%</div>`:''}
     <div class="nwc-ba">
@@ -464,7 +488,6 @@ function showNWChange(){
       <div class="col"><div class="lbl">אחרי</div><div class="num">${fmt(after.nw)}</div><div class="mon">${esc(after.label)}</div></div>
     </div>
     <div class="nwc-foot">${logo?`<img src="${logo}" alt=""/>`:''}${nm?`<span class="nwc-name">${esc(nm)}</span>`:''}</div>`;
-  document.getElementById('nwchange-modal').style.display='flex';
 }
 function closeNWChange(){const m=document.getElementById('nwchange-modal');if(m)m.style.display='none';}
 // Render the change card to a PNG the client can save, instead of a manual screenshot.
