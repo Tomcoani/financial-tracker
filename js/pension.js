@@ -51,9 +51,9 @@ function mkPen(p,i){
     <div class="pr2">
       <div class="pf"><label>תאריך בדיקה אחרונה <span style="font-size:10px;color:var(--t3);font-weight:400">— מתי בדקת לאחרונה כמה כסף יש לך?</span></label><input type="date" value="${p.date||''}" data-i="${i}" data-f="date" oninput="pu(this)"/></div>
     </div>
-    <div class="pen-section-title">מסלולי השקעה</div>
+    <div class="pen-section-title">באיזה מסלול הכסף שלך מושקע?</div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;display:grid;grid-template-columns:2fr 1fr 80px;gap:8px;text-align:right">
-      <span>שם המסלול</span><span>% הקצאה</span><span></span>
+      <span>שם המסלול</span><span>% מהכסף</span><span></span>
     </div>
     <div id="tracks-${i}">${tracksHtml}</div>
     <button class="btnadd-sm" onclick="addTrack(${i})">+ הוסף מסלול</button>`;
