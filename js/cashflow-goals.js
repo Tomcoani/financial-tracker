@@ -1,5 +1,22 @@
 
 // ══ CASH FLOW CALCULATOR ══
+// Collapse/expand the "כמה חסכתי החודש" section (preference kept per browser).
+function toggleCfCollapse(){
+  const body=document.getElementById('cf-section-body');
+  const arrow=document.getElementById('cf-collapse-arrow');
+  if(!body)return;
+  const collapsed=body.style.display==='none';
+  body.style.display=collapsed?'':'none';
+  if(arrow)arrow.textContent=collapsed?'▾':'▸';
+  try{localStorage.setItem('cf_collapsed',collapsed?'0':'1');}catch(e){}
+}
+function applyCfCollapse(){
+  let c=false;try{c=localStorage.getItem('cf_collapsed')==='1';}catch(e){}
+  const body=document.getElementById('cf-section-body');
+  const arrow=document.getElementById('cf-collapse-arrow');
+  if(body)body.style.display=c?'none':'';
+  if(arrow)arrow.textContent=c?'▸':'▾';
+}
 function calcCashFlow(){
   // Strip thousands commas so "10,000" parses as 10000 not 10
   const balance=parseFloat((document.getElementById('cf-balance')?.value||'').replace(/,/g,''))||0;

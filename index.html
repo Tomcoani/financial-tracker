@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=57">
+<link rel="stylesheet" href="styles/main.css?v=58">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -210,11 +210,14 @@
 
       <!-- SECTION 1: כמה חסכתי החודש -->
       <div class="g-section g-section--cf">
-        <div class="g-section-hd">
+        <div class="g-section-hd" onclick="toggleCfCollapse()" style="cursor:pointer">
           <span class="g-section-title">כמה חסכתי החודש</span>
-          <span style="font-size:17px">💰</span>
+          <span style="display:flex;align-items:center;gap:9px">
+            <span style="font-size:17px">💰</span>
+            <span id="cf-collapse-arrow" style="color:var(--teal);font-size:14px;font-weight:800">▾</span>
+          </span>
         </div>
-        <div class="cashflow-box">
+        <div class="cashflow-box" id="cf-section-body">
           <h3><i data-lucide="coins" style="width:16px;height:16px;vertical-align:middle;margin-left:4px"></i> כמה יש לי להשקיע החודש?</h3>
           <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;color:var(--t2);line-height:1.8">
             <div style="margin-bottom:6px"><strong style="color:var(--teal)">מה עושים כאן?</strong>
@@ -245,7 +248,7 @@
           <div class="cashflow-row">
             <div class="cf-field">
               <label>כמה יש לך היום בעו"ש?<span class="q-tip">?<span class="q-popup">הכנס את היתרה הנוכחית בחשבון העו"ש שלך נכון להיום.</span></span></label>
-              <input type="number" id="cf-balance" placeholder="0" oninput="calcCashFlow()"/>
+              <input type="number" id="cf-balance" placeholder="0" oninput="D.cfBalance=this.value;markDirty();calcCashFlow()"/>
             </div>
             <div class="cf-field">
               <label>מה ה"אפס החדש" שלך?<span class="q-tip">?<span class="q-popup">האפס החדש הוא הסכום המינימלי שאתה רוצה לשמור בעו"ש כ"כרית ביטחון" — סכום שמתחתיו לא תגע.</span></span></label>
@@ -795,15 +798,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=57"></script>
-<script defer src="js/cashflow-goals.js?v=57"></script>
-<script defer src="js/pension.js?v=57"></script>
-<script defer src="js/networth.js?v=57"></script>
-<script defer src="js/portfolio.js?v=57"></script>
-<script defer src="js/dashboard.js?v=57"></script>
-<script defer src="js/settings.js?v=57"></script>
-<script defer src="js/admin.js?v=57"></script>
-<script defer src="js/misc.js?v=57"></script>
-<script defer src="js/budget.js?v=57"></script>
+<script defer src="js/core.js?v=58"></script>
+<script defer src="js/cashflow-goals.js?v=58"></script>
+<script defer src="js/pension.js?v=58"></script>
+<script defer src="js/networth.js?v=58"></script>
+<script defer src="js/portfolio.js?v=58"></script>
+<script defer src="js/dashboard.js?v=58"></script>
+<script defer src="js/settings.js?v=58"></script>
+<script defer src="js/admin.js?v=58"></script>
+<script defer src="js/misc.js?v=58"></script>
+<script defer src="js/budget.js?v=58"></script>
 </body>
 </html>

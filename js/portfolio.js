@@ -77,9 +77,20 @@ function renderPortfolio(){
       <div></div><div></div><div></div>
     </div>`;
     html+=`<button class="btnadd" onclick="addPortItem(${pi})" style="margin-top:6px">+ הוספת נייר ערך</button>`;
+    // "How much to invest" allocator — splits an amount across the securities by % יעד
+    html+=`<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+        <span style="font-size:12.5px;color:var(--t2);font-weight:700">💵 כמה יש לך להשקיע?</span>
+        <input type="number" data-no-fmt value="${port.investAmt||''}" placeholder="0" data-pi="${pi}" oninput="updateInvestPlan(${pi},this.value)"
+          style="width:130px;background:var(--s2);border:1px solid var(--teal-border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:800;padding:6px 10px;text-align:right"/>
+        <span style="font-size:11px;color:var(--t3)">מחלק לפי "% יעד" של כל נייר</span>
+      </div>
+      <div id="invest-breakdown-${pi}" style="margin-top:9px"></div>
+    </div>`;
     html+=`</div>`; // close port-body
     card.innerHTML=html;
     container.appendChild(card);
+    renderInvestBreakdown(pi);
   });
   updatePortStats();
 }
@@ -107,6 +118,36 @@ function portItemUpdate(el){
   if(document.getElementById('nw-investments'))renderNWSection('nw-investments','investments');
   maybeClearPendingTransfer(); // deposit reflected → drop the reminder
   touchSection('portfolio');markDirty();
+}
+
+// ══ "HOW MUCH TO INVEST" ALLOCATOR ══
+// Splits an amount to invest across a portfolio's securities by their % יעד.
+function updateInvestPlan(pi,val){
+  if(!D.portfolios[pi])return;
+  D.portfolios[pi].investAmt=val;
+  renderInvestBreakdown(pi);
+  markDirty();
+}
+function renderInvestBreakdown(pi){
+  const el=document.getElementById('invest-breakdown-'+pi);
+  if(!el)return;
+  const port=D.portfolios[pi]; if(!port){el.innerHTML='';return;}
+  const amt=parseFloat(String(port.investAmt||'').replace(/,/g,''))||0;
+  if(amt<=0){el.innerHTML='';return;}
+  const items=(port.items||[]).filter(it=>(it.name||'').trim()&&(parseFloat(it.targetPct)||0)>0);
+  if(!items.length){el.innerHTML='<div style="font-size:11.5px;color:var(--t3)">מלא "% יעד" לניירות כדי לראות כמה להפקיד בכל אחד.</div>';return;}
+  const totalPct=items.reduce((s,it)=>s+(parseFloat(it.targetPct)||0),0);
+  const rows=items.map(it=>{
+    const p=parseFloat(it.targetPct)||0;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12.5px">
+      <span style="color:var(--t2)">${esc(it.name)} <span style="color:var(--t3)">(${p}%)</span></span>
+      <span style="color:var(--teal);font-weight:800;direction:ltr">${fmt(amt*p/100)}</span>
+    </div>`;
+  }).join('');
+  const note=Math.round(totalPct)!==100
+    ? `<div style="font-size:11px;color:var(--amber);margin-top:5px">סך אחוזי היעד הוא ${+totalPct.toFixed(1)}% (לא 100%) — ההפקדות מחושבות לפי האחוז של כל נייר.</div>`
+    : '';
+  el.innerHTML=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 13px">${rows}${note}</div>`;
 }
 
 // ══ PENDING TRANSFER (savings → portfolio) ══
