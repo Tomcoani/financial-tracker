@@ -286,11 +286,11 @@ function mkGoal(g,i){
   d.id='goal-card-'+i;
   d.className='goal-card'+(isDone?' completed':'')+(expanded?' expanded':'');
   const hzSel=!isDone
-    ?`<select class="htag ${hi!==null?HC[hi]:'htag-new'}" onchange="setH(${i},+this.value,this)">
+    ?`<select class="htag ${hi!==null?HC[hi]:'htag-new'}" onchange="setH(${i},+this.value,this)" onclick="event.stopPropagation()">
         <option value="-1"${hi===null?' selected':''} style="background:#1e2d45;color:#94a3b8">בחר טווח</option>
         ${HZ.map((h,hi2)=>`<option value="${hi2}"${hi2===hi?' selected':''} style="background:#1e2d45;color:#e2e8f0">${h}</option>`).join('')}
       </select>`
-    :'<span style="font-size:11px;color:var(--green);font-weight:700">✅ הושלם</span>';
+    :'<span class="htag" style="font-size:11px;color:#6ee7b7;background:rgba(16,185,129,.2)">✅ הושלם</span>';
   const cur=g.savedCurrency||'ILS';
   const inpStyle='background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:var(--font);font-size:13px;padding:6px 10px;direction:rtl;width:100%';
   const curSel=(field,val)=>`<select data-i="${i}" data-f="${field}" onchange="gu(this)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:2px 4px;width:52px;flex-shrink:0">
@@ -352,28 +352,21 @@ function mkGoal(g,i){
           style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
       </div>`;
   }
-  const hzChip=isDone
-    ?'<span class="htag" style="background:rgba(16,185,129,.2);color:#6ee7b7;font-size:11px">✅ הושלם</span>'
-    :(hi!==null?`<span class="htag h${hi}" style="font-size:11px">${HZ[hi]}</span>`:'<span class="htag htag-new" style="font-size:11px">ללא טווח</span>');
   const amtText=nd>0?`${fmtCur(sv,cur)} / ${fmtCur(nd,g.neededCurrency||'ILS')}`:(sv>0?fmtCur(sv,cur):'טרם הוגדר יעד');
+  const doneBtn=`<button class="htag gs-done-btn" onclick="event.stopPropagation();toggleDone(${i})" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10.5px">${isDone?'↩ פתח':'✓ הושלם'}</button>`;
   d.innerHTML=`
     <div class="goal-summary" onclick="toggleGoalCollapse(${i})">
       <div class="gs-top">
         <input class="gs-name" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)" onclick="event.stopPropagation()"/>
-        <span class="gs-right">${hzChip}<span class="gs-chev">${expanded?'▾':'▸'}</span></span>
+        <span class="gs-right">${hzSel}${doneBtn}<span class="gs-chev">${expanded?'▾':'▸'}</span></span>
       </div>
       <div class="pbar mini"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
       <div class="gs-row"><span class="gs-amt">${amtText}</span><span class="gs-pct${isDone?' done':''}">${pct}%</span></div>
     </div>
     <div class="goal-body" id="goal-body-${i}" style="display:${expanded?'':'none'}">
-      <div class="goal-toolbar">
-        ${hzSel}
-        <button class="htag" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10px" onclick="toggleDone(${i})">${isDone?'↩ פתח':'✓ סמן כהושלם'}</button>
-        <button class="bdel" onclick="delGoal(${i})">×</button>
-      </div>
+      <div class="goal-toolbar"><button onclick="delGoal(${i})" style="background:transparent;border:1px solid var(--border);color:var(--t3);border-radius:8px;padding:4px 12px;font-family:var(--font);font-size:11.5px;font-weight:700;cursor:pointer" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(239,68,68,.4)'" onmouseout="this.style.color='var(--t3)';this.style.borderColor='var(--border)'">🗑 מחק מטרה</button></div>
       ${bodyContent}
       <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmtCur(nd-sv,g.neededCurrency||'ILS'):''}${isDone?' 🎉':''}</div>
-      ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}
     </div>`;
   return d;
 }
