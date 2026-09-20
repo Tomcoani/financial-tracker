@@ -175,7 +175,7 @@ function renderGoalsHzSummary(){
     </div>
   </div>`;
 }
-let _collapsedGoals=new Set();
+let _expandedGoals=new Set(); // which goal cards are open for editing (default: compact)
 function renderGoals(){
   const hzEl=document.getElementById('goals-by-horizon');hzEl.innerHTML='';
   const active=(D.goals||[]).filter(g=>!g.done);
@@ -184,40 +184,32 @@ function renderGoals(){
   } else {
     const ctrl=document.createElement('div');
     ctrl.style.cssText='text-align:left;margin-bottom:10px';
-    ctrl.innerHTML=`<button onclick="toggleAllGoals()" style="background:none;border:none;color:var(--t2);font-family:var(--font);font-size:12px;cursor:pointer;padding:0">▾ קווץ / פרוש הכל</button>`;
+    ctrl.innerHTML=`<button onclick="toggleAllGoals()" style="background:none;border:none;color:var(--t2);font-family:var(--font);font-size:12px;cursor:pointer;padding:0">▾ פרוש / קבץ הכל</button>`;
     hzEl.appendChild(ctrl);
     const byH=[[],[],[],[]];const unset=[];
     active.forEach(goal=>{
       const idx=(D.goals||[]).indexOf(goal);
       (goal.h>=0&&goal.h<=3)?byH[goal.h].push({goal,idx}):unset.push({goal,idx});
     });
-    const appendGoal=({goal,idx},grp)=>{
-      const card=mkGoal(goal,idx);
-      grp.appendChild(card);
-      if(_collapsedGoals.has(idx)){
-        const body=card.querySelector('.goal-body');
-        if(body)body.style.display='none';
-        const btn=card.querySelector('.goal-toggle');
-        if(btn)btn.textContent='▸';
-      }
+    const buildGroup=(items,title)=>{
+      const grp=document.createElement('div');grp.className='hz-group';
+      if(title)grp.innerHTML=`<div class="hz-group-title">${title}</div>`;
+      const grid=document.createElement('div');grid.className='goal-grid';
+      items.forEach(({goal,idx})=>grid.appendChild(mkGoal(goal,idx)));
+      grp.appendChild(grid);
+      hzEl.appendChild(grp);
     };
-    HZ.forEach((hz,hi)=>{
-      if(!byH[hi].length)return;
-      const grp=document.createElement('div');grp.className='hz-group';
-      grp.innerHTML=`<div class="hz-group-title">${hz}</div>`;
-      byH[hi].forEach(item=>appendGoal(item,grp));
-      hzEl.appendChild(grp);
-    });
-    if(unset.length){
-      const grp=document.createElement('div');grp.className='hz-group';
-      unset.forEach(item=>appendGoal(item,grp));
-      hzEl.appendChild(grp);
-    }
+    HZ.forEach((hz,hi)=>{if(byH[hi].length)buildGroup(byH[hi],hz);});
+    if(unset.length)buildGroup(unset,'ללא טווח');
   }
   const doneEl=document.getElementById('goals-done-list');doneEl.innerHTML='';
   const done=(D.goals||[]).filter(g=>g.done);
   if(!done.length)doneEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right;padding:10px 0">עוד לא הושלמו מטרות — המשך לעבוד! 💪</p>';
-  done.forEach(g=>doneEl.appendChild(mkGoal(g,(D.goals||[]).indexOf(g))));
+  else{
+    const grid=document.createElement('div');grid.className='goal-grid';
+    done.forEach(g=>grid.appendChild(mkGoal(g,(D.goals||[]).indexOf(g))));
+    doneEl.appendChild(grid);
+  }
   renderGoalsHzSummary();
   renderPortfolioGoalCard();
   setTimeout(attachAllNumFormats,0);
@@ -252,24 +244,31 @@ function renderPortfolioGoalCard(){
 function toggleGoalCollapse(i){
   const body=document.getElementById('goal-body-'+i);
   const card=document.getElementById('goal-card-'+i);
-  if(!body)return;
-  const collapsed=body.style.display==='none';
-  body.style.display=collapsed?'':'none';
-  const btn=card&&card.querySelector('.goal-toggle');
-  if(btn)btn.textContent=collapsed?'▾':'▸';
-  if(collapsed)_collapsedGoals.delete(i);
-  else _collapsedGoals.add(i);
+  if(!body||!card)return;
+  const nowExpanded=body.style.display==='none';
+  body.style.display=nowExpanded?'':'none';
+  card.classList.toggle('expanded',nowExpanded);
+  const chev=card.querySelector('.gs-chev');if(chev)chev.textContent=nowExpanded?'▾':'▸';
+  if(nowExpanded)_expandedGoals.add(i);else _expandedGoals.delete(i);
 }
 function toggleAllGoals(){
-  const bodies=document.querySelectorAll('.goal-body');
-  const anyOpen=Array.from(bodies).some(b=>b.style.display!=='none');
-  bodies.forEach(b=>b.style.display=anyOpen?'none':'');
-  document.querySelectorAll('.goal-toggle').forEach(b=>b.textContent=anyOpen?'▸':'▾');
-  if(anyOpen){
-    bodies.forEach(b=>{const id=+b.id.replace('goal-body-','');_collapsedGoals.add(id);});
-  } else {
-    _collapsedGoals.clear();
-  }
+  const cards=[...document.querySelectorAll('#goals-by-horizon .goal-card')];
+  const anyExpanded=cards.some(c=>c.classList.contains('expanded'));
+  cards.forEach(c=>{
+    const body=c.querySelector('.goal-body');const chev=c.querySelector('.gs-chev');
+    const i=+c.id.replace('goal-card-','');
+    if(anyExpanded){if(body)body.style.display='none';c.classList.remove('expanded');if(chev)chev.textContent='▸';_expandedGoals.delete(i);}
+    else{if(body)body.style.display='';c.classList.add('expanded');if(chev)chev.textContent='▾';_expandedGoals.add(i);}
+  });
+}
+// Keep the compact summary (bar / % / amount) in sync while editing in the body.
+function refreshGoalSummary(card,i){
+  if(!card)return;
+  const sv=parseFloat(D.goals[i].saved)||0,nd=parseFloat(D.goals[i].needed)||0;
+  const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
+  const cur=D.goals[i].savedCurrency||'ILS';
+  const gp=card.querySelector('.gs-pct');if(gp)gp.textContent=pct+'%';
+  const ga=card.querySelector('.gs-amt');if(ga)ga.textContent=nd>0?fmtCur(sv,cur)+' / '+fmtCur(nd,D.goals[i].neededCurrency||'ILS'):(sv>0?fmtCur(sv,cur):'טרם הוגדר יעד');
 }
 // Months per horizon index — matches HZ labels: 12m / 1-5y / 5-10y / 10+y
 const GOAL_HZ_MONTHS=[12,36,84,180];
@@ -282,9 +281,10 @@ function mkGoal(g,i){
   const hzMonths=hi!==null?GOAL_HZ_MONTHS[hi]:GOAL_HZ_MONTHS[0];
   const monthlyNeeded=(!isDone&&remaining>0&&nd>0&&hi!==null)?Math.ceil(remaining/hzMonths):0;
   const hzLabel=hi===0?'12 חודשים':hi===1?'3 שנים':hi===2?'7 שנים':'15 שנה';
+  const expanded=_expandedGoals.has(i); // open for editing?
   const d=document.createElement('div');
   d.id='goal-card-'+i;
-  d.className='goal-card'+(isDone?' completed':'');
+  d.className='goal-card'+(isDone?' completed':'')+(expanded?' expanded':'');
   const hzSel=!isDone
     ?`<select class="htag ${hi!==null?HC[hi]:'htag-new'}" onchange="setH(${i},+this.value,this)">
         <option value="-1"${hi===null?' selected':''} style="background:#1e2d45;color:#94a3b8">בחר טווח</option>
@@ -352,17 +352,26 @@ function mkGoal(g,i){
           style="width:100%;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:13px;text-align:right"/>
       </div>`;
   }
+  const hzChip=isDone
+    ?'<span class="htag" style="background:rgba(16,185,129,.2);color:#6ee7b7;font-size:11px">✅ הושלם</span>'
+    :(hi!==null?`<span class="htag h${hi}" style="font-size:11px">${HZ[hi]}</span>`:'<span class="htag htag-new" style="font-size:11px">ללא טווח</span>');
+  const amtText=nd>0?`${fmtCur(sv,cur)} / ${fmtCur(nd,g.neededCurrency||'ILS')}`:(sv>0?fmtCur(sv,cur):'טרם הוגדר יעד');
   d.innerHTML=`
-    <div class="goal-top">
-      <input class="nin" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)"/>
-      ${hzSel}
-      <button class="goal-toggle" onclick="toggleGoalCollapse(${i})" title="קווץ/הרחב">▾</button>
-      <button class="htag" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10px" onclick="toggleDone(${i})">${isDone?'↩ פתח':'✓ סמן כהושלם'}</button>
-      <button class="bdel" onclick="delGoal(${i})">×</button>
+    <div class="goal-summary" onclick="toggleGoalCollapse(${i})">
+      <div class="gs-top">
+        <input class="gs-name" value="${esc(g.name)}" placeholder="שם המטרה" data-i="${i}" data-f="name" oninput="gu(this)" onclick="event.stopPropagation()"/>
+        <span class="gs-right">${hzChip}<span class="gs-chev">${expanded?'▾':'▸'}</span></span>
+      </div>
+      <div class="pbar mini"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
+      <div class="gs-row"><span class="gs-amt">${amtText}</span><span class="gs-pct${isDone?' done':''}">${pct}%</span></div>
     </div>
-    <div class="goal-body" id="goal-body-${i}">
+    <div class="goal-body" id="goal-body-${i}" style="display:${expanded?'':'none'}">
+      <div class="goal-toolbar">
+        ${hzSel}
+        <button class="htag" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10px" onclick="toggleDone(${i})">${isDone?'↩ פתח':'✓ סמן כהושלם'}</button>
+        <button class="bdel" onclick="delGoal(${i})">×</button>
+      </div>
       ${bodyContent}
-      <div class="pbar"><div class="pfill${isDone?' done':''}" style="width:${pct}%"></div></div>
       <div class="plbl">${pct}% הושג${nd>0?' · נשאר '+fmtCur(nd-sv,g.neededCurrency||'ILS'):''}${isDone?' 🎉':''}</div>
       ${monthlyNeeded>0?`<div class="goal-monthly-hint">💡 כדי להגיע ליעד תוך <strong>${hzLabel}</strong> — חיסכון של <strong>${fmt(monthlyNeeded)}</strong> בחודש</div>`:''}
     </div>`;
@@ -376,6 +385,7 @@ function gu(el){
   const pct=nd>0?Math.min(100,Math.round(sv/nd*100)):0;
   const fill=card.querySelector('.pfill');if(fill)fill.style.width=pct+'%';
   const lbl=card.querySelector('.plbl');if(lbl)lbl.textContent=pct+'% הושג'+(nd>0?' · נשאר '+fmt(nd-sv):'');
+  refreshGoalSummary(card,i);
   if(f==='where'||f==='saved')renderLocsAutoSummary();
   if(f==='saved'){updateLocFooter();touchSection('goals');}
   if(f==='needed')touchSection('goals');
@@ -394,6 +404,7 @@ function updateGoalLoc(goalIdx,locIdx,field,val){
       const fill=card.querySelector('.pfill');if(fill)fill.style.width=pct+'%';
       const lbl=card.querySelector('.plbl');if(lbl)lbl.textContent=pct+'% הושג'+(nd>0?' · נשאר '+fmtCur(nd-total,D.goals[goalIdx].neededCurrency||'ILS'):'');
       const totEl=card.querySelector('.goal-locs-total');if(totEl)totEl.textContent=fmtCur(total,D.goals[goalIdx].savedCurrency||'ILS');
+      refreshGoalSummary(card,goalIdx);
     }
     updateLocFooter();touchSection('goals');renderLocsAutoSummary();
   }
@@ -469,13 +480,14 @@ function showGoalError(i,msg){
 function addGoal(){
   D.goals.push({name:'',where:'',saved:'',needed:'',h:-1,done:false,goalLocs:[]});
   const newIdx=D.goals.length-1; // the card we want to land on
+  _expandedGoals.add(newIdx); // open the new goal for editing
   renderGoals();touchSection('goals');markDirty();
   setTimeout(()=>{
     const card=document.getElementById('goal-card-'+newIdx);
     if(!card)return;
     card.scrollIntoView({behavior:'smooth',block:'center'});
-    const nameInput=card.querySelector('input');
-    if(nameInput)nameInput.focus({preventScroll:true}); // focus without a second scroll jump
+    const nameInput=card.querySelector('.gs-name');
+    if(nameInput)nameInput.focus({preventScroll:true}); // focus the name without a second scroll jump
   },60);
 }
 function delGoal(i){D.goals.splice(i,1);renderGoals();renderLocsAutoSummary();markDirty();}

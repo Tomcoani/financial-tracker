@@ -187,7 +187,22 @@ input:not([type="date"]):not([type="email"]):not([type="password"]) {
 .save-status{font-size:11px;color:var(--t3);margin-right:8px;}
 
 /* ── GOAL CARDS ── */
-.goal-card{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;transition:border-color .2s;}
+.goal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
+.goal-card.expanded{grid-column:1 / -1;}
+.goal-summary{cursor:pointer;}
+.gs-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px;}
+.gs-name{background:transparent;border:none;outline:none;color:var(--white);font-family:var(--font);font-size:14.5px;font-weight:800;flex:1;min-width:0;text-align:right;padding:0;}
+.gs-name::placeholder{color:var(--t3);font-weight:700;}
+.gs-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.gs-chev{color:var(--t3);font-size:12px;}
+.pbar.mini{height:7px;margin-bottom:0;}
+.gs-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.gs-amt{font-size:11.5px;color:var(--t2);direction:ltr;}
+.gs-pct{font-size:13px;font-weight:800;color:var(--teal);}
+.gs-pct.done{color:var(--green);}
+.goal-toolbar{display:flex;align-items:center;gap:8px;margin:14px 0 12px;padding-top:13px;border-top:1px solid var(--border);flex-wrap:wrap;}
+@media(max-width:640px){.goal-grid{grid-template-columns:1fr;}}
+.goal-card{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:15px;margin-bottom:0;transition:border-color .2s;}
 .goal-card:hover{border-color:var(--teal-border);}
 .goal-card.completed{border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.04);}
 .goal-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
