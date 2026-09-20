@@ -560,7 +560,11 @@ function renderLocsTransfer(){
   }
   withAmt.forEach(l=>{
     const ri=(D.locations||[]).indexOf(l);
-    const hasTo=(l.whereTo||'').trim();
+    // Normalize the text so the box height matches the real number of lines:
+    // drop trailing spaces before line breaks, collapse blank lines, trim the end.
+    const wt=String(l.whereTo||'').replace(/[ \t]+\n/g,'\n').replace(/\n{2,}/g,'\n').replace(/\s+$/,'');
+    const hasTo=wt.trim();
+    const wtRows=Math.max(1,wt.split('\n').length);
     const row=document.createElement('div');
     row.style.cssText='display:grid;grid-template-columns:1fr 32px 1fr 26px;align-items:stretch;margin-bottom:8px;transition:opacity .15s';
     row.setAttribute('draggable','true');
@@ -576,14 +580,14 @@ function renderLocsTransfer(){
       <div style="background:${hasTo?'rgba(66,235,214,.06)':'transparent'};
         border:1px solid ${hasTo?'var(--teal-border)':'var(--border)'};
         border-radius:10px 0 0 10px;border-left:none;
-        padding:9px 12px;display:flex;align-items:center">
+        padding:9px 12px;display:flex;align-items:flex-start">
         <textarea placeholder="לאן מועבר הכסף" data-i="${ri}" data-f="whereTo"
           oninput="lu(this);autoResize(this)" ondragstart="event.stopPropagation()"
-          rows="${Math.max(1,(l.whereTo||'').split('\n').length)}"
+          rows="${wtRows}"
           style="background:transparent;border:none;outline:none;resize:none;overflow:hidden;
             color:${hasTo?'var(--teal)':'var(--t2)'};font-family:var(--font);font-size:13px;
             font-weight:${hasTo?'600':'400'};text-align:right;width:100%;line-height:1.55;
-            padding:0;min-height:1.55em;direction:rtl">${esc(l.whereTo||'')}</textarea>
+            padding:0;min-height:1.55em;direction:rtl">${esc(wt)}</textarea>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;color:var(--t3);
         font-size:18px;cursor:grab;user-select:none;padding:0 2px" title="גרור לשינוי סדר">⠿</div>`;
