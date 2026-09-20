@@ -451,8 +451,15 @@ function showGoalError(i,msg){
 }
 function addGoal(){
   D.goals.push({name:'',where:'',saved:'',needed:'',h:-1,done:false,goalLocs:[]});
+  const newIdx=D.goals.length-1; // the card we want to land on
   renderGoals();touchSection('goals');markDirty();
-  setTimeout(()=>{const last=document.querySelector('#goals-by-horizon .goal-card:last-child');if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+  setTimeout(()=>{
+    const card=document.getElementById('goal-card-'+newIdx);
+    if(!card)return;
+    card.scrollIntoView({behavior:'smooth',block:'center'});
+    const nameInput=card.querySelector('input');
+    if(nameInput)nameInput.focus({preventScroll:true}); // focus without a second scroll jump
+  },60);
 }
 function delGoal(i){D.goals.splice(i,1);renderGoals();renderLocsAutoSummary();markDirty();}
 
