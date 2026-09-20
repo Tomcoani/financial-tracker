@@ -7,7 +7,7 @@ function toggleCfCollapse(){
   if(!body)return;
   const collapsed=body.style.display==='none';
   body.style.display=collapsed?'':'none';
-  if(arrow)arrow.textContent=collapsed?'▾':'▸';
+  if(arrow)arrow.textContent=(collapsed?'▾':'▸')+' קבץ / פרוש';
   try{localStorage.setItem('cf_collapsed',collapsed?'0':'1');}catch(e){}
 }
 function applyCfCollapse(){
@@ -15,7 +15,7 @@ function applyCfCollapse(){
   const body=document.getElementById('cf-section-body');
   const arrow=document.getElementById('cf-collapse-arrow');
   if(body)body.style.display=c?'none':'';
-  if(arrow)arrow.textContent=c?'▸':'▾';
+  if(arrow)arrow.textContent=(c?'▸':'▾')+' קבץ / פרוש';
 }
 function calcCashFlow(){
   // Strip thousands commas so "10,000" parses as 10000 not 10

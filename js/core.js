@@ -155,6 +155,7 @@ auth.onAuthStateChanged(async user=>{
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
     if(!Array.isArray(D.updateMonths))D.updateMonths=[]; // monthly-streak history (migrate)
     if(typeof D.bestStreak!=='number')D.bestStreak=0;
+    if(!D.settings.pageSeenUpdates)D.settings.pageSeenUpdates={}; // per-page "what changed" tracking
     // The "הוצאות באשראי" field was removed; fold any saved value into the
     // optional fixed-expenses list so existing users' numbers don't change.
     if(D.cfCredit&&parseFloat(String(D.cfCredit).replace(/,/g,''))>0){
@@ -373,6 +374,7 @@ function goTo(id,btn){
   }
   if(id==='settings')renderSettings();
   if(id==='admin')renderAdmin();
+  if(typeof maybeShowPageUpdate==='function')maybeShowPageUpdate(id); // one-time "what changed on this page"
 }
 
 // ══ RENDER ALL ══

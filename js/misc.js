@@ -377,6 +377,59 @@ function showUpdateModal(){
 }
 function closeUpdateModal(){const m=document.getElementById('update-modal');if(m)m.style.display='none';}
 
+// ══ PER-PAGE "WHAT CHANGED HERE" NOTICE ══
+// Shows a one-time popup the first time a client opens a page after it changed.
+// To announce a change on a page: add/bump its entry below (bump `id` to a new
+// value and edit `items`). Keys are the page ids used by goTo (dash, budget,
+// goals, pension, portfolio, nw, history, notes, links, settings).
+const PAGE_UPDATES={
+  portfolio:{id:'2026-09-20',items:[
+    '💵 חדש: כתבו כמה כסף יש לכם להשקיע — והמערכת מחשבת כמה להפקיד בכל נייר לפי אחוז היעד.',
+    '↕️ אפשר לקבץ / לפרוש את כל התיקים בלחיצה אחת.'
+  ]},
+  goals:{id:'2026-09-20',items:[
+    '💰 קוביה חדשה בראש העמוד שמראה כמה חסכתם החודש (לפי ההתנהלות החודשית).',
+    '📈 כפתור "החודש אני מעביר כסף לתיק ההשקעות" שמסנכרן עם עמוד התיק.',
+    '↕️ אפשר לקבץ את החלק של "כמה חסכתי החודש".'
+  ]},
+  nw:{id:'2026-09-20',items:[
+    '📸 כפתור חדש: כרטיס "לפני / אחרי" של השינוי בשווי נטו — להורדה כתמונה, עם בחירת התקופות.'
+  ]},
+  pension:{id:'2026-09-20',items:[
+    '📝 שינינו את הכיתוב כדי שיהיה ברור יותר: "באיזה מסלול הכסף שלך מושקע?".'
+  ]}
+};
+function maybeShowPageUpdate(pageId){
+  const upd=PAGE_UPDATES[pageId];
+  if(!upd||!upd.id||typeof D!=='object'||!D||!D.settings)return;
+  if(!D.settings.pageSeenUpdates)D.settings.pageSeenUpdates={};
+  if((D.settings.pageSeenUpdates[pageId]||'')===upd.id)return;
+  // Don't nag brand-new / onboarding users — mark caught-up silently.
+  const established=D.settings.displayName&&localStorage.getItem('tour_done_'+CU);
+  if(!established){D.settings.pageSeenUpdates[pageId]=upd.id;markDirty();return;}
+  setTimeout(()=>{
+    // Don't stack on top of another open popup — try again next time they visit.
+    const openOther=[...document.querySelectorAll('.overlay')].some(o=>o.id!=='page-update-modal'&&getComputedStyle(o).display!=='none');
+    if(openOther)return;
+    showPageUpdate(pageId);
+  },550);
+}
+function showPageUpdate(pageId){
+  const upd=PAGE_UPDATES[pageId];if(!upd)return;
+  const intro=document.getElementById('page-update-intro');
+  const list=document.getElementById('page-update-items');
+  const modal=document.getElementById('page-update-modal');
+  if(!intro||!list||!modal)return;
+  intro.textContent=upd.intro||'הנה מה ששינינו בעמוד הזה מאז הפעם האחרונה שהסתכלת:';
+  list.innerHTML=(upd.items||[]).map(t=>`<li style="margin-bottom:7px">${esc(t)}</li>`).join('');
+  modal.style.display='flex';
+  // Mark as seen the moment it opens, so it never repeats.
+  if(!D.settings.pageSeenUpdates)D.settings.pageSeenUpdates={};
+  D.settings.pageSeenUpdates[pageId]=upd.id;
+  markDirty();try{manualSave();}catch(e){}
+}
+function closePageUpdate(){const m=document.getElementById('page-update-modal');if(m)m.style.display='none';}
+
 // ══ IN-APP "YOU HAVEN'T UPDATED IN A WHILE" REMINDER ══
 // A gentle top banner shown when the account's data hasn't been saved for a
 // while. This is the in-app half of the reminder; the email half (for people
