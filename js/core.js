@@ -156,6 +156,7 @@ auth.onAuthStateChanged(async user=>{
     if(!Array.isArray(D.updateMonths))D.updateMonths=[]; // monthly-streak history (migrate)
     if(typeof D.bestStreak!=='number')D.bestStreak=0;
     if(!D.settings.pageSeenUpdates)D.settings.pageSeenUpdates={}; // per-page "what changed" tracking
+    if(!D.pageStats)D.pageStats={}; // per-page usage counts
     // The "הוצאות באשראי" field was removed; fold any saved value into the
     // optional fixed-expenses list so existing users' numbers don't change.
     if(D.cfCredit&&parseFloat(String(D.cfCredit).replace(/,/g,''))>0){
@@ -303,6 +304,23 @@ async function manualSave(silent){
 }
 // Save right away without waiting for the debounce (tab switch / leaving the app)
 function flushSave(){clearTimeout(autoSaveTimer);if(dirty)manualSave(true);}
+
+// ══ PAGE-USAGE TRACKING ══
+// Records how many times each page was opened + the last visit, per user, in
+// D.pageStats { pageId:{count,last} }. Persisted quietly (no goals-activity
+// stamp, since merely viewing a page is not an edit). Surfaced in the admin
+// page to see which features clients actually use.
+let _pageStatTimer=null;
+function trackPageView(id){
+  if(!CU||typeof D!=='object'||!D||id==='admin')return;
+  if(!D.pageStats)D.pageStats={};
+  if(!D.pageStats[id])D.pageStats[id]={count:0,last:null};
+  D.pageStats[id].count++;
+  D.pageStats[id].last=new Date().toISOString();
+  dirty=true; // persist, but via our own quiet debounce (not markDirty → no goals stamp)
+  clearTimeout(_pageStatTimer);
+  _pageStatTimer=setTimeout(()=>{if(dirty)manualSave(true);},4000);
+}
 // Save when the app is hidden/backgrounded (switching tabs, locking phone, etc.)
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushSave();});
 window.addEventListener('pagehide',flushSave);
@@ -378,6 +396,7 @@ function goTo(id,btn){
   if(id==='settings')renderSettings();
   if(id==='admin')renderAdmin();
   if(typeof maybeShowPageUpdate==='function')maybeShowPageUpdate(id); // one-time "what changed on this page"
+  if(typeof trackPageView==='function')trackPageView(id); // usage analytics
 }
 
 // ══ RENDER ALL ══
