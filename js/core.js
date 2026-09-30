@@ -273,6 +273,9 @@ function fbErr(c){
 let _firstDirtyAt=0;
 function markDirty(){
   dirty=true;
+  // Any change anywhere counts as activity on the goals section (used as the
+  // overall "is this client active" signal now that history is hidden).
+  if(CU&&typeof touchSection==='function')touchSection('goals');
   document.getElementById('save-bar').style.display='flex';
   document.getElementById('save-status').textContent='';
   if(!_firstDirtyAt)_firstDirtyAt=Date.now();
