@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=64">
+<link rel="stylesheet" href="styles/main.css?v=65">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -597,6 +597,11 @@
         <div class="ch-title">סטטיסטיקות כלליות</div>
         <div class="g3" id="admin-stats"></div>
       </div>
+      <div class="card">
+        <div class="ch-title"><i data-lucide="bar-chart-3" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> שימוש בפיצ'רים</div>
+        <div class="ch-hint">כמה לקוחות פתחו כל עמוד וכמה פעמים בסך הכל. הנתונים נצברים מ-1.10.2026 ואילך.</div>
+        <div id="admin-usage"><p style="color:var(--t3);font-size:13px;text-align:right">טוען...</p></div>
+      </div>
       <div class="card" style="border-color:rgba(139,92,246,.3)">
         <div class="ch-title"><i data-lucide="lock" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> מודל אבטחה</div>
         <div style="font-size:13px;color:var(--t2);line-height:1.8;text-align:right">
@@ -807,15 +812,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=64"></script>
-<script defer src="js/cashflow-goals.js?v=64"></script>
-<script defer src="js/pension.js?v=64"></script>
-<script defer src="js/networth.js?v=64"></script>
-<script defer src="js/portfolio.js?v=64"></script>
-<script defer src="js/dashboard.js?v=64"></script>
-<script defer src="js/settings.js?v=64"></script>
-<script defer src="js/admin.js?v=64"></script>
-<script defer src="js/misc.js?v=64"></script>
-<script defer src="js/budget.js?v=64"></script>
+<script defer src="js/core.js?v=65"></script>
+<script defer src="js/cashflow-goals.js?v=65"></script>
+<script defer src="js/pension.js?v=65"></script>
+<script defer src="js/networth.js?v=65"></script>
+<script defer src="js/portfolio.js?v=65"></script>
+<script defer src="js/dashboard.js?v=65"></script>
+<script defer src="js/settings.js?v=65"></script>
+<script defer src="js/admin.js?v=65"></script>
+<script defer src="js/misc.js?v=65"></script>
+<script defer src="js/budget.js?v=65"></script>
 </body>
 </html>

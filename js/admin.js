@@ -1,4 +1,43 @@
 // ══ ADMIN ══
+const ADMIN_PAGE_LABELS={dash:'בית',budget:'התנהלות חודשית',goals:'מטרות',pension:'פנסיה',portfolio:'תיק השקעות',nw:'שווי נטו',notes:'הערות',links:'כלים',settings:'הגדרות',history:'היסטוריה (מוסתר)'};
+function lastActiveText(iso){
+  const d=daysSince(iso);
+  if(d===null)return 'טרם';
+  if(d===0)return 'היום';
+  if(d===1)return 'אתמול';
+  return 'לפני '+d+' ימים';
+}
+// Aggregate per-page usage across all clients and render the "feature usage" table.
+function renderAdminUsage(users){
+  const el=document.getElementById('admin-usage');
+  if(!el)return;
+  const agg={}; // pageId -> {users, opens}
+  users.forEach(u=>{
+    const ps=u.pageStats||{};
+    Object.keys(ps).forEach(pid=>{
+      const c=(ps[pid]&&ps[pid].count)||0;
+      if(c<=0)return;
+      if(!agg[pid])agg[pid]={users:0,opens:0};
+      agg[pid].users++;agg[pid].opens+=c;
+    });
+  });
+  const total=users.length;
+  const rows=Object.keys(agg).map(pid=>({pid,label:ADMIN_PAGE_LABELS[pid]||pid,users:agg[pid].users,opens:agg[pid].opens}))
+    .sort((a,b)=>b.users-a.users||b.opens-a.opens);
+  if(!rows.length){el.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">עדיין אין נתוני שימוש — ייצברו ככל שלקוחות ייכנסו לעמודים.</p>';return;}
+  el.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;text-align:right">
+    <thead><tr style="color:var(--t3);border-bottom:1px solid var(--border)">
+      <th style="padding:6px 8px;text-align:right">עמוד</th>
+      <th style="padding:6px 8px;text-align:right">לקוחות שפתחו</th>
+      <th style="padding:6px 8px;text-align:right">סה"כ כניסות</th>
+    </tr></thead><tbody>
+    ${rows.map(r=>`<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
+      <td style="padding:7px 8px;color:var(--white);font-weight:600">${esc(r.label)}</td>
+      <td style="padding:7px 8px"><span style="color:var(--teal);font-weight:800">${r.users}</span> <span style="color:var(--t3)">/ ${total} (${total?Math.round(r.users/total*100):0}%)</span></td>
+      <td style="padding:7px 8px;color:var(--t2)">${r.opens.toLocaleString('he-IL')}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+}
 async function renderAdmin(){
   if(!CU)return;
   const me=auth.currentUser;
@@ -36,11 +75,12 @@ async function renderAdmin(){
         if(nwAge===null||nwAge>180)alerts.push({label:'שווי נטו',cls:'tag-urgent'});
         const lastSnap=(d.snapshots||[]).length>0?d.snapshots[d.snapshots.length-1]:null;
         users.push({uid:userDoc.id,name,email,phone,alerts,goalsAge,penAge,nwAge,
-          nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,
+          nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,pageStats:d.pageStats||{},
           snapshots:(d.snapshots||[]).map(s=>({label:s.label,date:s.date,netWorth:s.netWorth||0,penTotal:s.penTotal||0,goalsSaved:s.goalsSaved||0}))});
       }catch(e){}
     }
     renderAdminFeedback(allFeedback);
+    renderAdminUsage(users);
     const totalUsers=users.length,needUpdate=users.filter(u=>u.alerts.length>0).length;
     if(statsEl)statsEl.innerHTML=`
       <div class="stat"><label>סה"כ לקוחות</label><div class="val vt">${totalUsers}</div></div>
@@ -60,6 +100,7 @@ async function renderAdmin(){
                   ? '<span class="admin-alert-tag tag-ok"><i data-lucide="check-circle" style="width:12px;height:12px;vertical-align:middle"></i> מעודכן</span>'
                   : u.alerts.map(a=>`<span class="admin-alert-tag ${a.cls}">⚠️ ${a.label}</span>`).join('')}
               </div>
+              <span style="font-size:11px;color:var(--t3);white-space:nowrap">· פעיל ${lastActiveText(u.lastSaved)}</span>
             </div>
           </div>
           <div style="font-size:13px;color:var(--t3);transition:transform .2s" id="acarrow-${u.uid}">▼</div>
