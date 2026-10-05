@@ -34,7 +34,7 @@ function g(m,f){return D?.settings?.gender==='female'?f:m;}
 function nw6(n){return Array(n||D?.nwPeriodsCount||6).fill('');}
 function defData(){
   return {
-    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfBalance:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',cfLastUpdated:'',
+    monthly:'',future:'',penNotes:'',gnotes:'',cfZero:'',cfBalance:'',cfExpenses:'',cfCurrency:'ILS',cfFixedExpenses:[],cfCredit:'',cfLastUpdated:'',
     settings:{displayName:'',email:'',age:'',notifyEmail:'',gender:'male'},
     lastUpdated:{goals:null,pension:null,nw:null},
     updateMonths:[],bestStreak:0,
@@ -430,7 +430,7 @@ function renderAll(){
     else{cfBalEl.value='';delete cfBalEl.dataset.numRaw;}
   }
   const cfExpEl=document.getElementById('cf-expenses');
-  if(cfExpEl)cfExpEl.value='';
+  if(cfExpEl)cfExpEl.value=D.cfExpenses?parseFloat(String(D.cfExpenses).replace(/,/g,'')):'';
   if(typeof applyCfCollapse==='function')applyCfCollapse();
   if(typeof calcCashFlow==='function')calcCashFlow(); // recompute now that balance is restored
   renderCfFixed();

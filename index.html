@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=69">
+<link rel="stylesheet" href="styles/main.css?v=70">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -254,6 +254,10 @@
               <label>מה ה"אפס החדש" שלך?<span class="q-tip">?<span class="q-popup">האפס החדש הוא הסכום המינימלי שאתה רוצה לשמור בעו"ש כ"כרית ביטחון" — סכום שמתחתיו לא תגע.</span></span></label>
               <input type="number" id="cf-zero" placeholder="0" oninput="D.cfZero=this.value;markDirty();calcCashFlow()"/>
             </div>
+          </div>
+          <div class="cf-field" style="margin-bottom:12px">
+            <label>הוצאות נוספות עד המשכורת הבא<span class="q-tip">?<span class="q-popup">כל ההוצאות שצפויות עד המשכורת הבאה ושאינן הוצאות קבועות — חד-פעמיות, חיוב אשראי גבוה מהרגיל החודש, מע"מ/ביטוח לאומי וכד'.</span></span></label>
+            <input type="number" id="cf-expenses" placeholder="0" oninput="D.cfExpenses=this.value;markDirty();calcCashFlow()"/>
           </div>
           <div class="cf-field" style="margin-bottom:12px">
             <div id="cf-fixed-expenses"></div>
@@ -825,15 +829,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=69"></script>
-<script defer src="js/cashflow-goals.js?v=69"></script>
-<script defer src="js/pension.js?v=69"></script>
-<script defer src="js/networth.js?v=69"></script>
-<script defer src="js/portfolio.js?v=69"></script>
-<script defer src="js/dashboard.js?v=69"></script>
-<script defer src="js/settings.js?v=69"></script>
-<script defer src="js/admin.js?v=69"></script>
-<script defer src="js/misc.js?v=69"></script>
-<script defer src="js/budget.js?v=69"></script>
+<script defer src="js/core.js?v=70"></script>
+<script defer src="js/cashflow-goals.js?v=70"></script>
+<script defer src="js/pension.js?v=70"></script>
+<script defer src="js/networth.js?v=70"></script>
+<script defer src="js/portfolio.js?v=70"></script>
+<script defer src="js/dashboard.js?v=70"></script>
+<script defer src="js/settings.js?v=70"></script>
+<script defer src="js/admin.js?v=70"></script>
+<script defer src="js/misc.js?v=70"></script>
+<script defer src="js/budget.js?v=70"></script>
 </body>
 </html>

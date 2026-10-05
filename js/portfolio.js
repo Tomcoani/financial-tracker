@@ -45,7 +45,7 @@ function renderPortfolio(){
         color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;outline:none;
         flex:1;min-width:180px;transition:border-color .2s;text-align:right;direction:rtl"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"/>
-      <div id="port-card-total-${pi}" style="font-size:16px;font-weight:800;color:var(--teal)">${portTotal>0?fmt(portTotal):''}</div>
+      <div id="port-card-total-${pi}" style="font-size:16px;font-weight:800;color:var(--teal);direction:ltr">${portHeaderTotalHtml(port.items)}</div>
       ${D.portfolios.length>1?`<button class="bdel" onclick="delPortfolio(${pi})" style="font-size:20px" title="מחק תיק">×</button>`:''}
     </div>`;
     // Body (hidden when the portfolio is collapsed to a single row)
@@ -80,14 +80,8 @@ function renderPortfolio(){
         <button class="bdel" onclick="delPortItem(${pi},${ii})">×</button>
       </div>`;
     });
-    // Total row for this portfolio
-    html+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 40px;gap:8px;align-items:center;
-      margin-top:4px;padding-top:9px;border-top:1px solid var(--teal-border)">
-      <div style="font-size:12px;font-weight:800;color:var(--t2);text-align:right">סה"כ שווי נוכחי</div>
-      <div></div>
-      <div id="port-sum-${pi}" style="font-size:14px;font-weight:800;color:var(--teal);text-align:center">${portTotal>0?fmt(portTotal):'—'}</div>
-      <div></div><div></div><div></div>
-    </div>`;
+    // Total row(s) — shown in each currency actually used, without conversion.
+    html+=`<div id="port-sum-wrap-${pi}" style="margin-top:4px;padding-top:9px;border-top:1px solid var(--teal-border)">${portSumHtml(port.items)}</div>`;
     html+=`<button class="btnadd" onclick="addPortItem(${pi})" style="margin-top:6px">+ הוספת נייר ערך</button>`;
     // "How much to invest" allocator — splits an amount across the securities by % יעד
     html+=`<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
@@ -117,11 +111,12 @@ function portItemUpdate(el){
   if(!D.portfolios[pi]||!D.portfolios[pi].items[ii])return;
   D.portfolios[pi].items[ii][f]=el.value;
   D.portfolio=D.portfolios.flatMap(p=>p.items||[]);
-  const portTotal=(D.portfolios[pi].items||[]).reduce((s,it)=>s+portItemILS(it),0);
+  const items=D.portfolios[pi].items||[];
+  const portTotal=items.reduce((s,it)=>s+portItemILS(it),0); // ₪ — for the % column only
   const headerEl=document.getElementById('port-card-total-'+pi);
-  if(headerEl)headerEl.textContent=portTotal>0?fmt(portTotal):'';
-  const sumEl=document.getElementById('port-sum-'+pi);
-  if(sumEl)sumEl.textContent=portTotal>0?fmt(portTotal):'—';
+  if(headerEl)headerEl.innerHTML=portHeaderTotalHtml(items);
+  const sumWrap=document.getElementById('port-sum-wrap-'+pi);
+  if(sumWrap)sumWrap.innerHTML=portSumHtml(items);
   (D.portfolios[pi].items||[]).forEach((it,idx)=>{
     const pctEl=document.getElementById(`pct-${pi}-${idx}`);
     if(pctEl){const v=portItemILS(it);pctEl.textContent=portTotal>0&&v?(v/portTotal*100).toFixed(1)+'%':'—%';}
@@ -162,8 +157,32 @@ function renderInvestBreakdown(pi){
   el.innerHTML=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 13px">${rows}${note}</div>`;
 }
 
-// A portfolio item's value converted to ₪ (items may now be entered in $).
+// A portfolio item's value converted to ₪ (used only for allocation %/charts).
 function portItemILS(it){return toILS(parseFloat(String((it&&it.value)||'').replace(/,/g,''))||0,(it&&it.currency)||'ILS');}
+// Raw per-item value (no currency conversion) and per-currency totals — the
+// portfolio shows totals in their own currency, never multiplied by the $ rate.
+function portItemRaw(it){return parseFloat(String((it&&it.value)||'').replace(/,/g,''))||0;}
+function portCurTotals(items){
+  const t={ILS:0,USD:0};
+  (items||[]).forEach(it=>{t[(it&&it.currency==='USD')?'USD':'ILS']+=portItemRaw(it);});
+  return t;
+}
+function _nraw(n,sym){return sym+Math.round(n).toLocaleString('he-IL');}
+// The small total shown in the portfolio card header (₪ and/or $).
+function portHeaderTotalHtml(items){
+  const t=portCurTotals(items);
+  return [t.ILS>0?_nraw(t.ILS,'₪'):'',t.USD>0?_nraw(t.USD,'$'):''].filter(Boolean).join(' · ');
+}
+// The total block under the securities — one line per currency in use.
+function portSumHtml(items){
+  const t=portCurTotals(items),both=t.ILS>0&&t.USD>0;
+  const row=(lbl,val)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+    <span style="font-size:12px;font-weight:800;color:var(--t2)">${lbl}</span>
+    <span style="font-size:14px;font-weight:800;color:var(--teal);direction:ltr">${val}</span></div>`;
+  if(both)return row('סה"כ השקעה בשקלים',_nraw(t.ILS,'₪'))+row('סה"כ השקעה בדולר',_nraw(t.USD,'$'));
+  if(t.USD>0)return row('סה"כ שווי נוכחי',_nraw(t.USD,'$'));
+  return row('סה"כ שווי נוכחי',t.ILS>0?_nraw(t.ILS,'₪'):'—');
+}
 // ══ PENDING TRANSFER (savings → portfolio) ══
 // Sum of all portfolio item values, in ₪.
 function portGrandTotalILS(){

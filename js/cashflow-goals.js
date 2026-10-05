@@ -38,7 +38,8 @@ function calcCashFlow(){
   const balance=parseFloat((document.getElementById('cf-balance')?.value||'').replace(/,/g,''))||0;
   const zero=parseFloat((document.getElementById('cf-zero')?.value||'').replace(/,/g,''))||0;
   const fixedTotal=(D.cfFixedExpenses||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
-  const expenses=fixedTotal; // "הוצאות נוספות" field removed — only fixed expenses now
+  const additional=parseFloat((document.getElementById('cf-expenses')?.value||'').replace(/,/g,''))||0;
+  const expenses=fixedTotal+additional;
   const cur=(document.getElementById('cf-currency')?.value)||D.cfCurrency||'ILS';
   const el=document.getElementById('cf-result');
   if(!balance&&!zero&&!expenses){el.style.display='none';return;}

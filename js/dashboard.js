@@ -439,7 +439,7 @@ async function exportPDF(){
       <td>${esc(port.brokerName)||'—'}</td>
       <td>${esc(it.name)}</td>
       <td>${esc(it.category)}</td>
-      <td class="num">${fmt(typeof portItemILS==='function'?portItemILS(it):(parseFloat(it.value)||0))}</td>
+      <td class="num">${(it.currency==='USD'?'$':'₪')+Math.round(parseFloat(String(it.value||'').replace(/,/g,''))||0).toLocaleString('he-IL')}</td>
       <td>${it.targetPct?it.targetPct+'%':'—'}</td>
     </tr>`)
   ).join('');
