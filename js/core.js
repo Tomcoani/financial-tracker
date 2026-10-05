@@ -381,7 +381,9 @@ function collectAll(){
 // ══ NAV ══
 let _lastTab='';
 function goTo(id,btn){
+  const _leaving=_lastTab;
   if(_lastTab&&_lastTab!==id)flushSave(); // persist edits from the tab we're leaving
+  if(_leaving==='nw'&&id!=='nw'&&typeof maybeShowNWComplete==='function')maybeShowNWComplete(); // nudge if NW rows left empty
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
   document.getElementById('p-'+id).classList.add('on');

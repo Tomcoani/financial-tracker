@@ -85,6 +85,35 @@ function syncNWFromPension(){
   });
   return filled;
 }
+// ══ NET-WORTH COMPLETENESS CHECK ══
+// Named rows that have no value in the latest tracked period — likely forgotten.
+function nwIncompleteRows(){
+  const col=getLatestNWCol();
+  if(col<0)return [];
+  const secNames={assets:'נכסים',investments:'השקעות',savings:'חסכונות',debts:'חובות'};
+  const out=[];
+  ['assets','investments','savings','debts'].forEach(sec=>{
+    ((D.nwData&&D.nwData[sec]&&D.nwData[sec].rows)||[]).forEach(row=>{
+      const hasName=(row.name||'').trim();
+      const hasVal=row.vals&&row.vals[col]!=null&&String(row.vals[col]).trim()!=='';
+      if(hasName&&!hasVal)out.push(secNames[sec]+' · '+row.name);
+    });
+  });
+  return out;
+}
+// Shown once per session when leaving the NW tab with empty rows, so the client
+// can confirm nothing was missed.
+function maybeShowNWComplete(){
+  try{if(sessionStorage.getItem('nw_complete_shown'))return;}catch(e){}
+  const missing=nwIncompleteRows();
+  if(!missing.length)return;
+  const list=document.getElementById('nw-complete-list');
+  if(list)list.innerHTML=missing.map(m=>`<li>${esc(m)}</li>`).join('');
+  const ack=document.getElementById('nw-complete-ack');if(ack)ack.checked=false;
+  const m=document.getElementById('nw-complete-modal');if(m)m.style.display='flex';
+  try{sessionStorage.setItem('nw_complete_shown','1');}catch(e){}
+}
+function closeNWComplete(){const m=document.getElementById('nw-complete-modal');if(m)m.style.display='none';}
 // Called when pension data changes — offer to sync locations
 function autoSyncLocations(){
   // Only re-render - don't push pension into D.locations (causes duplication)

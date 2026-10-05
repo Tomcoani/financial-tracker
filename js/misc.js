@@ -728,20 +728,7 @@ function showTourStep(){
   }
 
   // Position the highlight ring around the target element
-  setTimeout(()=>{
-    const t=document.getElementById(step.el);
-    if(t){
-      const r=t.getBoundingClientRect();
-      const pad=6;
-      ring.style.top=(r.top-pad)+'px';
-      ring.style.left=(r.left-pad)+'px';
-      ring.style.width=(r.width+pad*2)+'px';
-      ring.style.height=(r.height+pad*2)+'px';
-      ring.style.display='block';
-    } else {
-      ring.style.display='none';
-    }
-  },180);
+  setTimeout(()=>positionTourRing(document.getElementById(step.el)),180);
 
   overlay.style.display='block';
   card.style.display='block';
@@ -769,15 +756,26 @@ function closeTour(){
   if(CU)localStorage.setItem('tour_done_'+CU,'1');
 }
 
+// Position the tour highlight ring around a target. The ring is position:fixed
+// inside the zoom:1.08 body, so getBoundingClientRect returns zoomed coordinates
+// while style.* is applied unzoomed — divide by the zoom so the ring lands
+// exactly around the element.
+function positionTourRing(t){
+  const ring=document.getElementById('tour-ring');
+  if(!ring)return;
+  if(!t){ring.style.display='none';return;}
+  const r=t.getBoundingClientRect();
+  const z=parseFloat(getComputedStyle(document.body).zoom)||1;
+  const pad=6;
+  ring.style.top=(r.top/z-pad)+'px';
+  ring.style.left=(r.left/z-pad)+'px';
+  ring.style.width=(r.width/z+pad*2)+'px';
+  ring.style.height=(r.height/z+pad*2)+'px';
+  ring.style.display='block';
+}
 // Re-position highlight ring on resize
 window.addEventListener('resize',()=>{
   if(document.getElementById('tour-card').style.display==='block'&&TOUR_STEPS[tourStep]){
-    const t=document.getElementById(TOUR_STEPS[tourStep].el);
-    if(t){
-      const r=t.getBoundingClientRect(),pad=6;
-      const ring=document.getElementById('tour-ring');
-      ring.style.top=(r.top-pad)+'px';ring.style.left=(r.left-pad)+'px';
-      ring.style.width=(r.width+pad*2)+'px';ring.style.height=(r.height+pad*2)+'px';
-    }
+    positionTourRing(document.getElementById(TOUR_STEPS[tourStep].el));
   }
 });

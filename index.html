@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=67">
+<link rel="stylesheet" href="styles/main.css?v=68">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -766,6 +766,20 @@
   </div>
 </div>
 
+<!-- NET-WORTH COMPLETENESS CHECK -->
+<div class="overlay" id="nw-complete-modal" style="display:none">
+  <div class="modal" style="text-align:right;width:min(480px,94vw)">
+    <h2 style="margin-bottom:6px">📝 רגע לפני שממשיכים</h2>
+    <p style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:10px">שמנו לב שיש כמה שורות בשווי נטו שעדיין לא מילאת בהן ערך בתקופה האחרונה. אם זה בכוונה — מצוין, פשוט סמן את התיבה למטה:</p>
+    <ul id="nw-complete-list" style="margin:0 0 12px;padding-inline-start:20px;font-size:13px;color:var(--amber);line-height:1.8;max-height:200px;overflow:auto"></ul>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t1);cursor:pointer;margin-bottom:14px">
+      <input type="checkbox" id="nw-complete-ack" style="width:16px;height:16px;accent-color:var(--teal)"/>
+      אלו כל הנתונים שלי — לא פספסתי כלום
+    </label>
+    <div class="modal-btns"><button class="btnsnap primary" style="flex:1" onclick="closeNWComplete()">הבנתי ✓</button></div>
+  </div>
+</div>
+
 <!-- NET-WORTH CHANGE CARD (screenshot-ready) -->
 <div class="overlay" id="nwchange-modal" style="display:none">
   <div style="width:min(480px,94vw);display:flex;flex-direction:column;align-items:center;gap:14px">
@@ -811,15 +825,15 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=67"></script>
-<script defer src="js/cashflow-goals.js?v=67"></script>
-<script defer src="js/pension.js?v=67"></script>
-<script defer src="js/networth.js?v=67"></script>
-<script defer src="js/portfolio.js?v=67"></script>
-<script defer src="js/dashboard.js?v=67"></script>
-<script defer src="js/settings.js?v=67"></script>
-<script defer src="js/admin.js?v=67"></script>
-<script defer src="js/misc.js?v=67"></script>
-<script defer src="js/budget.js?v=67"></script>
+<script defer src="js/core.js?v=68"></script>
+<script defer src="js/cashflow-goals.js?v=68"></script>
+<script defer src="js/pension.js?v=68"></script>
+<script defer src="js/networth.js?v=68"></script>
+<script defer src="js/portfolio.js?v=68"></script>
+<script defer src="js/dashboard.js?v=68"></script>
+<script defer src="js/settings.js?v=68"></script>
+<script defer src="js/admin.js?v=68"></script>
+<script defer src="js/misc.js?v=68"></script>
+<script defer src="js/budget.js?v=68"></script>
 </body>
 </html>
