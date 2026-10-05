@@ -54,7 +54,7 @@ function renderPortfolio(){
     html+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 40px;gap:8px;
       font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;margin-bottom:8px;text-align:right">
       <div>שם ניירות הערך</div>
-      <div>קטגוריה<span class="q-tip">?<span class="q-popup">סוג הנכס — מניות חו"ל/ישראל, אג"ח, נדל"ן, סחורות, מזומן/כספית וכו'. עוזר לראות את פיזור התיק.</span></span></div>
+      <div>קטגוריה<span class="q-tip">?<span class="q-popup" style="width:260px;white-space:normal;text-align:right;line-height:1.7">מה כל קטגוריה אומרת:<br>• <b>מניות ישראל</b> — השקעה במדד או בחברות הנסחרות בישראל<br>• <b>מניות חו"ל</b> — השקעה במדד או בחברות בחו"ל (למשל S&P 500)<br>• <b>אג"ח</b> — אגרות חוב: הלוואה לממשלה או לחברה שמחזירה ריבית<br>• <b>נדל"ן</b> — נכסים או קרנות נדל"ן (REIT)<br>• <b>סחורות</b> — זהב, נפט, מתכות וכו'<br>• <b>מזומן</b> — כסף נזיל / קרן כספית<br>• <b>אחר</b> — כל השקעה שלא נכנסת לקטגוריות שלמעלה</span></span></div>
       <div>שווי נוכחי<span class="q-tip">?<span class="q-popup">כמה ההשקעה הזו שווה נכון להיום (זמן מילוי הנתונים). אפשר לבחור ₪ או $.</span></span></div>
       <div>חלק מהתיק<span class="q-tip">?<span class="q-popup">איזה אחוז מכלל התיק הנייר הזה מהווה כרגע — מחושב אוטומטית.</span></span></div>
       <div>% יעד<span class="q-tip">?<span class="q-popup">איזה אחוז מהתיק אתה רוצה שהנייר הזה יהיה — הקצאת היעד שלך.</span></span></div>
