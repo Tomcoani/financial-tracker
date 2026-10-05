@@ -326,6 +326,13 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',flushSave);
 window.addEventListener('blur',flushSave);
 
+// Scrolling the mouse wheel over a focused number input used to change its value
+// by accident — blur it on wheel so the page just scrolls instead.
+document.addEventListener('wheel',()=>{
+  const a=document.activeElement;
+  if(a&&a.tagName==='INPUT'&&a.type==='number')a.blur();
+},{passive:true});
+
 // ══ IDLE AUTO-LOGOUT ══
 // Sign the user out after 24h with no interaction (covers a tab left open AND
 // a session reopened later — the on-load check in the auth handler catches that).

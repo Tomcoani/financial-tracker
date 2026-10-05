@@ -154,7 +154,7 @@ function renderDash(){
   // Build liquid assets from locations, replacing home value with net
   const liquidItems=[];
   // Build liquid items directly from NW data sections (latestCol already set at top)
-  const portGrandTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  const portGrandTotal=(typeof portGrandTotalILS==='function')?portGrandTotalILS():(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   const seenNames=new Set();
 
   // 1. Assets from NW tab (נכסים section) - use net home value
@@ -439,7 +439,7 @@ async function exportPDF(){
       <td>${esc(port.brokerName)||'—'}</td>
       <td>${esc(it.name)}</td>
       <td>${esc(it.category)}</td>
-      <td class="num">${fmt(parseFloat(it.value)||0)}</td>
+      <td class="num">${fmt(typeof portItemILS==='function'?portItemILS(it):(parseFloat(it.value)||0))}</td>
       <td>${it.targetPct?it.targetPct+'%':'—'}</td>
     </tr>`)
   ).join('');

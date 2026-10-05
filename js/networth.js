@@ -6,24 +6,24 @@
 // overwriting user-entered values. Returns the number of cells changed.
 function syncNWFromPension(){
   const cnt=D.nwPeriodsCount||6;
-  // Sync writes ONLY into the column whose date matches the current month.
-  // Older columns are frozen history — pension/portfolio edits never touch them.
-  // (e.g. updating pension in July 2026 fills the 7/2026 column; the previous
-  // column keeps whatever it had, as if nothing happened there.)
+  // Current-month column (used for locations, which have no per-entry date).
   let syncCol=-1;
   for(let c=cnt-1;c>=0;c--){if(isCurrentPeriod(D.nwPeriods[c])){syncCol=c;break;}}
-  if(syncCol<0)return 0;
+  // Pension/study-fund values are written into the NW column whose MONTH matches
+  // the pension's own check date — not just the current month. So a pension dated
+  // anywhere in Oct 2026 fills the Oct 2026 column, even on a different day.
+  const nwColMY=c=>{const pd=parsePeriodDate(D.nwPeriods[c]);return pd?{m:pd.m,y:pd.y}:null;};
+  const dateMY=iso=>{if(!iso)return null;const d=new Date(iso);return isNaN(d.getTime())?null:{m:d.getMonth()+1,y:d.getFullYear()};};
+  const colForMY=my=>{if(my){for(let c=cnt-1;c>=0;c--){const p=nwColMY(c);if(p&&p.m===my.m&&p.y===my.y)return c;}}return syncCol;};
   let filled=0;
   // Record where an auto-filled cell's value came from, so the UI can show a "?"
-  // marker naming the source (row.autoSrc[col] = label).
-  const markSrc=(row,src)=>{if(src){if(!row.autoSrc)row.autoSrc={};row.autoSrc[syncCol]=src;}};
-  const fill=(row,val,src)=>{
-    if(!row.vals[syncCol]){row.vals[syncCol]=String(val);markSrc(row,src);filled++;}
-    // Cell already holds exactly the source's value (e.g. synced before markers
-    // existed) — mark it too, so the "?" badge shows where it came from.
-    else if(String(row.vals[syncCol])===String(val))markSrc(row,src);
+  // marker naming the source (row.autoSrc[col] = label). Only fills EMPTY cells.
+  const markSrc=(row,src,col)=>{if(src&&col>=0){if(!row.autoSrc)row.autoSrc={};row.autoSrc[col]=src;}};
+  const fill=(row,val,src,col)=>{
+    if(col<0)return;
+    if(!row.vals[col]){row.vals[col]=String(val);markSrc(row,src,col);filled++;}
+    else if(String(row.vals[col])===String(val))markSrc(row,src,col);
   };
-  const overwrite=(row,val,src)=>{if(row.vals[syncCol]!==String(val)){row.vals[syncCol]=String(val);filled++;}markSrc(row,src);};
   // Generic rows locked against location-fill when their money already synced into named rows
   // (prevents double-counting the same money in both a named row and the generic row)
   const lockedRows=new Set();
@@ -69,16 +69,17 @@ function syncNWFromPension(){
         if(isHT)lockedRows.add('קרן השתלמות');
       }
     }
-    fill(row,p.amount,'טאב פנסיה');
+    // Fill the column matching the pension's check-date month (fallback: current month).
+    fill(row,p.amount,'טאב פנסיה',colForMY(dateMY(p.date)));
   });
 
-  // ── Locations → matching NW rows ───────────────────────────────────────────
+  // ── Locations → matching NW rows (current-month column; locations have no date) ──
   (D.locations||[]).forEach(loc=>{
     if(!loc.name||!loc.amount)return;
     ['assets','investments','savings'].forEach(sec=>{
       D.nwData[sec].rows.forEach(row=>{
         if(sec==='investments'&&lockedRows.has(row.name))return;
-        if(row.name===loc.name)fill(row,loc.amount,'רשימת הנכסים');
+        if(row.name===loc.name)fill(row,loc.amount,'רשימת הנכסים',syncCol);
       });
     });
   });

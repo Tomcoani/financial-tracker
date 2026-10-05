@@ -16,14 +16,29 @@ function applyCfCollapse(){
   const arrow=document.getElementById('cf-collapse-arrow');
   if(body)body.style.display=c?'none':'';
   if(arrow)arrow.textContent=(c?'▸':'▾')+' קבץ / פרוש';
+  applyCfExplain();
+}
+// Collapse just the "מה עושים כאן?" explanation box (kept per browser).
+function toggleCfExplain(){
+  const box=document.getElementById('cf-explain'),btn=document.getElementById('cf-explain-btn');
+  if(!box)return;
+  const collapsed=box.style.display==='none';
+  box.style.display=collapsed?'':'none';
+  if(btn)btn.textContent='💡 הסבר '+(collapsed?'▾':'▸');
+  try{localStorage.setItem('cf_explain_collapsed',collapsed?'0':'1');}catch(e){}
+}
+function applyCfExplain(){
+  let c=false;try{c=localStorage.getItem('cf_explain_collapsed')==='1';}catch(e){}
+  const box=document.getElementById('cf-explain'),btn=document.getElementById('cf-explain-btn');
+  if(box)box.style.display=c?'none':'';
+  if(btn)btn.textContent='💡 הסבר '+(c?'▸':'▾');
 }
 function calcCashFlow(){
   // Strip thousands commas so "10,000" parses as 10000 not 10
   const balance=parseFloat((document.getElementById('cf-balance')?.value||'').replace(/,/g,''))||0;
   const zero=parseFloat((document.getElementById('cf-zero')?.value||'').replace(/,/g,''))||0;
   const fixedTotal=(D.cfFixedExpenses||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
-  const additional=parseFloat((document.getElementById('cf-expenses')?.value||'').replace(/,/g,''))||0;
-  const expenses=fixedTotal+additional;
+  const expenses=fixedTotal; // "הוצאות נוספות" field removed — only fixed expenses now
   const cur=(document.getElementById('cf-currency')?.value)||D.cfCurrency||'ILS';
   const el=document.getElementById('cf-result');
   if(!balance&&!zero&&!expenses){el.style.display='none';return;}
@@ -52,7 +67,7 @@ function cfAllocationHint(){
   const urgent=(D.goals||[]).filter(gl=>!gl.done&&(gl.name||'').trim()&&(gl.h||0)===0)
     .map(gl=>({name:gl.name,gap:(parseFloat(gl.needed)||0)-(parseFloat(gl.saved)||0)}))
     .filter(x=>x.gap>0);
-  const portTotal=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  const portTotal=(typeof portGrandTotalILS==='function')?portGrandTotalILS():(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   let html='<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.2);text-align:right;font-size:12.5px;font-weight:400;line-height:1.7">';
   html+='<div style="font-weight:800;margin-bottom:4px">לאן להעביר את הכסף? 🤔</div>';
   if(urgent.length){
@@ -134,6 +149,20 @@ function switchGoalTab(tab){
   if(sum)sum.style.display=tab==='active'?'block':'none';
 }
 // Summary of total amount NEEDED per time horizon (active goals), converted to ₪.
+function toggleHzSummary(){
+  const b=document.getElementById('hzsum-body'),a=document.getElementById('hzsum-arrow');
+  if(!b)return;
+  const collapsed=b.style.display==='none';
+  b.style.display=collapsed?'':'none';
+  if(a)a.textContent=(collapsed?'▾':'▸')+' קבץ / פרוש';
+  try{localStorage.setItem('hzsum_collapsed',collapsed?'0':'1');}catch(e){}
+}
+function applyHzSummary(){
+  let c=false;try{c=localStorage.getItem('hzsum_collapsed')==='1';}catch(e){}
+  const b=document.getElementById('hzsum-body'),a=document.getElementById('hzsum-arrow');
+  if(b)b.style.display=c?'none':'';
+  if(a)a.textContent=(c?'▸':'▾')+' קבץ / פרוש';
+}
 function renderGoalsHzSummary(){
   const el=document.getElementById('goals-hz-summary');
   if(!el)return;
@@ -166,14 +195,22 @@ function renderGoalsHzSummary(){
   const totGap=Math.max(0,totNeed-totSave);
   el.innerHTML=`
   <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px">
-    <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:2px">📊 סיכום לפי טווחי זמן</div>
-    <div style="font-size:11px;color:var(--t3);margin-bottom:6px">כמה כסף צריך בסך הכל לכל טווח (סכום היעד של המטרות)</div>
-    ${rows}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
-      <div style="font-size:12px;font-weight:800;color:var(--t2)">סה"כ כל המטרות${totGap>0?' · נשאר '+fmt(totGap):''}</div>
-      <div style="font-size:16px;font-weight:800;color:var(--teal)">${fmt(totNeed)}</div>
+    <div onclick="toggleHzSummary()" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:2px">📊 סיכום לפי טווחי זמן</div>
+        <div style="font-size:11px;color:var(--t3)">כמה כסף צריך בסך הכל לכל טווח (סכום היעד של המטרות)</div>
+      </div>
+      <span id="hzsum-arrow" style="color:var(--t2);font-size:12px;font-weight:700;white-space:nowrap">▾ קבץ / פרוש</span>
+    </div>
+    <div id="hzsum-body" style="margin-top:6px">
+      ${rows}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:800;color:var(--t2)">סה"כ כל המטרות${totGap>0?' · נשאר '+fmt(totGap):''}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--teal)">${fmt(totNeed)}</div>
+      </div>
     </div>
   </div>`;
+  setTimeout(applyHzSummary,0);
 }
 let _expandedGoals=new Set(); // which goal cards are open for editing (default: compact)
 function renderGoals(){
@@ -220,7 +257,9 @@ function renderGoals(){
 // so clients see it as a destination next to their regular goals.
 function renderPortfolioGoalCard(){
   const el=document.getElementById('portfolio-goal-card');
-  if(!el)return;
+  if(el)el.innerHTML=''; // "תיק השקעות — מטרה שוטפת" card removed per request
+  return;
+  /* eslint-disable no-unreachable */
   const total=(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   el.innerHTML=`
   <div style="margin-top:14px;background:linear-gradient(135deg,rgba(66,235,214,.10),rgba(66,235,214,.03));border:1.5px solid rgba(66,235,214,.35);border-radius:14px;padding:14px 16px">

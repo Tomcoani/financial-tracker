@@ -32,7 +32,7 @@ function renderPortfolio(){
     if(holder.firstElementChild)container.appendChild(holder.firstElementChild);
   }
   D.portfolios.forEach((port,pi)=>{
-    const portTotal=(port.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+    const portTotal=(port.items||[]).reduce((s,it)=>s+portItemILS(it),0);
     const collapsed=_collapsedPorts.has(pi);
     const card=document.createElement('div');card.className='card';card.style.marginBottom='16px';
     let html=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:${collapsed?'0':'16px'};flex-wrap:wrap">
@@ -53,16 +53,28 @@ function renderPortfolio(){
     // Column headers
     html+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 40px;gap:8px;
       font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;margin-bottom:8px;text-align:right">
-      <div>שם ניירות הערך</div><div>קטגוריה</div><div>שווי נוכחי (₪)</div><div>% מהתיק</div><div>% יעד</div><div></div>
+      <div>שם ניירות הערך</div>
+      <div>קטגוריה<span class="q-tip">?<span class="q-popup">סוג הנכס — מניות חו"ל/ישראל, אג"ח, נדל"ן, סחורות, מזומן/כספית וכו'. עוזר לראות את פיזור התיק.</span></span></div>
+      <div>שווי נוכחי<span class="q-tip">?<span class="q-popup">כמה ההשקעה הזו שווה נכון להיום (זמן מילוי הנתונים). אפשר לבחור ₪ או $.</span></span></div>
+      <div>חלק מהתיק<span class="q-tip">?<span class="q-popup">איזה אחוז מכלל התיק הנייר הזה מהווה כרגע — מחושב אוטומטית.</span></span></div>
+      <div>% יעד<span class="q-tip">?<span class="q-popup">איזה אחוז מהתיק אתה רוצה שהנייר הזה יהיה — הקצאת היעד שלך.</span></span></div>
+      <div></div>
     </div>`;
     // Items
     (port.items||[]).forEach((p,ii)=>{
-      const curPct=portTotal>0&&parseFloat(p.value)?(parseFloat(p.value)/portTotal*100).toFixed(1):'—';
+      const vIL=portItemILS(p);
+      const curPct=portTotal>0&&vIL>0?(vIL/portTotal*100).toFixed(1):'—';
       const catOpts=PORT_CATS.map(c=>`<option${c===p.category?' selected':''}>${c}</option>`).join('');
       html+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 40px;gap:8px;margin-bottom:7px;align-items:center">
         <input class="port-input" value="${esc(p.name||'')}" placeholder="שם נייר הערך / קרן" data-pi="${pi}" data-ii="${ii}" data-f="name" oninput="portItemUpdate(this)" style="text-align:right"/>
         <select class="port-input" data-pi="${pi}" data-ii="${ii}" data-f="category" oninput="portItemUpdate(this)" style="color:var(--white)">${catOpts}</select>
-        <input class="port-input" type="number" value="${p.value||''}" placeholder="0" data-pi="${pi}" data-ii="${ii}" data-f="value" oninput="portItemUpdate(this)" onblur="validateNum(this.value,'portValue',this)"/>
+        <div style="display:flex;gap:4px;align-items:center;min-width:0">
+          <input class="port-input" type="number" value="${p.value||''}" placeholder="0" data-pi="${pi}" data-ii="${ii}" data-f="value" oninput="portItemUpdate(this)" onblur="validateNum(this.value,'portValue',this)" style="min-width:0;flex:1"/>
+          <select class="port-input" data-pi="${pi}" data-ii="${ii}" data-f="currency" oninput="portItemUpdate(this)" style="width:40px;flex-shrink:0;padding:6px 2px;color:var(--teal)">
+            <option value="ILS"${(p.currency||'ILS')==='ILS'?' selected':''}>₪</option>
+            <option value="USD"${p.currency==='USD'?' selected':''}>$</option>
+          </select>
+        </div>
         <div id="pct-${pi}-${ii}" style="text-align:center;font-size:13px;font-weight:700;color:var(--teal)">${curPct}%</div>
         <input class="port-input" type="number" value="${p.targetPct||''}" placeholder="%" data-pi="${pi}" data-ii="${ii}" data-f="targetPct" oninput="portItemUpdate(this)" onblur="validateNum(this.value,'portTarget',this)"/>
         <button class="bdel" onclick="delPortItem(${pi},${ii})">×</button>
@@ -80,11 +92,11 @@ function renderPortfolio(){
     // "How much to invest" allocator — splits an amount across the securities by % יעד
     html+=`<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-        <span style="font-size:12.5px;color:var(--t2);font-weight:700">💵 כמה יש לך להשקיע?</span>
+        <span style="font-size:12.5px;color:var(--t2);font-weight:700">💵 יש לך סכום פנוי להשקיע החודש? כמה (₪)?</span>
         <input type="number" data-no-fmt value="${port.investAmt||''}" placeholder="0" data-pi="${pi}" oninput="updateInvestPlan(${pi},this.value)"
           style="width:130px;background:var(--s2);border:1px solid var(--teal-border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:800;padding:6px 10px;text-align:right"/>
-        <span style="font-size:11px;color:var(--t3)">מחלק לפי "% יעד" של כל נייר</span>
       </div>
+      <div style="font-size:11px;color:var(--t3);margin-top:5px">נחשב לך כמה להפקיד בכל נייר כדי לשמור על אחוזי היעד שהגדרת.</div>
       <div id="invest-breakdown-${pi}" style="margin-top:9px"></div>
     </div>`;
     html+=`</div>`; // close port-body
@@ -105,14 +117,14 @@ function portItemUpdate(el){
   if(!D.portfolios[pi]||!D.portfolios[pi].items[ii])return;
   D.portfolios[pi].items[ii][f]=el.value;
   D.portfolio=D.portfolios.flatMap(p=>p.items||[]);
-  const portTotal=(D.portfolios[pi].items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  const portTotal=(D.portfolios[pi].items||[]).reduce((s,it)=>s+portItemILS(it),0);
   const headerEl=document.getElementById('port-card-total-'+pi);
   if(headerEl)headerEl.textContent=portTotal>0?fmt(portTotal):'';
   const sumEl=document.getElementById('port-sum-'+pi);
   if(sumEl)sumEl.textContent=portTotal>0?fmt(portTotal):'—';
-  (D.portfolios[pi].items||[]).forEach((_,idx)=>{
+  (D.portfolios[pi].items||[]).forEach((it,idx)=>{
     const pctEl=document.getElementById(`pct-${pi}-${idx}`);
-    if(pctEl){const v=parseFloat(D.portfolios[pi].items[idx].value)||0;pctEl.textContent=portTotal>0&&v?(v/portTotal*100).toFixed(1)+'%':'—%';}
+    if(pctEl){const v=portItemILS(it);pctEl.textContent=portTotal>0&&v?(v/portTotal*100).toFixed(1)+'%':'—%';}
   });
   updatePortStats();syncNWFromPension();
   if(document.getElementById('nw-investments'))renderNWSection('nw-investments','investments');
@@ -150,10 +162,12 @@ function renderInvestBreakdown(pi){
   el.innerHTML=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 13px">${rows}${note}</div>`;
 }
 
+// A portfolio item's value converted to ₪ (items may now be entered in $).
+function portItemILS(it){return toILS(parseFloat(String((it&&it.value)||'').replace(/,/g,''))||0,(it&&it.currency)||'ILS');}
 // ══ PENDING TRANSFER (savings → portfolio) ══
-// Sum of all portfolio item values (stored in ₪).
+// Sum of all portfolio item values, in ₪.
 function portGrandTotalILS(){
-  return (D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  return (D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,it)=>s+portItemILS(it),0);
 }
 // Called by the goals page: record an intended deposit and remind on the portfolio.
 function startPortfolioTransfer(){
@@ -271,7 +285,7 @@ function updatePortStats(){
   const viewItems=(_selectedPortIdx>=0&&ports[_selectedPortIdx])
     ?ports[_selectedPortIdx].items||[]
     :allItems;
-  const total=viewItems.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  const total=viewItems.reduce((s,it)=>s+portItemILS(it),0);
   const cats=new Set(viewItems.filter(p=>p.value).map(p=>p.category));
   const el_total=document.getElementById('port-total');
   const el_count=document.getElementById('port-count');
@@ -289,7 +303,7 @@ function renderPortfolioCharts(viewItems){
   if(chPort)chPort.destroy();
   const ctx=document.getElementById('ch-port');if(!ctx)return;
   const catMap={};
-  items.forEach(p=>{catMap[p.category]=(catMap[p.category]||0)+(parseFloat(p.value)||0);});
+  items.forEach(p=>{catMap[p.category]=(catMap[p.category]||0)+portItemILS(p);});
   const labels=Object.keys(catMap),vals=Object.values(catMap);
   chPort=new Chart(ctx.getContext('2d'),{
     type:'doughnut',
@@ -309,7 +323,7 @@ function renderRebalance(total,viewItems){
   }
   const totalTarget=items.reduce((s,p)=>s+(parseFloat(p.targetPct)||0),0);
   const enriched=items.map(p=>{
-    const cur=parseFloat(p.value)||0;
+    const cur=portItemILS(p);
     const curPct=total>0?(cur/total*100):0;
     const targetPct=parseFloat(p.targetPct)||0;
     return{...p,cur,curPct,targetPct};
