@@ -15,9 +15,20 @@ function getCurrSymbol(c){return CURR_SYMBOLS[c]||c;}
 // Changes only how amounts are shown across the app; stored values stay as-is.
 // Ask for the CURRENT rate — rates drift, so we prompt on every switch (with
 // the last value pre-filled). Returns true if a valid rate was set.
-function promptRate(cur){
-  const prev=(D.exchangeRates&&D.exchangeRates[cur])||'';
-  const input=prompt('שער חליפין נוכחי — כמה ₪ שווה 1 '+cur+'?\n(עדכנו לפי השער היום)',prev?String(prev):'');
+// Pull today's rate (how many ₪ per 1 unit of `cur`) from a free, CORS-enabled
+// source — works straight from the browser, no server or API key.
+async function fetchLiveRate(cur){
+  if(!cur||cur==='ILS')return null;
+  const res=await fetch('https://open.er-api.com/v6/latest/'+encodeURIComponent(cur));
+  const j=await res.json();
+  if(j&&j.result==='success'&&j.rates&&typeof j.rates.ILS==='number')return Math.round(j.rates.ILS*10000)/10000;
+  throw new Error('no live rate');
+}
+function promptRate(cur,prefill){
+  const live=(prefill!=null&&!isNaN(prefill)&&prefill>0);
+  const prev=live?prefill:((D.exchangeRates&&D.exchangeRates[cur])||'');
+  const hint=live?'\n(שער היום נטען אוטומטית — אפשר לאשר או לשנות)':'\n(עדכנו לפי השער היום)';
+  const input=prompt('שער חליפין — כמה ₪ שווה 1 '+cur+'?'+hint,prev?String(prev):'');
   if(input===null)return false; // cancelled
   const rate=parseFloat(String(input).replace(/,/g,''));
   if(isNaN(rate)||rate<=0){alert('שער לא תקין');return false;}
@@ -26,16 +37,17 @@ function promptRate(cur){
   if(!CURR_SYMBOLS[cur])CURR_SYMBOLS[cur]=cur;
   return true;
 }
-function setDisplayCurrency(el){
+async function setDisplayCurrency(el){
   let cur=el.value;
   if(cur==='__add__'){
     const code=prompt('קוד מטבע (לדוגמה: CHF, JPY, CAD):','');
     if(!code||!code.trim()){el.value=dispCur();return;}
     cur=code.trim().toUpperCase();
   }
-  // Every switch to a foreign currency asks for the current rate
+  // Switching to a foreign currency: fetch today's rate and offer it as the default.
   if(cur!=='ILS'){
-    if(!promptRate(cur)){el.value=dispCur();return;} // cancelled/invalid → keep current
+    let live=null;try{live=await fetchLiveRate(cur);}catch(e){}
+    if(!promptRate(cur,live)){el.value=dispCur();return;} // cancelled/invalid → keep current
   }
   if(!D.settings)D.settings={};
   D.settings.displayCurrency=cur;
@@ -43,11 +55,32 @@ function setDisplayCurrency(el){
   refreshMoneyViews();
   showToast('התצוגה עברה ל'+getCurrSymbol(cur)+' '+cur+' ✓');
 }
-// Update the rate of the currently displayed currency, any time (button on home)
-function updateDisplayRate(){
+// Manual update of the displayed currency's rate (prefilled with today's rate).
+async function updateDisplayRate(){
   const cur=dispCur();
   if(cur==='ILS'){showToast('בחרו מטבע זר קודם');return;}
-  if(promptRate(cur)){markDirty();refreshMoneyViews();showToast('שער '+cur+' עודכן ✓');}
+  let live=null;try{live=await fetchLiveRate(cur);}catch(e){}
+  if(promptRate(cur,live)){markDirty();refreshMoneyViews();showToast('שער '+cur+' עודכן ✓');}
+}
+// One-click: set the displayed currency's rate to today's live rate, no prompt.
+async function updateRateLive(cur){
+  cur=cur||dispCur();
+  if(cur==='ILS'){showToast('בחרו מטבע זר קודם');return;}
+  const btn=document.getElementById('dash-rate-live-btn');
+  const orig=btn?btn.innerHTML:'';
+  if(btn){btn.innerHTML='מעדכן…';btn.disabled=true;}
+  try{
+    const rate=await fetchLiveRate(cur);
+    if(!D.exchangeRates)D.exchangeRates={};
+    D.exchangeRates[cur]=rate;
+    D.ratesUpdated=new Date().toISOString();
+    markDirty();refreshMoneyViews();
+    showToast('השער עודכן להיום: 1 '+cur+' = ₪'+rate+' ✓');
+  }catch(e){
+    // Offline or source down — fall back to manual entry.
+    if(promptRate(cur)){markDirty();refreshMoneyViews();showToast('שער '+cur+' עודכן ✓');}
+    else alert('לא הצלחתי למשוך שער עדכני כרגע — אפשר להזין ידנית.');
+  }finally{if(btn){btn.innerHTML=orig;btn.disabled=false;}}
 }
 // Re-render every money-bearing view so the new currency shows immediately
 function refreshMoneyViews(){

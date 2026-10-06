@@ -30,13 +30,15 @@ function renderDash(){
   const dcSel=document.getElementById('dash-currency');
   if(dcSel)dcSel.innerHTML=buildCurrOptions(dispCur());
   const rateBtn=document.getElementById('dash-rate-btn');
+  const liveBtn=document.getElementById('dash-rate-live-btn');
+  const c=dispCur(),foreign=c!=='ILS';
   if(rateBtn){
-    const c=dispCur();
-    if(c!=='ILS'&&D.exchangeRates&&D.exchangeRates[c]){
+    if(foreign&&D.exchangeRates&&D.exchangeRates[c]){
       rateBtn.style.display='inline-block';
       rateBtn.textContent='🔄 1 '+c+' = ₪'+D.exchangeRates[c];
     }else rateBtn.style.display='none';
   }
+  if(liveBtn)liveBtn.style.display=foreign?'inline-block':'none';
   const cur=calcCurrent(),snaps=D.snapshots||[],prev=snaps.length?snaps[snaps.length-1]:null;
   // Best-estimate NW: each row uses its own most-recent non-empty value.
   // Prevents the common case where updating only investments in a new period
