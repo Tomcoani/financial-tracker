@@ -167,6 +167,7 @@ auth.onAuthStateChanged(async user=>{
     renderAll();
     goTo('dash',document.querySelector('.nbtn'));
     startIdleWatch(); // begin 24h idle-logout tracking
+    if(typeof refreshRatesOnLoad==='function')refreshRatesOnLoad(); // live FX rates in background
     // Prompt for name on first login if not set
     if(!D.settings.displayName){
       setTimeout(()=>{

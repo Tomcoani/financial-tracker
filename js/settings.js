@@ -82,6 +82,45 @@ async function updateRateLive(cur){
     else alert('לא הצלחתי למשוך שער עדכני כרגע — אפשר להזין ידנית.');
   }finally{if(btn){btn.innerHTML=orig;btn.disabled=false;}}
 }
+// Every non-ILS currency referenced anywhere in the user's data (+ the display
+// currency). These are the rates worth refreshing — all conversions read from
+// the single source of truth, D.exchangeRates.
+function currenciesInUse(){
+  const set=new Set();
+  const add=c=>{if(c&&c!=='ILS')set.add(c);};
+  add(dispCur());
+  add(D.cfCurrency);
+  (D.portfolios||[]).forEach(p=>(p.items||[]).forEach(it=>add(it&&it.currency)));
+  (D.goals||[]).forEach(g=>{add(g&&g.savedCurrency);add(g&&g.neededCurrency);});
+  (D.locations||[]).forEach(l=>add(l&&l.currency));
+  ['assets','investments','savings','debts'].forEach(sec=>{
+    ((D.nwData&&D.nwData[sec]&&D.nwData[sec].rows)||[]).forEach(row=>{
+      add(row.currency);
+      if(row.cellCurrencies)Object.values(row.cellCurrencies).forEach(add);
+    });
+  });
+  return [...set];
+}
+// Pull today's rate for every currency in use on load, so conversions are
+// always current without any manual action. Runs in the background; updates the
+// rate only (never the entered amounts); keeps the last rate if offline; does
+// NOT force a save (so it never counts as user activity / streak).
+let _ratesRefreshed=false;
+async function refreshRatesOnLoad(){
+  if(_ratesRefreshed||typeof D!=='object'||!D)return;
+  _ratesRefreshed=true;
+  const curs=currenciesInUse();
+  if(!curs.length)return; // only ₪ → nothing to fetch
+  let changed=false;
+  const results=await Promise.allSettled(curs.map(c=>fetchLiveRate(c)));
+  if(!D.exchangeRates)D.exchangeRates={};
+  results.forEach((res,i)=>{
+    if(res.status==='fulfilled'&&typeof res.value==='number'&&res.value>0){
+      D.exchangeRates[curs[i]]=res.value;changed=true;
+    }
+  });
+  if(changed){D.ratesUpdated=new Date().toISOString();try{refreshMoneyViews();}catch(e){}}
+}
 // Re-render every money-bearing view so the new currency shows immediately
 function refreshMoneyViews(){
   [renderDash,renderGoals,renderNW,renderNWSummary,renderPortfolio,updatePortStats,
