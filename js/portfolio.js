@@ -332,14 +332,12 @@ function renderPortfolioCharts(viewItems){
       cutout:'65%',maintainAspectRatio:false}
   });
 }
-function renderRebalance(total,viewItems){
-  const src=viewItems||(D.portfolios||[]).flatMap(p=>p.items||[]);
-  const items=src.filter(p=>p.name&&parseFloat(p.value)&&parseFloat(p.targetPct));
-  const el=document.getElementById('rebalance-box');
-  if(!items.length){
-    el.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">הוסף השקעות עם אחוז יעד כדי לקבל המלצה</p>';
-    return;
-  }
+// Rebalance recommendation HTML for ONE portfolio's items (balanced to its own
+// 100%). Each portfolio is rebalanced independently — never pooled together.
+function rebalanceHtml(srcItems){
+  const items=(srcItems||[]).filter(p=>p.name&&parseFloat(p.value)&&parseFloat(p.targetPct));
+  if(!items.length)return '<p style="color:var(--t3);font-size:13px;text-align:right">הוסף השקעות עם אחוז יעד כדי לקבל המלצה</p>';
+  const total=items.reduce((s,p)=>s+portItemILS(p),0);
   const totalTarget=items.reduce((s,p)=>s+(parseFloat(p.targetPct)||0),0);
   const enriched=items.map(p=>{
     const cur=portItemILS(p);
@@ -347,9 +345,7 @@ function renderRebalance(total,viewItems){
     const targetPct=parseFloat(p.targetPct)||0;
     return{...p,cur,curPct,targetPct};
   });
-  // Correct "add-only" rebalance: solve for total X to add so underweight assets
-  // reach their target % of the NEW total (T+X), not just the current total.
-  // X = (T·S_u − C_u) / (1 − S_u)  where S_u=Σtarget_i, C_u=Σcurrent_i for underweight
+  // Add-only rebalance: X = (T·S_u − C_u)/(1 − S_u) for underweight assets.
   const underweight=enriched.filter(p=>p.curPct<p.targetPct);
   const S_u=underweight.reduce((s,p)=>s+p.targetPct/100,0);
   const C_u=underweight.reduce((s,p)=>s+p.cur,0);
@@ -384,7 +380,24 @@ function renderRebalance(total,viewItems){
   if(Math.abs(totalTarget-100)>1)
     html+=`<div style="font-size:11px;color:var(--amber);margin-top:10px;text-align:right">⚠️ סך אחוזי היעד: ${totalTarget.toFixed(0)}% (צריך להיות 100%)</div>`;
   html+=`<div style="font-size:11px;color:var(--t3);margin-top:10px;text-align:right">* ההמלצה מבוססת על הפקדות בלבד, לא מכירות</div>`;
-  el.innerHTML=html;
+  return html;
+}
+function renderRebalance(total,viewItems){
+  const el=document.getElementById('rebalance-box');
+  if(!el)return;
+  const ports=D.portfolios||[];
+  // "כל התיקים" with more than one portfolio → a separate recommendation per
+  // portfolio (each balanced on its own), not one pooled across all.
+  if(ports.length>1&&_selectedPortIdx<0){
+    el.innerHTML=ports.map((p,i)=>`
+      <div style="margin-bottom:14px;padding-bottom:14px;${i<ports.length-1?'border-bottom:1px solid var(--border)':''}">
+        <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:9px;text-align:right">📦 ${esc(p.brokerName||'תיק '+(i+1))}</div>
+        ${rebalanceHtml(p.items||[])}
+      </div>`).join('');
+    return;
+  }
+  // Single portfolio, or a specific one selected → one recommendation.
+  el.innerHTML=rebalanceHtml(viewItems);
 }
 
 // ══ SNAPSHOTS ══
