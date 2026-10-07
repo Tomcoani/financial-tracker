@@ -91,6 +91,47 @@ function ensureBizRows(m){
   if(!Array.isArray(m.business)||!m.business.length)m.business=BIZ_DEFAULT_ROWS();
   if(p.bizMode==='separate'&&(!Array.isArray(m.bizIncome)||!m.bizIncome.length))m.bizIncome=[{name:'הכנסות העסק',amount:''}];
 }
+// ── Bi-monthly VAT (עוסק מורשה) ──
+// VAT is often paid every two months, so one month shows a big payment and the
+// next shows 0. We don't alter the math (the summary stays real cash); instead
+// we explain the month: in a no-payment month, the "leftover" isn't all free.
+function vatBimonthlyOn(){const p=D.budgetProfile||{};return !!(p.selfEmployed&&p.bizType==='murshe'&&p.vatBimonthly);}
+function _vatOf(month){
+  const row=((month&&month.business)||[]).find(r=>/מע"?מ/.test(r.name||''));
+  return row?parseFloat(String(row.amount||0).replace(/,/g,''))||0:0;
+}
+// Most recent VAT payment before the current month (for "next month you'll pay ~X").
+function lastVatPaidBefore(key){
+  const keys=Object.keys(D.budgetMonths||{}).sort().filter(k=>k<key);
+  for(let i=keys.length-1;i>=0;i--){const v=_vatOf(D.budgetMonths[keys[i]]);if(v>0)return v;}
+  return 0;
+}
+function vatNoticeHtml(){
+  if(!vatBimonthlyOn())return '';
+  const cur=_vatOf(curBudget());
+  const box=(c,txt)=>`<div style="font-size:11.5px;line-height:1.7;color:${c};background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;margin-bottom:10px">${txt}</div>`;
+  if(cur>0)return box('var(--t2)',`💡 זה <b>חודש תשלום מע"מ</b>. בפועל זה כ־<b>${iln(fmt(cur/2))}</b> לכל חודש — שווה להפריש את הסכום הזה כל חודש, גם בחודשים בלי תשלום.`);
+  const prev=lastVatPaidBefore(D.budgetCurMonth);
+  if(prev>0)return box('var(--amber)',`⚠️ <b>החודש לא שולם מע"מ</b> — בחודש הבא צפוי תשלום של כ־<b>${iln(fmt(prev))}</b>. חלק מהכסף ש"נשאר" החודש שמור בעצם לתשלום הזה.`);
+  return box('var(--t3)','💡 מדווחים מע"מ פעם בחודשיים: בחודש התשלום רשמו את הסכום המלא, ובחודש שאין תשלום השאירו 0.');
+}
+// ── Income guidance: gross vs net depends on the profile ──
+// If business income is recorded AFTER tax while the tax payments are also listed
+// under "עסק", the tax gets deducted twice — so self-employed (combined) enter it
+// gross.
+function renderIncomeHint(){
+  const el=document.getElementById('budget-income-hint');
+  if(!el)return;
+  const p=budgetProfile();
+  let t='כל הכסף שנכנס החודש (נטו, אחרי מס) — משכורות, עסק, קצבאות והכנסות חד-פעמיות.';
+  if(p.selfEmployed&&p.bizMode!=='separate'){
+    t='💡 <b>חשוב:</b> את הכנסות העסק רשמו <b>ברוטו</b> — כל מה שנכנס לפני מע"מ, ביטוח לאומי ומס הכנסה — כי את התשלומים האלה רושמים בנפרד בחלק "עסק" (אחרת הם יורדו פעמיים).'
+      +(p.salaried?' משכורת כשכיר רשמו <b>נטו</b>, כפי שהיא נכנסת לחשבון.':'');
+  }else if(p.selfEmployed&&p.bizMode==='separate'){
+    t='כאן רק ההכנסות של הבית'+(p.salaried?' — למשל משכורת כשכיר (<b>נטו</b>, כפי שנכנסת לחשבון)':'')+'. הכנסות העסק נרשמות בכרטיס "עסק" למטה.';
+  }
+  el.innerHTML=t;
+}
 function setBudgetProfile(field,val){
   budgetProfile()[field]=val;
   touchSection('budget');markDirty();
@@ -142,6 +183,7 @@ function renderBudget(){
   ensureBizRows(curBudget());
   renderBudgetMonthSelect();
   renderBudgetProfile();
+  renderIncomeHint();
   ['income','needs','wants'].forEach(renderBudgetSection);
   renderBudgetBusiness();
   renderBudgetSummary();
@@ -332,6 +374,7 @@ function updateBudgetRow(sec,i,field,val){
     if(totEl)totEl.textContent=fmt(budgetTotal(sec));
     renderBudgetSummary();
     if(sec==='business'||sec==='bizIncome')renderBizNet();
+    if(sec==='business'){const vn=document.getElementById('budget-vat-notice');if(vn)vn.innerHTML=vatNoticeHtml();}
   }
   // Refresh the "higher than usual" marker for this row
   const flagEl=document.getElementById('budget-flag-'+sec+'-'+i);
@@ -388,6 +431,10 @@ function renderBudgetProfile(){
         ${radio('bizType','zair',p.bizType,'עוסק זעיר','מסלול מיסוי מפושט לעסק קטן')}
         ${radio('bizType','murshe',p.bizType,'עוסק מורשה','גובה מע"מ ומדווח למע"מ')}
       </div>
+      ${p.bizType==='murshe'?`<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--t2);cursor:pointer">
+        <input type="checkbox" ${p.vatBimonthly?'checked':''} onchange="setBudgetProfile('vatBimonthly',this.checked)" style="accent-color:var(--teal)"/>
+        אני מדווח/ת מע"מ פעם בחודשיים
+      </label>`:''}
     </div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
       <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:8px">איך לנהל את כספי העסק?${!p.bizMode?' <span style="color:var(--amber);font-size:11.5px;font-weight:700">· בחרו אחד</span>':''}</div>
@@ -414,7 +461,9 @@ function renderBudgetBusiness(){
       ?'תזרים נפרד לעסק — ההכנסות וההוצאות של העסק לא נכללות בחשבון של הבית.'
       :'משולב עם הבית — תשלומי העסק נספרים כהוצאה בחשבון החודשי. את הכנסת העסק רשמו בחלק "הכנסות".'}</div>
     ${p.bizType==='patur'?'<div style="font-size:11.5px;color:var(--amber);margin-bottom:8px">💡 עוסק פטור לרוב לא גובה ולא משלם מע"מ — אפשר להשאיר את שורת המע"מ על 0.</div>':''}
-    ${sep?`<div style="font-size:12.5px;font-weight:800;color:var(--white);margin:4px 0 6px">💰 הכנסות העסק</div>
+    <div id="budget-vat-notice">${vatNoticeHtml()}</div>
+    ${sep?`<div style="font-size:12.5px;font-weight:800;color:var(--white);margin:4px 0 2px">💰 הכנסות העסק</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:6px">רשמו <b>ברוטו</b> — כל מה שנכנס לעסק, לפני מע"מ, ביטוח לאומי ומס הכנסה (התשלומים נרשמים בנפרד למטה).</div>
       <div id="budget-bizIncome"></div>
       <button class="btnadd" onclick="addBudgetRow('bizIncome')" style="margin-top:8px">+ הוסף הכנסה עסקית</button>
       <div style="font-size:12.5px;font-weight:800;color:var(--white);margin:16px 0 6px">🧾 תשלומים והוצאות העסק</div>`:''}
@@ -531,6 +580,8 @@ function renderBudgetSummary(){
     <div style="margin-top:10px;font-size:11px;color:var(--t3);text-align:center">
       הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
       ${bizSeparate()?'<div style="margin-top:4px">💼 העסק מנוהל בתזרים נפרד — ראו את כרטיס "עסק" למטה.</div>':''}
+      ${(bizCombined()&&vatBimonthlyOn()&&!_vatOf(curBudget())&&lastVatPaidBefore(D.budgetCurMonth)>0)
+        ?`<div style="margin-top:6px;color:var(--amber);font-weight:700">⚠️ החודש לא שולם מע"מ — בחודש הבא צפוי תשלום של כ־${iln(fmt(lastVatPaidBefore(D.budgetCurMonth)))}, אז לא כל מה שנשאר פנוי באמת.</div>`:''}
     </div>
   </div>`;
 }
