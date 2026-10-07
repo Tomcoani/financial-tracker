@@ -194,9 +194,10 @@ function renderNW(){
   }
   // Add/remove period buttons
   const btnWrap=document.createElement('div');
-  btnWrap.style.cssText='display:flex;gap:8px;margin-top:12px;';
+  btnWrap.style.cssText='display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;';
   btnWrap.innerHTML=`
-    <button onclick="addNWPeriod()" class="btnadd" style="flex:1;margin-top:0">+ הוסף תקופה</button>
+    <button onclick="addNWPeriodBefore()" class="btnadd" style="flex:1;min-width:150px;margin-top:0" title="הוסף תקופה מוקדמת יותר, לפני התקופה הראשונה">+ הוסף תקופה מוקדמת יותר</button>
+    <button onclick="addNWPeriod()" class="btnadd" style="flex:1;min-width:150px;margin-top:0" title="הוסף תקופה מאוחרת יותר, אחרי התקופה האחרונה">+ הוסף תקופה מאוחרת יותר</button>
     ${count>1?`<button onclick="removeNWPeriod()" style="background:transparent;border:1.5px dashed rgba(239,68,68,.4);color:var(--red);border-radius:10px;padding:10px 16px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">− הסר תקופה</button>`:''}
   `;
   ph.appendChild(btnWrap);
@@ -431,6 +432,40 @@ function addNWPeriod(){
   // extend all rows
   ['assets','investments','savings','debts'].forEach(sec=>{
     (D.nwData[sec].rows||[]).forEach(row=>{row.vals.push('');});
+  });
+  renderNW();markDirty();
+}
+// Add an EARLIER period before the first one. Every per-column value/marker
+// shifts one slot to the right so existing data stays aligned.
+function addNWPeriodBefore(){
+  if(!D.nwPeriodsCount)D.nwPeriodsCount=(D.nwPeriods||[]).length||6;
+  // Default date for the new earliest column = first period minus the gap to the
+  // next period (6 months if unknown).
+  let newLabel='';
+  const p0=parsePeriodDate(D.nwPeriods[0]||'');
+  if(p0){
+    let gap=6;
+    const p1=parsePeriodDate(D.nwPeriods[1]||'');
+    if(p1){const g=(p1.y*12+p1.m)-(p0.y*12+p0.m);if(g>0)gap=g;}
+    let m=p0.m-gap,y=p0.y;
+    while(m<1){m+=12;y--;}
+    newLabel=m+'/'+y;
+  }
+  D.nwPeriods.unshift(newLabel);
+  D.nwPeriodsCount++;
+  nwColHidden={};
+  const shiftKeys=obj=>{
+    if(!obj)return obj;
+    const out={};
+    Object.keys(obj).forEach(k=>{const n=parseInt(k);isNaN(n)?out[k]=obj[k]:out[n+1]=obj[k];});
+    return out;
+  };
+  ['assets','investments','savings','debts'].forEach(sec=>{
+    (D.nwData[sec].rows||[]).forEach(row=>{
+      row.vals.unshift('');
+      if(row.autoSrc)row.autoSrc=shiftKeys(row.autoSrc);
+      if(row.cellCurrencies)row.cellCurrencies=shiftKeys(row.cellCurrencies);
+    });
   });
   renderNW();markDirty();
 }
