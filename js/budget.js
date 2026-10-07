@@ -40,6 +40,9 @@ function newBudgetMonthTemplate(){
   const strip=rows=>(rows||[]).map(r=>({name:r.name,amount:''}));
   const t={income:strip(last.income),needs:strip(last.needs),wants:strip(last.wants)};
   if(!t.income.length||!t.needs.length)return defBudgetMonth();
+  // Business categories repeat month to month too
+  if(Array.isArray(last.business)&&last.business.length)t.business=strip(last.business);
+  if(Array.isArray(last.bizIncome)&&last.bizIncome.length)t.bizIncome=strip(last.bizIncome);
   return t;
 }
 // Migrate the old single-month shape (D.monthlyBudget) into D.budgetMonths
@@ -61,8 +64,38 @@ function curBudget(){migrateBudget();return D.budgetMonths[D.budgetCurMonth];}
 const BUDGET_SECTIONS={
   income:{color:'var(--teal)',ph:'מקור הכנסה...',totalLbl:'סה"כ הכנסות'},
   needs:{color:'var(--green)',ph:'הוצאה חיונית...',totalLbl:'סה"כ צרכים'},
-  wants:{color:'var(--amber)',ph:'הוצאת כיף...',totalLbl:'סה"כ כיף'}
+  wants:{color:'var(--amber)',ph:'הוצאת כיף...',totalLbl:'סה"כ כיף'},
+  business:{color:'#c4b5fd',ph:'תשלום / הוצאה של העסק...',totalLbl:'סה"כ תשלומי העסק'},
+  bizIncome:{color:'var(--teal)',ph:'מקור הכנסה של העסק...',totalLbl:'סה"כ הכנסות העסק'}
 };
+// ── Employment profile (global, not per month): שכיר / עצמאי (or both) ──
+// D.budgetProfile = {salaried, selfEmployed, bizType:'patur'|'zair'|'murshe'|'',
+//                    bizMode:'combined'|'separate'|''}  ('' mode = combined)
+const BIZ_TYPES={patur:'עוסק פטור',zair:'עוסק זעיר',murshe:'עוסק מורשה'};
+function budgetProfile(){
+  if(!D.budgetProfile)D.budgetProfile={salaried:false,selfEmployed:false,bizType:'',bizMode:''};
+  return D.budgetProfile;
+}
+function bizSeparate(){const p=D.budgetProfile||{};return !!(p.selfEmployed&&p.bizMode==='separate');}
+function bizCombined(){const p=D.budgetProfile||{};return !!(p.selfEmployed&&p.bizMode!=='separate');}
+const BIZ_DEFAULT_ROWS=()=>[
+  {name:'תשלום למע"מ',amount:''},
+  {name:'תשלום לביטוח לאומי',amount:''},
+  {name:'תשלום מס הכנסה',amount:''}
+];
+// Make sure the current month has the business rows once "עצמאי" is on.
+// Never deletes anything — unchecking just hides the section.
+function ensureBizRows(m){
+  const p=budgetProfile();
+  if(!p.selfEmployed||!m)return;
+  if(!Array.isArray(m.business)||!m.business.length)m.business=BIZ_DEFAULT_ROWS();
+  if(p.bizMode==='separate'&&(!Array.isArray(m.bizIncome)||!m.bizIncome.length))m.bizIncome=[{name:'הכנסות העסק',amount:''}];
+}
+function setBudgetProfile(field,val){
+  budgetProfile()[field]=val;
+  touchSection('budget');markDirty();
+  renderBudget();
+}
 // Force LTR rendering for money amounts inside RTL text, so "−₪1,120" doesn't
 // get bidi-scrambled into "1,120₪−".
 function iln(s){return '<span style="direction:ltr;unicode-bidi:isolate;display:inline-block">'+s+'</span>';}
@@ -71,7 +104,10 @@ function budgetTotal(sec){
 }
 function budgetSavedOf(month){
   const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
-  return {inc:sum(month.income),exp:sum(month.needs)+sum(month.wants)};
+  // Combined mode: business payments count as household expenses.
+  // Separate mode: the business has its own cashflow, outside the household.
+  const biz=bizCombined()?sum(month.business):0;
+  return {inc:sum(month.income),exp:sum(month.needs)+sum(month.wants)+biz};
 }
 // Savings from the most recent month the client actually filled in
 // (income − expenses). Returns {saved, monthKey} or null if none.
@@ -103,8 +139,11 @@ function renderGoalsSavingsTile(){
 }
 function renderBudget(){
   migrateBudget();
+  ensureBizRows(curBudget());
   renderBudgetMonthSelect();
+  renderBudgetProfile();
   ['income','needs','wants'].forEach(renderBudgetSection);
+  renderBudgetBusiness();
   renderBudgetSummary();
   const notesEl=document.getElementById('budget-notes');
   if(notesEl)notesEl.value=curBudget().notes||'';
@@ -133,7 +172,7 @@ function budgetCopyPrevAmounts(){
   if(!pk){showToast('אין חודש קודם עם נתונים להעתקה');return;}
   const prev=D.budgetMonths[pk],cur=curBudget();
   let filled=0;
-  ['income','needs','wants'].forEach(sec=>{
+  ['income','needs','wants','business','bizIncome'].forEach(sec=>{
     (cur[sec]||[]).forEach(row=>{
       if(parseFloat(String(row.amount||0).replace(/,/g,''))||0)return; // typed — keep
       const nm=(row.name||'').trim();
@@ -158,7 +197,7 @@ function budgetNotesChange(el){
 function budgetRowFlag(sec,name,amount){
   const amt=parseFloat(String(amount||0).replace(/,/g,''))||0;
   const nm=(name||'').trim();
-  if(!amt||!nm||sec==='income')return null;
+  if(!amt||!nm||sec==='income'||sec==='bizIncome')return null;
   const keys=Object.keys(D.budgetMonths).sort().filter(k=>k<D.budgetCurMonth);
   const vals=[];
   keys.forEach(k=>{
@@ -286,12 +325,13 @@ function renderBudgetSection(sec){
 }
 function updateBudgetRow(sec,i,field,val){
   const b=curBudget();
-  if(!b[sec][i])return;
+  if(!b[sec]||!b[sec][i])return;
   b[sec][i][field]=val;
   if(field==='amount'){
     const totEl=document.getElementById('budget-total-'+sec);
     if(totEl)totEl.textContent=fmt(budgetTotal(sec));
     renderBudgetSummary();
+    if(sec==='business'||sec==='bizIncome')renderBizNet();
   }
   // Refresh the "higher than usual" marker for this row
   const flagEl=document.getElementById('budget-flag-'+sec+'-'+i);
@@ -305,17 +345,96 @@ function budgetFlagInfo(sec,i){
   if(avg!=null)showToast('👀 "'+(row.name||'')+'" גבוה מהרגיל — הממוצע בחודשים קודמים: '+fmt(avg));
 }
 function addBudgetRow(sec){
-  curBudget()[sec].push({name:'',amount:''});
+  const b=curBudget();
+  if(!Array.isArray(b[sec]))b[sec]=[];
+  b[sec].push({name:'',amount:''});
   touchSection('budget');markDirty();
   renderBudgetSection(sec);
   const el=document.getElementById('budget-'+sec);
   if(el){const ins=el.querySelectorAll('input[type="text"]');if(ins.length)ins[ins.length-1].focus();}
 }
 function removeBudgetRow(sec,i){
-  curBudget()[sec].splice(i,1);
+  const b=curBudget();
+  if(!Array.isArray(b[sec]))return;
+  b[sec].splice(i,1);
   touchSection('budget');markDirty();
   renderBudgetSection(sec);
   renderBudgetSummary();
+  if(sec==='business'||sec==='bizIncome')renderBizNet();
+}
+// ── Employment profile card (top of the page) ──
+function renderBudgetProfile(){
+  const el=document.getElementById('budget-profile');
+  if(!el)return;
+  const p=budgetProfile();
+  const chip=(on)=>`display:inline-flex;align-items:center;gap:7px;cursor:pointer;padding:7px 14px;border-radius:10px;font-size:13px;font-weight:700;border:1.5px solid ${on?'var(--teal)':'var(--border)'};background:${on?'rgba(66,235,214,.10)':'var(--s2)'};color:${on?'var(--teal)':'var(--t2)'}`;
+  const radio=(name,val,cur,label,sub)=>`<label style="${chip(cur===val)};flex-direction:column;align-items:flex-start;gap:2px">
+      <span style="display:flex;align-items:center;gap:7px"><input type="radio" name="${name}" value="${val}" ${cur===val?'checked':''} onchange="setBudgetProfile('${name}',this.value)" style="accent-color:var(--teal)"/>${label}</span>
+      ${sub?`<span style="font-size:10.5px;font-weight:400;color:var(--t3)">${sub}</span>`:''}
+    </label>`;
+  let html=`
+    <div class="ch-title">👤 מה מצב התעסוקה שלך?</div>
+    <div class="ch-hint">אפשר לסמן את שניהם — למשל שכיר שיש לו גם עסק בצד.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <label style="${chip(p.salaried)}"><input type="checkbox" ${p.salaried?'checked':''} onchange="setBudgetProfile('salaried',this.checked)" style="accent-color:var(--teal)"/> שכיר</label>
+      <label style="${chip(p.selfEmployed)}"><input type="checkbox" ${p.selfEmployed?'checked':''} onchange="setBudgetProfile('selfEmployed',this.checked)" style="accent-color:var(--teal)"/> עצמאי</label>
+    </div>`;
+  if(p.selfEmployed){
+    html+=`
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:8px">איזה סוג עוסק?${!p.bizType?' <span style="color:var(--amber);font-size:11.5px;font-weight:700">· בחרו אחד</span>':''}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${radio('bizType','patur',p.bizType,'עוסק פטור','מחזור קטן, לא גובה מע"מ')}
+        ${radio('bizType','zair',p.bizType,'עוסק זעיר','מסלול מיסוי מפושט לעסק קטן')}
+        ${radio('bizType','murshe',p.bizType,'עוסק מורשה','גובה מע"מ ומדווח למע"מ')}
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:8px">איך לנהל את כספי העסק?${!p.bizMode?' <span style="color:var(--amber);font-size:11.5px;font-weight:700">· בחרו אחד</span>':''}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${radio('bizMode','combined',p.bizMode,'משולב עם הבית','תשלומי העסק נספרים בהוצאות החודשיות')}
+        ${radio('bizMode','separate',p.bizMode,'תזרים נפרד לעסק','לעסק הכנסות והוצאות משלו, מחוץ לחשבון הבית')}
+      </div>
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+// ── Business card ("💼 עסק") — shown only for self-employed ──
+function renderBudgetBusiness(){
+  const card=document.getElementById('budget-business-card');
+  if(!card)return;
+  const p=budgetProfile();
+  if(!p.selfEmployed){card.style.display='none';card.innerHTML='';return;}
+  card.style.display='';
+  const sep=p.bizMode==='separate';
+  const typeLbl=BIZ_TYPES[p.bizType]||'';
+  card.innerHTML=`
+    <div class="ch-title"><span style="color:#c4b5fd">💼</span> עסק${typeLbl?' · '+typeLbl:''}</div>
+    <div class="ch-hint">${sep
+      ?'תזרים נפרד לעסק — ההכנסות וההוצאות של העסק לא נכללות בחשבון של הבית.'
+      :'משולב עם הבית — תשלומי העסק נספרים כהוצאה בחשבון החודשי. את הכנסת העסק רשמו בחלק "הכנסות".'}</div>
+    ${p.bizType==='patur'?'<div style="font-size:11.5px;color:var(--amber);margin-bottom:8px">💡 עוסק פטור לרוב לא גובה ולא משלם מע"מ — אפשר להשאיר את שורת המע"מ על 0.</div>':''}
+    ${sep?`<div style="font-size:12.5px;font-weight:800;color:var(--white);margin:4px 0 6px">💰 הכנסות העסק</div>
+      <div id="budget-bizIncome"></div>
+      <button class="btnadd" onclick="addBudgetRow('bizIncome')" style="margin-top:8px">+ הוסף הכנסה עסקית</button>
+      <div style="font-size:12.5px;font-weight:800;color:var(--white);margin:16px 0 6px">🧾 תשלומים והוצאות העסק</div>`:''}
+    <div id="budget-business"></div>
+    <button class="btnadd" onclick="addBudgetRow('business')" style="margin-top:8px">+ הוסף תשלום / הוצאה לעסק</button>
+    <div id="budget-biz-net"></div>`;
+  if(sep)renderBudgetSection('bizIncome');
+  renderBudgetSection('business');
+  renderBizNet();
+}
+// Business net (separate mode only): business income − business payments.
+function renderBizNet(){
+  const el=document.getElementById('budget-biz-net');
+  if(!el)return;
+  if(!bizSeparate()){el.innerHTML='';return;}
+  const inc=budgetTotal('bizIncome'),exp=budgetTotal('business'),net=inc-exp,pos=net>=0;
+  el.innerHTML=`<div style="margin-top:12px;background:var(--s2);border:1px solid rgba(167,139,250,.35);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <span style="font-size:12.5px;color:var(--t2);font-weight:700">${pos?'נשאר בעסק החודש':'גירעון בעסק החודש'}</span>
+    <span style="font-size:16px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${iln((pos?'':'−')+fmt(Math.abs(net)))}</span>
+  </div>`;
 }
 // ── Savings trend chart: how much was left over, month by month ──
 let chBudget=null;
@@ -351,9 +470,10 @@ function renderBudgetSummary(){
   if(!el)return;
   renderBudgetTrend();
   const inc=budgetTotal('income'),needs=budgetTotal('needs'),wants=budgetTotal('wants');
-  const exp=needs+wants,saved=inc-exp;
+  const biz=bizCombined()?budgetTotal('business'):0; // business payments (combined mode)
+  const exp=needs+wants+biz,saved=inc-exp;
   const pct=v=>inc>0?Math.round(v/inc*100):0;
-  const needsPct=pct(needs),wantsPct=pct(wants),savePct=pct(saved);
+  const needsPct=pct(needs),wantsPct=pct(wants),bizPct=pct(biz),savePct=pct(saved);
   if(!inc&&!exp){
     el.innerHTML=`<div class="card" style="text-align:center;color:var(--t3);font-size:13px;padding:20px">מלאו הכנסות והוצאות למטה כדי לראות כמה חסכתם החודש 👇</div>`;
     return;
@@ -384,9 +504,9 @@ function renderBudgetSummary(){
       ${cmpHtml}
     </div>
     <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s2);margin-bottom:6px">
-      ${barSeg(needsPct,'var(--green)')}${barSeg(wantsPct,'var(--amber)')}${barSeg(savePct,'var(--teal)')}
+      ${barSeg(needsPct,'var(--green)')}${barSeg(wantsPct,'var(--amber)')}${barSeg(bizPct,'#a78bfa')}${barSeg(savePct,'var(--teal)')}
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">
+    <div style="display:grid;grid-template-columns:repeat(${biz>0?4:3},minmax(0,1fr));gap:8px;margin-top:12px">
       <div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
         <div style="font-size:11px;color:var(--t3)"><span style="color:var(--green)">●</span> צרכים</div>
         <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(needs))}</div>
@@ -397,6 +517,11 @@ function renderBudgetSummary(){
         <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(wants))}</div>
         <div style="font-size:11px;color:var(--t3)">${inc>0?wantsPct+'% מההכנסה':''}</div>
       </div>
+      ${biz>0?`<div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
+        <div style="font-size:11px;color:var(--t3)"><span style="color:#a78bfa">●</span> עסק</div>
+        <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(biz))}</div>
+        <div style="font-size:11px;color:var(--t3)">${inc>0?bizPct+'% מההכנסה':''}</div>
+      </div>`:''}
       <div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
         <div style="font-size:11px;color:var(--t3)"><span style="color:var(--teal)">●</span> נשאר פנוי</div>
         <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(Math.max(0,saved)))}</div>
@@ -404,7 +529,8 @@ function renderBudgetSummary(){
       </div>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--t3);text-align:center">
-      הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
+      הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
+      ${bizSeparate()?'<div style="margin-top:4px">💼 העסק מנוהל בתזרים נפרד — ראו את כרטיס "עסק" למטה.</div>':''}
     </div>
   </div>`;
 }
