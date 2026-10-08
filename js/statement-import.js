@@ -636,12 +636,17 @@ function rebuild(){
     // Already imported (into any month — the fingerprint is stored on every month it filled),
     // or the same statement picked twice in this upload
     f.dupNow=f.txns.length>0&&seen.has(f.fp);
-    f.dup=f.dupNow||Object.values(D.budgetMonths||{}).some(m=>(m.imports||[]).some(x=>x.fp===f.fp));
+    const recs=Object.values(D.budgetMonths||{}).flatMap(m=>(m.imports||[]).filter(x=>x.fp===f.fp));
+    f.dup=f.dupNow||recs.length>0;
     if(f.dup&&f.useDup&&!f.dupNow)f.dup=false;
+    // Imported before the detail existed (no per-transaction list, no bank matching): take it again
+    // for the detail only — its amounts are already in the budget and are NOT added again
+    f.detailOnly=f.dup&&!f.dupNow&&recs.length>0&&recs.every(x=>!x.v);
     if(f.txns.length&&!f.dup)seen.add(f.fp);
     if(!f.dup)SI.txns.push(...f.txns);
   });
-  SI.txns.forEach(t=>{
+  SI.detailTx=SI.files.filter(f=>f.detailOnly).flatMap(f=>f.txns);
+  SI.txns.concat(SI.detailTx).forEach(t=>{
     t.cat=guessCat(t);
     t.biz=isBiz(t);
     const lt=learnedTarget(t.mk);
@@ -807,6 +812,7 @@ function reviewView(){
     else if(!f.txns.length&&f.tables.length){st='הקובץ נפתח, אבל לא הצלחנו לזהות בו את טבלת העסקאות';col='#fca5a5';}
     else if(!f.txns.length){st=f.kind==='pdf'?'הקובץ נפתח, אבל לא מצאנו בו שורות עסקה (תאריך + בית עסק + סכום)':'לא מצאנו בקובץ טבלת עסקאות';col='#fca5a5';}
     else if(f.dupNow){st='אותו פירוט כבר נבחר כאן (אולי באקסל ובפורמט PDF) — לא ייספר פעמיים';col='var(--amber)';}
+    else if(f.detailOnly){st='✓ הפירוט הזה כבר נטען בעבר (בגרסה קודמת). הסכומים לא ייספרו שוב — נשלים רק את רשימת העסקאות ואת ההתאמה לעו"ש';col='var(--teal)';}
     else if(f.dup){st='הפירוט הזה כבר נטען בעבר — לא ייספר שוב';col='var(--amber)';}
     else{
       st=`${f.txns.length} עסקאות · ${f.source==='דף בנק'?'יצא מהחשבון ':''}${money(f.spent)}${f.check==='ok'?' · <span style="color:var(--green)">✓ תואם לסה"כ בקובץ</span>':f.check==='diff'?' · <span style="color:var(--amber)">⚠ לא תואם לסה"כ בקובץ — כדאי להציץ</span>':''}`;
@@ -821,7 +827,7 @@ function reviewView(){
     }
     const pw=f.needPassword?`<div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap"><span style="font-size:12px">🔐 הקובץ נעול בסיסמה${f.pwWrong?' <span style="color:#fca5a5">(שגויה)</span>':''} — בד"כ תעודת הזהות:</span><input type="password" id="si-pw-${f.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);padding:5px 8px;width:130px"><button onclick="SIX.unlock(${f.id})" style="${BTN}background:var(--teal);color:#080c14;border:none;padding:5px 12px;font-weight:700">פתח</button></div>`:'';
     const help=(f.error||(!f.needPassword&&!f.txns.length))?`<div style="font-size:11.5px;color:var(--t3);margin-top:3px">נסו להוריד את הפירוט בפורמט <b>אקסל</b>, או לחצו למטה על "משהו לא נראה נכון?" ושלחו ליועץ את שלד המבנה.${f.error?`<div style="direction:ltr;text-align:left;font-size:10.5px;opacity:.8">${h(f.error)}</div>`:''}</div>`:'';
-    const again=f.dup&&!f.dupNow?` <button style="${LINK}" onclick="SIX.useDup(${f.id})">טען בכל זאת</button>`:'';
+    const again=f.dup&&!f.dupNow&&!f.detailOnly?` <button style="${LINK}" onclick="SIX.useDup(${f.id})">טען בכל זאת</button>`:'';
     return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
       <div style="font-size:18px">${f.kind==='pdf'?'📕':'📗'}</div>
       <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(f.source?f.source+' · ':'')}${h(f.name)}</div>
@@ -830,8 +836,11 @@ function reviewView(){
     </div>`;
   }).join('');
   if(!SI.txns.length){
+    // only older imports re-uploaded → one button that adds their detail (no amounts)
+    const canDetail=(SI.detailTx||[]).length>0;
     return `<h2>📄 מילוי הוצאות מקובץ</h2>${files}${dropZone(true)}${techView()}
-      <div class="modal-btns"><button class="btnsnap" style="background:var(--s2);color:var(--t2);border:1px solid var(--border)" onclick="SIX.close()">סגירה</button></div>`;
+      <div class="modal-btns">${canDetail?`<button class="btnsnap primary" style="flex:1" onclick="SIX.apply()">השלם פרטים והתאמה לעו"ש ✓</button>`:''}
+      <button class="btnsnap" style="background:var(--s2);color:var(--t2);border:1px solid var(--border)" onclick="SIX.close()">${canDetail?'ביטול':'סגירה'}</button></div>`;
   }
   const counted=SI.txns.filter(t=>t.target&&t.target!=='skip');
   const unassigned=SI.txns.filter(t=>!t.target);
@@ -982,7 +991,7 @@ function srcLabel(t){const f=SI.files.find(x=>x.id===t.fileId)||{};
 // the file's own order for same-day rows (bank exports are newest-first or oldest-first).
 function bankStats(){
   const out={};
-  SI.files.filter(f=>f.source==='דף בנק'&&!f.dup&&f.txns&&f.txns.length).forEach(f=>{
+  SI.files.filter(f=>f.source==='דף בנק'&&(!f.dup||f.detailOnly)&&f.txns&&f.txns.length).forEach(f=>{
     const tx=f.txns.slice();
     const desc=tx.length>1&&tx[0].date>tx[tx.length-1].date;
     tx.sort((a,b)=>(a.date-b.date)||(desc?b.ri-a.ri:a.ri-b.ri));
@@ -1005,7 +1014,7 @@ function bankStats(){
 // statement) with its date — to match against the card bills seen in the bank account
 function cardSegs(){
   const out={};
-  SI.files.filter(f=>f.source!=='דף בנק'&&!f.dup&&f.txns&&f.txns.length).forEach(f=>{
+  SI.files.filter(f=>f.source!=='דף בנק'&&(!f.dup||f.detailOnly)&&f.txns&&f.txns.length).forEach(f=>{
     const g={};
     f.txns.forEach(t=>{const k=t.month+'|'+(t.seg!==undefined&&f.segDates&&f.segDates[t.seg]?t.seg:'all');
       (g[k]=g[k]||{month:t.month,seg:t.seg,sum:0,card:t.card}).sum+=t.val;});
@@ -1098,7 +1107,8 @@ window.SIX={
     const byMonth={};
     SI.txns.forEach(t=>{if(!t.target||t.target==='skip')return;const k=txMonth(t);
       const s=byMonth[k]=byMonth[k]||{};s[t.target]=(s[t.target]||0)+t.val;});
-    const keys=[...new Set([...Object.keys(byMonth),...Object.keys(bankMonths)])].sort();
+    const detail=(SI.detailTx||[]).filter(t=>t.target&&t.target!=='skip');
+    const keys=[...new Set([...Object.keys(byMonth),...Object.keys(bankMonths),...Object.keys(segMonths),...detail.map(txMonth)])].sort();
     let rowsFilled=0;
     // New months are created in order, so each inherits the category names of the one before
     keys.forEach(key=>{
@@ -1117,7 +1127,8 @@ window.SIX={
         rowsFilled++;
       });
       // The transactions behind every row — so the client can open a category and see / fix them
-      SI.txns.forEach(t=>{if(!t.target||t.target==='skip'||txMonth(t)!==key)return;
+      // (files imported before this existed add their detail only — their amounts are already in)
+      SI.txns.concat(detail).forEach(t=>{if(!t.target||t.target==='skip'||txMonth(t)!==key)return;
         m.tx.push({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
           a:Math.round((t.income?-t.val:t.val)*100)/100,k:t.target,s:srcLabel(t)});});
       // Bank account: balances + what left it outside the budget (card bills, investments, own transfers)
@@ -1126,8 +1137,11 @@ window.SIX={
       // Remember the file on every month it filled (fingerprint only — no merchant data),
       // so it's never counted twice
       if(!Array.isArray(m.imports))m.imports=[];
-      SI.files.filter(f=>!f.dup&&f.txns&&f.txns.some(t=>txMonth(t)===key)).forEach(f=>m.imports.push({fp:f.fp,n:f.txns.length,source:f.source||'',at:new Date().toISOString()}));
+      // v:2 = imported with detail (transactions + bank matching)
+      SI.files.filter(f=>!f.dup&&f.txns&&f.txns.some(t=>txMonth(t)===key)).forEach(f=>m.imports.push({fp:f.fp,n:f.txns.length,source:f.source||'',v:2,at:new Date().toISOString()}));
     });
+    // detail completed for older imports → mark them, so they're not offered again
+    SI.files.filter(f=>f.detailOnly).forEach(f=>Object.values(D.budgetMonths).forEach(m=>(m.imports||[]).forEach(x=>{if(x.fp===f.fp)x.v=2;})));
     const key=keys[keys.length-1]||SI.month;
     // Remember the client's own assignments (merchant → category) for next month
     const learnedNow=new Set([...Object.keys(SI.session),...Object.keys(SI.bizSession)]).size;
@@ -1144,6 +1158,7 @@ window.SIX={
     touchSection('budget');markDirty();
     SIX.close();
     renderBudget();
+    if(!SI.txns.length){showToast('הפרטים הושלמו ✓ — רשימת העסקאות בכל קטגוריה וההתאמה לעו"ש');return;}
     showToast((keys.length>1?`מולאו ${keys.length} חודשים (${fmtBudgetMonth(keys[0])} – ${fmtBudgetMonth(keys[keys.length-1])}) מ־${n} עסקאות ✓`:`מולאו ${rowsFilled} קטגוריות מ־${n} עסקאות ב${fmtBudgetMonth(key)} ✓`)+(learnedNow?` · 🧠 זכרנו ${learnedNow} בתי עסק — בפעם הבאה הם יזוהו לבד`:' אפשר לתקן כל סכום ידנית'));
   }
 };

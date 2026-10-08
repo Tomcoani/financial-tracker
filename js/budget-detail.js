@@ -219,6 +219,8 @@ function renderBudgetBank(){
       <span>${c.ok?'✅':'⚠️'} ${esc(c.iss||'כרטיס')}${c.ref?' · '+esc(c.ref):''} <span style="color:var(--t3)">· ${_bShortDate(c.d)}</span></span>
       <span style="white-space:nowrap">${iln(fmt(c.a))} <span style="font-size:11px;color:${c.ok?'var(--green)':'var(--amber)'}">${c.ok?'תואם לפירוט':'אין פירוט'}</span></span></div>`).join('')
     +(missing.length?`<div style="font-size:11.5px;color:var(--amber);margin-top:4px">כדאי להעלות את פירוט הכרטיס של החיובים המסומנים ב־⚠️ — עד אז ההוצאות שבהם לא בתקציב.</div>`:'')
+    // a statement uploaded before the matching existed has no charge data — re-uploading fixes it
+    +(missing.length&&(m.imports||[]).some(x=>!x.v)?`<div style="font-size:11.5px;color:var(--t2);margin-top:4px">💡 כבר העלית את הפירוט? אם הוא הועלה לפני שנוספה ההתאמה לעו"ש — העלה אותו שוב. הסכומים לא ייספרו פעמיים, רק החיבור יושלם.</div>`:'')
     +(extra.length?`<div style="font-size:11.5px;color:var(--t3);margin-top:4px">${extra.length} חיובי כרטיס מהפירוט לא נמצאו בעו"ש (${extra.map(s=>esc(s.iss||'כרטיס')+' '+fmt(s.a)).join(', ')}) — אולי יורדים מחשבון אחר.</div>`:'');
   const inv=bk.invest||0;
   const tile=(lbl,val,color)=>`<div style="flex:1;min-width:110px;background:var(--s2);border-radius:10px;padding:8px;text-align:center"><div style="font-size:11px;color:var(--t3)">${lbl}</div><div style="font-size:16px;font-weight:800${color?';color:'+color:''}">${val}</div></div>`;
