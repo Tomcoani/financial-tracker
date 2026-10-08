@@ -21,6 +21,7 @@ function loadLib(k){
   return _lib[k];
 }
 
+const XFER_NAME='ביט / פייבוקס / העברות כספיות';
 // ── Categories: internal ids → how to find the client's matching budget row ──
 const CATS={
   rent:     {name:'שכר דירה / משכנתא',              sec:'needs',row:/דירה|משכנתא|דיור/},
@@ -42,7 +43,9 @@ const CATS={
   biz_vat:  {name:'תשלום למע"מ',         sec:'business',row:/מע"?מ/,    alt:{name:'מסים ותשלומי חובה',sec:'needs',row:/מס/}},
   // Advertising is a business expense for the self-employed even on a personal card
   ads:      {name:'פרסום ושיווק',        sec:'business',row:/פרסום|שיווק/, alt:{name:'מנויים (סטרימינג, חדר כושר)',sec:'wants',row:/מנוי|סטרימינג/}},
-  pro:      {name:'שירותים מקצועיים',    sec:'needs',row:/שירותים מקצועיים|יעוץ|ייעוץ/}
+  pro:      {name:'שירותים מקצועיים',    sec:'needs',row:/שירותים מקצועיים|יעוץ|ייעוץ/},
+  // Money sent to people (Bit / PayBox / bank transfers) — its own row, personal or business
+  xfer:     {name:XFER_NAME,              sec:'wants',row:/פייבוקס|העברות|ביט(?!וח)/}
 };
 // Business section rows for expenses on a business card (or marked "עסקי"): personal category →
 // business row. An existing business row matching `re` is used; otherwise the row is added.
@@ -56,10 +59,11 @@ const BIZ_ROWS={
   fees:  {name:'עמלות, ריבית וביטוחים',  re:/עמל|ריבית|ביטוח(?! לאומי)/},
   travel:{name:'נסיעות לחו"ל',           re:/חו"?ל|טיסות/},
   pro:   {name:'שירותים מקצועיים',       re:/שירותים מקצועיים|יעוץ|ייעוץ|רו"?ח/},
+  xfer:  {name:XFER_NAME,                re:/פייבוקס|העברות|ביט(?!וח)/},
   other: {name:'הוצאות עסק שונות',       re:/שונות/}
 };
 const CAT2BIZ={ads:'ads',subs:'soft',transport:'car',food:'food',super:'food',shopping:'equip',bills:'comm',
-  insurance:'fees',travel:'travel',pro:'pro',health:'other',kids:'other',pets:'other',rent:'other'};
+  insurance:'fees',travel:'travel',pro:'pro',xfer:'xfer',health:'other',kids:'other',pets:'other',rent:'other'};
 // Merchant keywords → category. The LONGEST matching keyword wins ("רמי לוי תקשורת"
 // → bills, not super). Keywords of ≤3 letters must match a whole word.
 const DICT={
@@ -72,7 +76,7 @@ const DICT={
   health:['מיילדות','רפואי','רפואה','קליניקה','דנטלי','סופר פארם','super pharm','superpharm','ניו פארם','new pharm','בי פארם','be pharm','מכבי','כללית','מאוחדת','לאומית','רופא','מרפאה','אופטיקה','משקפיים','שיניים','דנטל','בית מרקחת','פארם','רוקח','קופת חולים','מעבדה','פיזיותרפיה'],
   kids:['קידי','kids','צהרון','גן ילדים','בית ספר','מתנ"ס','חוג','קייטנה','toys','טויס','שילב','אוניברסיטה','מכללה','שכר לימוד','ועד הורים','גן'],
   food:['קפיטריה','חומוס','ממתקים','מאפים','פלאפל','גריל','בורקס','קייטרינג','מתוק','sweet','מסעדה','מסעדת','קפה','cafe','coffee','ארומה','aroma','קופיקס','cofix','גרג','לנדוור','מקדונלד','mcdonald','ברגר','burger','פיצה','pizza','דומינו','wolt','וולט','תן ביס','10bis','סיבוס','cibus','שווארמה','פלאפל','סושי','בר','פאב','יס פלאנט','yes planet','סינמה סיטי','cinema','רב חן','סינמה','eventim','לאן','תיאטרון','הופעה','בירה','אגדיר','גירף','ג׳ירף','בורגר','קונדיטוריה','גלידה','שיפודי','מאפה','בייגל','bakery'],
-  shopping:['אופנה','סטייל','style','קניון','מול','סלון','פרחים','flower','צעצועים','טויס','זארה','zara','h&m','קסטרו','castro','פוקס','fox','אמריקן איגל','american eagle','רנואר','גולף','טרמינל איקס','terminal x','עליאקספרס','aliexpress','amazon','אמזון','shein','שיין','asos','ebay','איביי','ksp','באג','bug','איבורי','ivory','מחסני חשמל','שקם אלקטריק','ace','אייס','הום סנטר','איקאה','ikea','נעמן','ורדינון','מגה ספורט','דקטלון','decathlon','adidas','nike','נייקי','אדידס','next','temu','טמו','סטימצקי','צומת ספרים','מקס סטוק','max stock','המשביר','נעליים','אופיס דיפו','ביגוד','הלבשה','תכשיטים','פנדורה'],
+  shopping:['paypal','פייפאל','אופנה','סטייל','style','קניון','מול','סלון','פרחים','flower','צעצועים','טויס','זארה','zara','h&m','קסטרו','castro','פוקס','fox','אמריקן איגל','american eagle','רנואר','גולף','טרמינל איקס','terminal x','עליאקספרס','aliexpress','amazon','אמזון','shein','שיין','asos','ebay','איביי','ksp','באג','bug','איבורי','ivory','מחסני חשמל','שקם אלקטריק','ace','אייס','הום סנטר','איקאה','ikea','נעמן','ורדינון','מגה ספורט','דקטלון','decathlon','adidas','nike','נייקי','אדידס','next','temu','טמו','סטימצקי','צומת ספרים','מקס סטוק','max stock','המשביר','נעליים','אופיס דיפו','ביגוד','הלבשה','תכשיטים','פנדורה'],
   travel:['אל על','el al','elal','ישראייר','ארקיע','booking','בוקינג','airbnb','expedia','hotels.com','מלון','hotel','ryanair','wizz','easyjet','agoda','אגודה','issta','איסתא','דיזנהאוס','נופשונית','השכרת רכב','duty free','דיוטי פרי'],
   subs:['בריכת','בריכה','netflix','נטפליקס','spotify','ספוטיפיי','apple.com','icloud','google','youtube','disney','דיסני','prime video','hbo','chatgpt','openai','claude','anthropic','microsoft','adobe','canva','holmes place','הולמס פלייס','גו אקטיב','go active','חדר כושר','כושר','dropbox','zoom','audible','storytel','סטורי טל','sting','סטינג','patreon','מנוי'],
   ads:['facebk','facebook','meta','fb.me','google ads','googleads','manychat','tiktok','linkedin','mailchimp','פרסום','קידום'],
@@ -80,7 +84,8 @@ const DICT={
   biz_tax:['מס הכנסה','נציבות מס','רשות המסים','מקדמות מס','פקיד שומה'],
   biz_ni:['ביטוח לאומי','המוסד לביטוח לאומי'],
   biz_vat:['מע"מ','מס ערך מוסף'],
-  skip:['העברה','bit','ביט','paybox','פייבוקס','פייפאל','paypal','משיכת מזומן','כספומט','מזומן','תשלום כרטיס','ישראכרט','מקס איט','לאומי קארד','כאל','ויזה','אמריקן אקספרס','דיינרס']
+  xfer:['העברה','bit','ביט','paybox','פייבוקס','העברה בbit','העברה ב-bit'],
+  skip:['כרטיסי אשראי','משיכת מזומן','כספומט','מזומן','תשלום כרטיס','ישראכרט','מקס איט','לאומי קארד','כאל','ויזה','אמריקן אקספרס','דיינרס']
 };
 // The issuer's own "ענף / קטגוריה" column → our category
 const SRC_CAT=[
@@ -147,10 +152,15 @@ const isAmtStr=s=>{s=String(s).trim();return /^[-−–]?\s*[₪$€]?\s*[-−�
 const TOTAL_RE=/סה"?כ|סך הכל|סך חיוב|total/i;
 
 // ── Column detection ──
-const ROLES=[['date','תאריך עסקה'],['merchant','בית עסק'],['charge','סכום חיוב'],['amount','סכום עסקה'],['credit','זכות (בנק)'],['currency','מטבע'],['srcCat','ענף'],['notes','הערות'],['billDate','תאריך חיוב']];
+const ROLES=[['date','תאריך עסקה'],['merchant','בית עסק'],['charge','סכום חיוב'],['amount','סכום עסקה'],['credit','זכות (בנק)'],['currency','מטבע'],['srcCat','ענף'],['notes','הערות'],['billDate','תאריך חיוב'],
+  ['dir','חיוב/זיכוי (בנק)'],['balance','יתרה (בנק)'],['opType','סוג פעולה (בנק)']];
 function autoMap(headers){
   const H=headers.map(normTxt),used=new Set(),map={};
   const pick=(role,re)=>{const i=H.findIndex((x,i)=>x&&!used.has(i)&&re.test(x));if(i>=0){map[role]=i;used.add(i);}};
+  // bank exports (One Zero): "חיוב/זיכוי" says which way the money went; "יתרה" = balance after it
+  pick('dir',/^(חיוב ?זיכוי|זיכוי ?חיוב)$/);
+  pick('balance',/^י ?תרה/);
+  pick('opType',/^סוג פעולה/);
   pick('billDate',/(תאריך|מועד).*חיוב/);
   pick('date',/תאריך|^date/);
   pick('charge',/סכום.*(חיוב|ש ?ח|בשקל)|חיוב.*ש ?ח|^חובה/);
@@ -213,15 +223,35 @@ function readSheet(file){
   const wb=XLSX.read(buf,textual?{type:'array',raw:true}:{type:'array',cellDates:true});
   file.sheets=[];let headText='';
   wb.SheetNames.forEach(sn=>{
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
+    // strip invisible direction marks (One Zero wraps every description in them)
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''})
+      .map(r=>r.map(c=>typeof c==='string'?c.replace(/[‎‏‪-‮]/g,'').trim():c));
     file.sheets.push({name:sn,rows});
     const hi=rows.findIndex(r=>headerScore(r)>0);
     headText+=' '+rows.slice(0,hi>=0?hi:15).map(r=>r.map(c=>c instanceof Date?dStr(c):c).join(' ')).join(' ');
     splitTables(file,rows,sn);
   });
-  const isBank=file.tables.some(t=>t.map.credit!==undefined||t.headers.some(x=>/^יתרה/.test(normTxt(x))));
+  file.tables.forEach(fixReversedColumns);
+  const isBank=file.tables.some(t=>t.map.credit!==undefined||t.map.balance!==undefined);
   file.source=isBank?'דף בנק':detectSource(headText);
+  if(isBank)file.bankName=bankNameOf(file.name+' '+headText);
   file.titleText=headText;
+}
+// Some exports store a column's Hebrew backwards ("טנוקסיד" = דיסקונט, "םילעופה" = הפועלים).
+// Tell-tale: words that START with a final letter (ם ן ץ ף ך), which real Hebrew never does.
+// Such a column is flipped back; numbers inside it keep their order.
+function fixReversedColumns(t){
+  const n=t.headers.length;
+  for(let c=0;c<n;c++){
+    let start=0,end=0;
+    t.rows.forEach(r=>{String(r[c]??'').split(/[^א-ת]+/).forEach(w=>{if(w.length<2)return;if(/^[ךםןףץ]/.test(w))start++;if(/[ךםןףץ]$/.test(w))end++;});});
+    if(start>=2&&start>end)t.rows.forEach(r=>{if(typeof r[c]==='string')r[c]=[...r[c]].reverse().join('').replace(LTR_RUN,m=>[...m].reverse().join(''));});
+  }
+}
+function bankNameOf(text){
+  const t=normTxt(text);
+  return /one ?zero|וואן זירו/.test(t)?'One Zero':/פועלים/.test(t)?'בנק הפועלים':/לאומי/.test(t)?'בנק לאומי':/דיסקונט/.test(t)?'דיסקונט':
+    /מזרחי/.test(t)?'מזרחי טפחות':/בינלאומי/.test(t)?'הבינלאומי':/פפר|pepper/.test(t)?'פפר':'';
 }
 // One sheet can hold several tables (e.g. ILS + foreign), each with its own header row
 function splitTables(file,rows,where){
@@ -244,7 +274,8 @@ function splitTables(file,rows,where){
 // visually. Walking right-to-left gives Hebrew in the right order but numbers / Latin backwards
 // ("31/03/2026" comes out "6202/30/13"). Rebuild such runs into words: a space where the gap
 // between letters is word-sized, then flip every left-to-right run (digits, Latin) back.
-const LTR_RUN=/[0-9A-Za-z.,\/:%$+\-]*[0-9A-Za-z][0-9A-Za-z.,\/:%$+\-]*/g;
+// starts & ends on a letter/digit, so a "/" or "-" sitting next to Hebrew keeps its place
+const LTR_RUN=/[0-9A-Za-z](?:[0-9A-Za-z.,\/:%$+\-]*[0-9A-Za-z])?/g;
 function charRuns(items){
   const out=[];let run=null;
   const flush=()=>{if(!run)return;
@@ -453,23 +484,67 @@ function extract(file){
       const merchant=String(cell('merchant')??'').trim();
       if(!merchant||TOTAL_RE.test(merchant))return;
       const charge=parseAmt(cell('charge')),amount=parseAmt(cell('amount')),credit=parseAmt(cell('credit'));
+      const bank=t.map.balance!==undefined||t.map.credit!==undefined||t.map.dir!==undefined;
+      // val > 0 = money out (expense); val < 0 = money in. income = money coming INTO a bank account.
       let val=charge!==null?charge:amount,income=false;
-      if(val===null&&credit){val=-credit;income=true;}
+      if(t.map.dir!==undefined&&amount!==null){                 // "חיוב/זיכוי" column says the direction
+        const v=Math.abs(amount);if(/זיכוי/.test(String(cell('dir')))){val=-v;income=true;}else val=v;
+      }else if(bank&&t.map.credit===undefined&&charge===null&&amount!==null){ // one signed amount: + = in
+        val=-amount;income=amount>0;
+      }else if(val===null&&credit){val=-credit;income=true;}
       if(val===null||val===0)return; // 0 = a fee that was fully discounted
       const rowTxt=r.filter(c=>!(c instanceof Date)&&!isDateStr(c)).join(' ');
       const inst=rowTxt.match(/(\d+)\s*(?:מתוך|מ-)\s*(\d+)/);
       const cur=String(cell('currency')??'').trim();
       const card=t.card||((file.name||'').match(/^(\d{4})[_\- ]/)||[])[1]||'';
-      out.push({key:file.id+':'+ti+':'+ri,fileId:file.id,ti,seg:t.rowSeg?t.rowSeg[ri]:undefined,
-        card,cardKey:card?(file.source||'כרטיס')+'|'+card:'file|'+file.name,date,billDate:parseDate(cell('billDate')),merchant,mk:merchantKey(merchant),val,income,
+      // Bank descriptions are "bank/name/memo/account" — show the person/company + memo
+      const p=bank?bankParty(merchant):{name:merchant,display:merchant,ref:''};
+      const tx={key:file.id+':'+ti+':'+ri,fileId:file.id,ti,ri,seg:t.rowSeg?t.rowSeg[ri]:undefined,
+        card,cardKey:bank?'bank|'+(file.bankName||file.name):card?(file.source||'כרטיס')+'|'+card:'file|'+file.name,
+        date,billDate:parseDate(cell('billDate')),merchant:p.display,mk:merchantKey(p.name),val,income,bank,
+        balance:bank?parseAmt(cell('balance')):null,opType:String(cell('opType')??'').trim(),ref:p.ref,
         inst:inst&&+inst[2]>1&&+inst[1]<=+inst[2]?inst[1]+'/'+inst[2]:'',fx:cur&&!/₪|ש"?ח|ils|nis|שקל/i.test(cur)?cur:'',
-        srcCat:String(cell('srcCat')??'').trim()});
+        srcCat:String(cell('srcCat')??'').trim()};
+      tx.kind=bank?bankKind(tx):'expense';
+      out.push(tx);
     });
   });
   return out;
 }
+// ── Bank rows ──
+const BANK_PREFIX=/^(לאומי|הפועלים|ב הפועלים ב|דיסקונט|מזרחי|בינלאומי|אוצר.?ה?חי[יו]?ל|חיל.?אוצר|מרכנתיל|יהב|ירושלים|איגוד|מסד|פפר|one ?zero|העברה ל|העברה מ|העברה מיידית)/i;
+function bankParty(desc){
+  const parts=String(desc||'').split('/').map(s=>s.trim());
+  const ref=(parts.find(s=>/^\d{4}$/.test(s))||''); // card digits on a card payment ("ישראכרט/1234/")
+  const segs=parts.filter(s=>s&&!/^[\d\-#\s.*]+$/.test(s)&&!/^(withdrawal|one|zero)$/i.test(s));
+  if(!segs.length)return {name:desc,display:desc,ref};
+  let name=segs[0],memo=segs[1]||'';
+  if(BANK_PREFIX.test(segs[0])&&segs[1]){name=segs[1];memo=segs[2]||'';}
+  memo=memo.replace(/תשלום מבנק.*$/,'').trim();
+  return {name,display:name+(memo?' · '+memo:''),ref};
+}
+const BROKER_RE=/ני"?ע|קרן כספית|כספית|^קניה|^מכירה|אקסלנס|מיטב|פסגות|אלטשולר|\bibi\b|אינטראקטיב|interactive|בלינק|blink|פועלים טרייד|ספארק|אנליסט|ilan/i;
+const CARD_PAY_RE=/כרטיסי אשראי|ישראכרט|מקס איט|לאומי קארד|אמריקן אקספרס|דיינרס|^כאל|\bcal\b|\bmax\b/i;
+function issuerOf(text){
+  const t=String(text||'');
+  return /כרטיסי אשראי|כאל|\bcal\b|דיינרס/i.test(t)?'כאל':/ישראכרט|אמריקן/i.test(t)?'ישראכרט':/מקס|\bmax\b|לאומי קארד/i.test(t)?'מקס':'';
+}
+// The client's own name (from settings) — transfers between their own accounts aren't spending
+function ownNameTokens(){
+  const n=String(((D&&D.settings)||{}).displayName||'').trim();
+  return n.split(/\s+/).filter(w=>w.length>=2);
+}
+function bankKind(t){
+  const txt=t.merchant+' '+t.opType;
+  if(/ניירות ערך/.test(t.opType)||BROKER_RE.test(t.merchant))return 'invest';
+  if(!t.income&&CARD_PAY_RE.test(t.merchant))return 'card';
+  const own=ownNameTokens();
+  if(own.length>=2&&own.every(w=>txt.includes(w)))return 'own';
+  return t.income?'income':'expense';
+}
 function guessCat(t){
-  if(t.income)return 'skip';
+  if(t.kind==='card'||t.kind==='invest'||t.kind==='own')return 'skip';
+  if(t.income)return 'income';
   const nm=normTxt(t.merchant),words=nm.split(' ');
   let best=null,bl=0;
   for(const [cat,kws] of Object.entries(DICT))for(const kw of kws){
@@ -478,6 +553,7 @@ function guessCat(t){
   }
   if(best)return best;
   if(t.srcCat)for(const [re,cat] of SRC_CAT)if(re.test(t.srcCat))return cat;
+  if(t.bank&&/העבר/.test(t.opType))return 'xfer'; // money sent to a person from the bank
   return '';
 }
 
@@ -488,7 +564,29 @@ function monthRows(){
   const names=sec=>(m[sec]||[]).map(r=>(r.name||'').trim()).filter(Boolean);
   // the business section exists only for the self-employed (budget.js ensureBizRows)
   const biz=selfEmployed()?(names('business').length?names('business'):BIZ_DEFAULT_ROWS().map(r=>r.name)):[];
-  return {needs:names('needs'),wants:names('wants'),business:biz};
+  const sep=selfEmployed()&&(D.budgetProfile||{}).bizMode==='separate';
+  return {needs:names('needs'),wants:names('wants'),business:biz,income:names('income'),
+    bizIncome:sep?(names('bizIncome').length?names('bizIncome'):['הכנסות העסק']):[]};
+}
+// ── Income (money coming into a bank account) ──
+// Salary-like → "משכורת"; business (payment processors, or marked 💼) → the business income row;
+// Bit / PayBox / transfers → "ביט / פייבוקס / העברות כספיות"; anything else → "הכנסות אחרות".
+const PROCESSOR_RE=/גרואו|grow|משולם|meshulam|paypal|פייפאל|stripe|קארדקום|cardcom|טרנזילה|tranzila|icount|חשבונית ירוקה|morning|payplus|פיי ?פלוס|ישראכרט סליקה|סליקה/i;
+// A transfer whose note says what it paid for — consulting, a course, a workshop — is a client
+// paying the self-employed person
+const BIZ_INCOME_RE=/יי?עוץ|יעו"ץ|קורס|סדנ|פגישת|הרצא|ליווי|חשבונית|שירותי|הרשמה ל/;
+function incomeRow(rows,re,name){const hit=rows.income.find(n=>re.test(n));return 'income|'+(hit||name);}
+function bizIncomeTarget(rows){
+  if(rows.bizIncome.length)return 'bizIncome|'+(rows.bizIncome.find(n=>/עסק|הכנס/.test(n))||rows.bizIncome[0]);
+  return incomeRow(rows,/עסק/,'הכנסה נוספת / עסק');
+}
+function incomeTarget(t,rows){
+  const nm=t.merchant+' '+t.opType;
+  if(/משכורת|שכר|מ\.ש\.?\b|מופ"?ת|מילוא|salary|payroll/i.test(nm))return incomeRow(rows,/משכורת|שכר/,'משכורת');
+  if(t.biz)return bizIncomeTarget(rows);
+  if(/ביטוח לאומי|קצב/.test(nm))return incomeRow(rows,/קצב/,'קצבאות');
+  if(/ביט(?!וח)|\bbit\b|פייבוקס|paybox|העבר/i.test(nm))return incomeRow(rows,/פייבוקס|העברות|ביט(?!וח)/,XFER_NAME);
+  return incomeRow(rows,/אחרות|שונות/,'הכנסות אחרות');
 }
 function catTarget(cat,rows){
   if(!cat)return '';
@@ -547,6 +645,12 @@ function rebuild(){
     t.cat=guessCat(t);
     t.biz=isBiz(t);
     const lt=learnedTarget(t.mk);
+    if(t.income){
+      // a remembered income row is used unless the client just flipped personal/business
+      if(lt!==null&&(SI.session[t.mk]!==undefined||SI.bizSession[t.mk]===undefined)){
+        t.target=lt;t.how=SI.session[t.mk]!==undefined?'session':'learned';return;}
+      t.target=t.cat==='skip'?'skip':incomeTarget(t,rows);t.how='auto';return;
+    }
     // 'learned' = remembered from an earlier import; 'session' = assigned just now.
     // A remembered row on the other side (personal vs business) gives way to this side's mapping.
     if(lt!==null&&(lt==='skip'||!selfEmployed()||lt.startsWith('business|')===t.biz)){
@@ -558,10 +662,11 @@ function rebuild(){
 // Order: what the client set for this merchant (now / remembered) → tax & ads are always
 // business → the card is marked as a business card → otherwise personal.
 function isBiz(t){
-  if(!selfEmployed()||t.income)return false;
+  if(!selfEmployed()||t.cat==='skip')return false;
   if(SI.bizSession[t.mk]!==undefined)return SI.bizSession[t.mk];
   const mb=(D.importMerchantBiz||{})[t.mk];if(mb!==undefined)return mb;
-  if(t.cat&&CATS[t.cat]&&CATS[t.cat].sec==='business')return true;
+  if(t.income&&(PROCESSOR_RE.test(t.merchant)||BIZ_INCOME_RE.test(t.merchant)))return true; // client payments
+  if(!t.income&&t.cat&&CATS[t.cat]&&CATS[t.cat].sec==='business')return true;
   return !!SI.bizCards[t.cardKey];
 }
 function bizTarget(cat,rows){
@@ -575,8 +680,8 @@ function bizTarget(cat,rows){
 // Cards in this upload, for the "which card is the business card?" question
 function cardList(){
   const c={};
-  SI.txns.forEach(t=>{if(t.income)return;const f=SI.files.find(x=>x.id===t.fileId)||{};
-    const k=t.cardKey;c[k]=c[k]||{key:k,label:(f.source||'כרטיס')+(t.card?' · '+t.card:''),file:f.name,n:0,sum:0};
+  SI.txns.forEach(t=>{if(t.income||t.cat==='skip')return;const f=SI.files.find(x=>x.id===t.fileId)||{};
+    const k=t.cardKey;c[k]=c[k]||{key:k,label:t.bank?'חשבון עו"ש'+(f.bankName?' · '+f.bankName:''):(f.source||'כרטיס')+(t.card?' · '+t.card:''),file:f.name,n:0,sum:0};
     c[k].n++;c[k].sum+=t.val;});
   return Object.values(c);
 }
@@ -626,10 +731,16 @@ function wireDrop(){
   z.ondrop=e=>{e.preventDefault();SIX.add(e.dataTransfer.files);};
 }
 function targetLabel(t){return t==='skip'?'לא לספור':t.split('|')[1];}
-function targetOptions(sel,rows){
+function targetOptions(sel,rows,income){
   const opt=(v,l)=>`<option value="${h(v)}"${v===sel?' selected':''}>${h(l)}</option>`;
   const newOnes=[...new Set(SI.txns.map(t=>t.target).filter(t=>t&&t!=='skip'&&!(rows[t.split('|')[0]]||[]).includes(t.split('|')[1])))];
   let o=sel?'':'<option value="" selected>בחרו קטגוריה...</option>';
+  if(income){ // money that came in → income rows only
+    const grp=(sec,lbl)=>`<optgroup label="${lbl}">`+(rows[sec]||[]).map(n=>opt(sec+'|'+n,n)).join('')+newOnes.filter(t=>t.startsWith(sec+'|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
+    o+=grp('income','הכנסות')+(rows.bizIncome.length?grp('bizIncome','הכנסות העסק'):'');
+    o+='<optgroup label="אחר">'+opt('skip','🚫 לא לספור (העברה בין חשבונות / משיכה מהשקעות)')+opt('__new_income','➕ שורת הכנסה חדשה...')+'</optgroup>';
+    return o;
+  }
   o+='<optgroup label="צרכים">'+rows.needs.map(n=>opt('needs|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('needs|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   o+='<optgroup label="כיף">'+rows.wants.map(n=>opt('wants|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('wants|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   if(selfEmployed())o+='<optgroup label="עסק">'+rows.business.map(n=>opt('business|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('business|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
@@ -639,7 +750,7 @@ function targetOptions(sel,rows){
 // Group transactions by merchant inside a target, for compact lists
 function byMerchant(list){
   const g={};
-  list.forEach(t=>{const k=t.mk||t.merchant;(g[k]=g[k]||{mk:t.mk,name:t.merchant,n:0,sum:0,inst:false,fx:false,biz:t.biz}).n++;g[k].sum+=t.val;if(t.inst)g[k].inst=true;if(t.fx)g[k].fx=true;});
+  list.forEach(t=>{const k=t.mk||t.merchant;(g[k]=g[k]||{mk:t.mk,name:t.merchant,n:0,sum:0,inst:false,fx:false,biz:t.biz,income:t.income,kind:t.kind}).n++;g[k].sum+=t.val;if(t.inst)g[k].inst=true;if(t.fx)g[k].fx=true;});
   return Object.values(g).sort((a,b)=>b.sum-a.sum);
 }
 function merchantLine(m,target,rows){
@@ -649,8 +760,8 @@ function merchantLine(m,target,rows){
       style="${BTN}flex-shrink:0;font-size:11px;padding:3px 7px;border:1px solid ${m.biz?'rgba(167,139,250,.5)':'var(--border)'};background:${m.biz?'rgba(167,139,250,.14)':'transparent'};color:${m.biz?'#c4b5fd':'var(--t2)'}">${m.biz?'💼 עסקי':'👤 אישי'}</button>`:'';
   return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
     <div style="flex:1;min-width:0;font-size:12.5px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(m.name)}${m.n>1?` <span style="color:var(--t3)">×${m.n}</span>`:''}${tags}</div></div>
-    <b style="font-size:12.5px;white-space:nowrap">${money(m.sum)}</b>${bizBtn}
-    <select onchange="SIX.assign('${enc(m.mk)}',this.value)" style="max-width:150px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);font-family:var(--font);font-size:11.5px;padding:4px">${targetOptions(target,rows)}</select>
+    <b style="font-size:12.5px;white-space:nowrap${m.income?';color:var(--teal)':''}">${m.income?'+'+money(-m.sum):money(m.sum)}</b>${bizBtn}
+    <select onchange="SIX.assign('${enc(m.mk)}',this.value)" style="max-width:150px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);font-family:var(--font);font-size:11.5px;padding:4px">${targetOptions(target,rows,m.income)}</select>
   </div>`;
 }
 // Self-employed: which of the uploaded cards is a business card? Highlighted when there are
@@ -725,16 +836,18 @@ function reviewView(){
   const counted=SI.txns.filter(t=>t.target&&t.target!=='skip');
   const unassigned=SI.txns.filter(t=>!t.target);
   const skipped=SI.txns.filter(t=>t.target==='skip');
-  const total=counted.reduce((a,t)=>a+t.val,0)+unassigned.reduce((a,t)=>a+t.val,0);
+  const live=counted.concat(unassigned);
+  const total=live.filter(t=>!t.income).reduce((a,t)=>a+t.val,0);      // money out
+  const incTotal=-live.filter(t=>t.income).reduce((a,t)=>a+t.val,0);   // money in
   // Months breakdown — every transaction goes to its billing month
-  const byMonth={};counted.concat(unassigned).forEach(t=>{const k=txMonth(t);(byMonth[k]=byMonth[k]||{n:0,sum:0}).n++;byMonth[k].sum+=t.val;});
+  const byMonth={};live.forEach(t=>{const k=txMonth(t);const b=byMonth[k]=byMonth[k]||{n:0,sum:0,inc:0};b.n++;if(t.income)b.inc-=t.val;else b.sum+=t.val;});
   const mKeys=Object.keys(byMonth).sort();
   const oneMonth=mKeys.length===1?mKeys[0]:'';
   const m=oneMonth?D.budgetMonths[oneMonth]:null; // "existing amount" hints only make sense for one month
   const undetected=SI.txns.filter(t=>!t.month&&t.target!=='skip').length;
   const monthsBox=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0 10px">
       <div style="font-size:12.5px;font-weight:800;margin-bottom:4px">📅 ${mKeys.length>1?`ההוצאות יתחלקו ל־${mKeys.length} חודשים`:'החודש שיתמלא'} <span style="font-weight:400;color:var(--t3);font-size:11px">· לפי מועד החיוב (מתי שהכסף ירד מהחשבון)</span></div>
-      ${mKeys.map(k=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:2px 0"><span>${fmtBudgetMonth(k)}${D.budgetMonths[k]?'':' <span style="font-size:10.5px;color:var(--teal)">(חודש חדש)</span>'}</span><span>${byMonth[k].n} עסקאות · <b>${money(byMonth[k].sum)}</b></span></div>`).join('')}
+      ${mKeys.map(k=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:2px 0"><span>${fmtBudgetMonth(k)}${D.budgetMonths[k]?'':' <span style="font-size:10.5px;color:var(--teal)">(חודש חדש)</span>'}</span><span>${byMonth[k].n} עסקאות · <b>${money(byMonth[k].sum)}</b>${byMonth[k].inc?` · <span style="color:var(--teal)">+${money(byMonth[k].inc)}</span>`:''}</span></div>`).join('')}
       ${undetected?`<div style="font-size:11.5px;color:var(--amber);margin-top:4px">לא זיהינו את חודש החיוב של ${undetected} עסקאות — הן ייכנסו ל:
         <select onchange="SIX.setMonth(this.value)" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:11.5px;font-weight:700;padding:2px 4px">${monthOptions(SI.month)}</select></div>`:''}
     </div>`;
@@ -753,11 +866,12 @@ function reviewView(){
   const tg={};counted.forEach(t=>{(tg[t.target]=tg[t.target]||[]).push(t);});
   const anyExisting=counted.some(t=>{const mm=D.budgetMonths[txMonth(t)];const [sec,name]=t.target.split('|');return mm&&(mm[sec]||[]).some(r=>(r.name||'').trim()===name&&num(r.amount));});
   const secBlock=(sec,lbl,color)=>{
-    const ks=Object.keys(tg).filter(k=>k.startsWith(sec+'|')).sort((a,b)=>tg[b].reduce((s,t)=>s+t.val,0)-tg[a].reduce((s,t)=>s+t.val,0));
+    const inc=sec==='income'||sec==='bizIncome',sg=inc?-1:1; // income is stored negative (money in)
+    const ks=Object.keys(tg).filter(k=>k.startsWith(sec+'|')).sort((a,b)=>sg*(tg[b].reduce((s,t)=>s+t.val,0)-tg[a].reduce((s,t)=>s+t.val,0)));
     if(!ks.length)return '';
-    const secSum=ks.reduce((s,k)=>s+tg[k].reduce((a,t)=>a+t.val,0),0);
+    const secSum=sg*ks.reduce((s,k)=>s+tg[k].reduce((a,t)=>a+t.val,0),0);
     return `<div style="font-size:12.5px;font-weight:800;color:${color};margin:12px 0 4px">${lbl} · ${money(secSum)}</div>`+ks.map(k=>{
-      const name=k.split('|')[1],sum=tg[k].reduce((a,t)=>a+t.val,0);
+      const name=k.split('|')[1],sum=sg*tg[k].reduce((a,t)=>a+t.val,0);
       const isNew=!(rows[sec]||[]).includes(name);
       const ex=m&&(m[sec]||[]).find(r=>(r.name||'').trim()===name);
       const exAmt=ex?num(ex.amount):0;
@@ -773,9 +887,19 @@ function reviewView(){
       </div>`;
     }).join('');
   };
-  const skipBlock=skipped.length?`<div style="margin-top:10px;font-size:12px;color:var(--t3)">
-      🚫 ${skipped.length} פעולות לא נספרו (העברות, משיכות, תשלומי כרטיס, הכנסות) · <button style="${LINK}" onclick="SIX.toggleSkip()">${SI.showSkip?'הסתר':'הצג'}</button>
-      ${SI.showSkip?`<div style="margin-top:4px">${byMerchant(skipped).map(x=>merchantLine(x,'skip',rows)).join('')}</div>`:''}
+  // Not counted in the budget, grouped by why: card bills (their detail comes from the card
+  // statement), investments, transfers between the client's own accounts, anything else
+  const KIND_LBL={card:'💳 תשלומי כרטיס אשראי מהבנק (הפירוט מגיע מקובץ הכרטיס)',invest:'📈 השקעות בשוק ההון (קנייה / מכירה של ני"ע)',own:'🔁 העברות בין החשבונות שלך',other:'🚫 לא נספר'};
+  const kindOf=t=>t.kind==='card'||t.kind==='invest'||t.kind==='own'?t.kind:'other';
+  const skipGroups=['invest','card','own','other'].map(kd=>{
+    const list=skipped.filter(t=>kindOf(t)===kd);if(!list.length)return '';
+    const out=list.filter(t=>!t.income).reduce((a,t)=>a+t.val,0),inn=-list.filter(t=>t.income).reduce((a,t)=>a+t.val,0);
+    return `<div style="margin-top:6px"><div style="font-size:12px;color:var(--t2);font-weight:700">${KIND_LBL[kd]} · ${out?money(out)+' יצא':''}${out&&inn?' · ':''}${inn?'<span style="color:var(--teal)">'+money(inn)+' נכנס</span>':''}</div>
+      ${SI.showSkip?byMerchant(list).map(x=>merchantLine(x,'skip',rows)).join(''):''}</div>`;
+  }).join('');
+  const skipBlock=skipped.length?`<div style="margin-top:12px;font-size:12px;color:var(--t3);background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b style="color:var(--t2)">לא נספר בתקציב (${skipped.length})</b><button style="${LINK}" onclick="SIX.toggleSkip()">${SI.showSkip?'הסתר פירוט':'הצג פירוט'}</button></div>
+      ${skipGroups}
     </div>`:'';
   const modeBox=anyExisting?`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:12px;font-size:12.5px">
       ${oneMonth?'בחודש הזה':'בחלק מהחודשים'} כבר יש סכומים בחלק מהקטגוריות:
@@ -783,12 +907,14 @@ function reviewView(){
       <label style="margin-inline-start:8px;cursor:pointer"><input type="radio" name="si-mode" ${SI.mode==='replace'?'checked':''} onchange="SIX.setMode('replace')"> להחליף אותם</label>
       <div style="font-size:11px;color:var(--t3);margin-top:2px">"להוסיף" — כשמעלים כרטיס נוסף. "להחליף" — כשהקלדתם קודם הערכה ועכשיו יש את הנתון האמיתי.</div>
     </div>`:'';
-  return `<h2>✓ מצאנו ${SI.txns.length} עסקאות · ${money(total)}</h2>
+  return `<h2>✓ מצאנו ${SI.txns.length} תנועות</h2>
+    <div style="font-size:13px;margin:-2px 0 6px">הוצאות <b>${money(total)}</b>${incTotal?` · הכנסות <b style="color:var(--teal)">${money(incTotal)}</b>`:''}</div>
     ${monthsBox}
     ${files}${dropZone(true)}
     ${cardsBox()}${memNote}${unk}
     <div style="font-size:13.5px;font-weight:800;margin-top:14px">כך זה ייכנס לתקציב${oneMonth?'':' <span style="font-weight:400;font-size:11.5px;color:var(--t3)">(סה"כ לכל החודשים — כל חודש יקבל את החלק שלו)</span>'}</div>
     <div style="font-size:11.5px;color:var(--t3)">לחיצה על קטגוריה מציגה את בתי העסק — ואפשר להעביר כל אחד לקטגוריה אחרת.</div>
+    ${secBlock('income','💰 הכנסות','var(--teal)')}${secBlock('bizIncome','💼 הכנסות העסק','var(--teal)')}
     ${secBlock('needs','🏠 צרכים','var(--green)')}${secBlock('wants','🎉 כיף','var(--amber)')}${secBlock('business','💼 עסק','#c4b5fd')}
     ${skipBlock}${modeBox}${techView()}
     <div class="modal-btns" style="margin-top:16px">
@@ -846,6 +972,49 @@ function skeleton(){
   return out.join('\n');
 }
 
+// ── Saved per month (for the budget page) ──
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const r2=n=>Math.round(n*100)/100;
+function srcLabel(t){const f=SI.files.find(x=>x.id===t.fileId)||{};
+  return t.bank?('עו"ש'+(f.bankName?' '+f.bankName:'')):((f.source||'כרטיס')+(t.card?' '+t.card:''));}
+// Bank file → per month: opening / closing balance, money in / out, and what left the account
+// outside the budget (card bills, investments, own transfers). Rows are put in time order using
+// the file's own order for same-day rows (bank exports are newest-first or oldest-first).
+function bankStats(){
+  const out={};
+  SI.files.filter(f=>f.source==='דף בנק'&&!f.dup&&f.txns&&f.txns.length).forEach(f=>{
+    const tx=f.txns.slice();
+    const desc=tx.length>1&&tx[0].date>tx[tx.length-1].date;
+    tx.sort((a,b)=>(a.date-b.date)||(desc?b.ri-a.ri:a.ri-b.ri));
+    const by={};tx.forEach(t=>{(by[mkKey(t.date)]=by[mkKey(t.date)]||[]).push(t);});
+    Object.entries(by).forEach(([k,list])=>{
+      const first=list[0],last=list[list.length-1];
+      const sum=fn=>r2(list.filter(fn).reduce((a,t)=>a+t.val,0));
+      out[k]={src:f.bankName||'עו"ש',
+        opening:first.balance!=null?r2(first.balance+first.val):null, // balance before the first row
+        closing:last.balance!=null?r2(last.balance):null,
+        inn:-sum(t=>t.income),out:sum(t=>!t.income),
+        invest:sum(t=>t.kind==='invest'),own:sum(t=>t.kind==='own'),
+        cards:list.filter(t=>t.kind==='card').map(t=>({d:ymd(t.date),a:r2(t.val),iss:issuerOf(t.merchant),ref:t.ref||''})),
+        from:ymd(first.date),to:ymd(last.date),at:new Date().toISOString()};
+    });
+  });
+  return out;
+}
+// Card statements → per month: each charge (a section closed by a total line, or the whole
+// statement) with its date — to match against the card bills seen in the bank account
+function cardSegs(){
+  const out={};
+  SI.files.filter(f=>f.source!=='דף בנק'&&!f.dup&&f.txns&&f.txns.length).forEach(f=>{
+    const g={};
+    f.txns.forEach(t=>{const k=t.month+'|'+(t.seg!==undefined&&f.segDates&&f.segDates[t.seg]?t.seg:'all');
+      (g[k]=g[k]||{month:t.month,seg:t.seg,sum:0,card:t.card}).sum+=t.val;});
+    Object.values(g).forEach(s=>{if(!s.month)return;
+      const d=s.seg!==undefined&&f.segDates&&f.segDates[s.seg]?ymd(f.segDates[s.seg]):'';
+      (out[s.month]=out[s.month]||[]).push({d,a:r2(s.sum),iss:f.source||'',card:s.card||'',fp:f.fp});});
+  });
+  return out;
+}
 // ── Public handlers ──
 window.SIX={
   open(){
@@ -880,10 +1049,10 @@ window.SIX={
   useDup(id){const f=SI.files.find(x=>x.id===id);if(f)f.useDup=true;rebuild();render();},
   assign(mkEnc,val){
     const mk=decodeURIComponent(mkEnc);
-    if(val==='__new_needs'||val==='__new_wants'){
-      const name=(prompt('שם הקטגוריה החדשה:')||'').trim();
+    if(val==='__new_needs'||val==='__new_wants'||val==='__new_income'){
+      const name=(prompt(val==='__new_income'?'שם שורת ההכנסה החדשה:':'שם הקטגוריה החדשה:')||'').trim();
       if(!name){render();return;}
-      val=(val==='__new_needs'?'needs':'wants')+'|'+name;
+      val=({__new_needs:'needs',__new_wants:'wants',__new_income:'income'})[val]+'|'+name;
     }
     SI.session[mk]=val==='skip'?'skip':(val?{sec:val.split('|')[0],name:val.split('|')[1]}:undefined);
     if(!val)delete SI.session[mk];
@@ -921,28 +1090,39 @@ window.SIX={
     const unassigned=SI.txns.filter(t=>!t.target);
     if(unassigned.length){
       const s=unassigned.reduce((a,t)=>a+t.val,0);
-      if(!confirm(`${byMerchant(unassigned).length} בתי עסק (${money(s)}) עדיין לא שויכו.\n\nלהכניס אותם לשורה "שונות" (הוצאות עסקיות — ל"הוצאות עסק שונות")?\n(ביטול = לחזור ולשייך)`))return;
-      unassigned.forEach(t=>t.target=t.biz?'business|'+BIZ_ROWS.other.name:'needs|שונות');
+      if(!confirm(`${byMerchant(unassigned).length} בתי עסק (${money(Math.abs(s))}) עדיין לא שויכו.\n\nלהכניס אותם לשורה "שונות" (הוצאות עסקיות — ל"הוצאות עסק שונות", הכנסות — ל"הכנסות אחרות")?\n(ביטול = לחזור ולשייך)`))return;
+      unassigned.forEach(t=>t.target=t.income?'income|הכנסות אחרות':t.biz?'business|'+BIZ_ROWS.other.name:'needs|שונות');
     }
+    const bankMonths=bankStats(),segMonths=cardSegs();
     // Sum per month → per budget row; every transaction goes to its billing month
     const byMonth={};
     SI.txns.forEach(t=>{if(!t.target||t.target==='skip')return;const k=txMonth(t);
       const s=byMonth[k]=byMonth[k]||{};s[t.target]=(s[t.target]||0)+t.val;});
-    const keys=Object.keys(byMonth).sort();
+    const keys=[...new Set([...Object.keys(byMonth),...Object.keys(bankMonths)])].sort();
     let rowsFilled=0;
     // New months are created in order, so each inherits the category names of the one before
     keys.forEach(key=>{
       if(!D.budgetMonths[key])D.budgetMonths[key]=newBudgetMonthTemplate();
       const m=D.budgetMonths[key];
-      Object.entries(byMonth[key]).forEach(([k,sum])=>{
+      if(!Array.isArray(m.tx))m.tx=[];
+      Object.entries(byMonth[key]||{}).forEach(([k,sum])=>{
         const [sec,name]=k.split('|');
         if(!Array.isArray(m[sec]))m[sec]=[];
         let row=m[sec].find(r=>(r.name||'').trim()===name);
         if(!row){row={name,amount:''};m[sec].push(row);}
+        const inc=sec==='income'||sec==='bizIncome';
+        if(SI.mode!=='add')m.tx=m.tx.filter(x=>x.k!==k); // replacing the row → replace its detail too
         const base=SI.mode==='add'?num(row.amount):0;
-        row.amount=String(Math.max(0,Math.round(base+sum)));
+        row.amount=String(Math.max(0,Math.round(base+(inc?-sum:sum))));
         rowsFilled++;
       });
+      // The transactions behind every row — so the client can open a category and see / fix them
+      SI.txns.forEach(t=>{if(!t.target||t.target==='skip'||txMonth(t)!==key)return;
+        m.tx.push({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
+          a:Math.round((t.income?-t.val:t.val)*100)/100,k:t.target,s:srcLabel(t)});});
+      // Bank account: balances + what left it outside the budget (card bills, investments, own transfers)
+      if(bankMonths[key])m.bank=Object.assign({},m.bank||{},bankMonths[key]);
+      if(segMonths[key]){m.cardSegs=(m.cardSegs||[]).concat(segMonths[key]);}
       // Remember the file on every month it filled (fingerprint only — no merchant data),
       // so it's never counted twice
       if(!Array.isArray(m.imports))m.imports=[];

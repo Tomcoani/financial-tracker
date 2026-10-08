@@ -346,17 +346,21 @@ function renderBudgetSection(sec){
   let html='';
   rows.forEach((row,i)=>{
     const flagAvg=budgetRowFlag(sec,row.name,row.amount);
+    // Rows filled from a statement keep their transactions — a button opens them under the row
+    const txs=budgetRowTx(sec,row.name),open=txs.length&&_budgetOpenRow===sec+'|'+(row.name||'').trim();
     html+=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
       <input type="text" value="${esc(row.name||'')}" placeholder="${meta.ph}" dir="rtl"
         oninput="updateBudgetRow('${sec}',${i},'name',this.value)"
         style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:var(--font);font-size:13px;padding:8px 10px;text-align:right"/>
+      ${txs.length?`<button onclick="budgetToggleRowTx('${sec}',${i})" title="מה נכלל בקטגוריה הזו"
+        style="flex-shrink:0;background:${open?'rgba(66,235,214,.14)':'var(--s2)'};border:1px solid ${open?'var(--teal-border)':'var(--border)'};color:var(--teal);border-radius:8px;padding:6px 6px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📋${txs.length}${open?'▴':'▾'}</button>`:''}
       <span id="budget-flag-${sec}-${i}" onclick="budgetFlagInfo('${sec}',${i})"
         title="גבוה מהרגיל" style="display:${flagAvg!=null?'inline':'none'};cursor:pointer;font-size:14px;flex-shrink:0">👀</span>
       <input type="number" value="${row.amount||''}" placeholder="0" data-no-fmt
         oninput="updateBudgetRow('${sec}',${i},'amount',this.value)"
         style="width:110px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:${meta.color};font-family:var(--font);font-size:14px;font-weight:700;padding:8px 10px;text-align:center"/>
       <button onclick="removeBudgetRow('${sec}',${i})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 2px;line-height:1;flex-shrink:0">×</button>
-    </div>`;
+    </div>${open?budgetRowTxPanel(sec,row.name,txs):''}`;
   });
   const total=budgetTotal(sec);
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
@@ -368,6 +372,12 @@ function renderBudgetSection(sec){
 function updateBudgetRow(sec,i,field,val){
   const b=curBudget();
   if(!b[sec]||!b[sec][i])return;
+  // Renaming a row keeps its imported transactions attached to it
+  if(field==='name'&&Array.isArray(b.tx)){
+    const from=sec+'|'+(b[sec][i].name||'').trim(),to=sec+'|'+String(val||'').trim();
+    b.tx.forEach(t=>{if(t.k===from)t.k=to;});
+    if(_budgetOpenRow===from)_budgetOpenRow=to;
+  }
   b[sec][i][field]=val;
   if(field==='amount'){
     const totEl=document.getElementById('budget-total-'+sec);
@@ -399,6 +409,8 @@ function addBudgetRow(sec){
 function removeBudgetRow(sec,i){
   const b=curBudget();
   if(!Array.isArray(b[sec]))return;
+  // a deleted row takes its imported transactions with it
+  if(b[sec][i]&&Array.isArray(b.tx)){const k=sec+'|'+(b[sec][i].name||'').trim();b.tx=b.tx.filter(t=>t.k!==k);}
   b[sec].splice(i,1);
   touchSection('budget');markDirty();
   renderBudgetSection(sec);
@@ -518,6 +530,7 @@ function renderBudgetSummary(){
   const el=document.getElementById('budget-summary');
   if(!el)return;
   renderBudgetTrend();
+  renderBudgetBank(); // the bank check depends on the same totals
   const inc=budgetTotal('income'),needs=budgetTotal('needs'),wants=budgetTotal('wants');
   const biz=bizCombined()?budgetTotal('business'):0; // business payments (combined mode)
   const exp=needs+wants+biz,saved=inc-exp;
