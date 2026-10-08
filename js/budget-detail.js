@@ -86,6 +86,99 @@ function budgetTxRemove(id){
   showToast('העסקה הוסרה ✓');
 }
 
+// ── Fixed expenses: apply one row's amount to other months ──
+// After an amount is typed (or via 🔁), the client picks months; the same-named row in those
+// months gets the amount (added if missing). By default only months where it's still empty are
+// ticked, so amounts already typed elsewhere aren't overwritten unless chosen.
+let _budgetRepeat=null; // {sec, name, mode:'offer'|'pick', sel:Set of month keys}
+const _bKeyOf=(sec,row)=>sec+'|'+String(row&&row.name||'').trim();
+function budgetRepeatOffer(sec,i){
+  const row=(curBudget()[sec]||[])[i];
+  if(!row||!_bNum(row.amount)||!(row.name||'').trim())return;
+  if(_budgetRepeat&&_budgetRepeat.mode==='pick'&&_budgetRepeat.key===_bKeyOf(sec,row))return;
+  _budgetRepeat={key:_bKeyOf(sec,row),sec,mode:'offer'};
+  renderBudgetSection(sec);
+}
+// Months to offer: every existing month + the next 6 from today, except the one shown
+function _budgetRepeatMonths(){
+  const keys=new Set(Object.keys(D.budgetMonths||{}));
+  const now=new Date();
+  for(let i=0;i<=6;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);keys.add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}
+  keys.delete(D.budgetCurMonth);
+  return [...keys].sort();
+}
+function _budgetRowIn(monthKey,sec,name){
+  const m=D.budgetMonths[monthKey];if(!m)return null;
+  return (m[sec]||[]).find(r=>(r.name||'').trim()===name)||null;
+}
+function budgetRepeatOpen(sec,i,toggle){
+  const row=(curBudget()[sec]||[])[i];if(!row)return;
+  const key=_bKeyOf(sec,row),name=(row.name||'').trim();
+  if(toggle&&_budgetRepeat&&_budgetRepeat.key===key&&_budgetRepeat.mode==='pick'){_budgetRepeat=null;renderBudgetSection(sec);return;}
+  // pre-tick existing months where this row is still empty (future months only if chosen)
+  const sel=new Set(_budgetRepeatMonths().filter(k=>{if(!D.budgetMonths[k])return false;const r=_budgetRowIn(k,sec,name);return !r||!_bNum(r.amount);}));
+  _budgetRepeat={key,sec,mode:'pick',sel};
+  renderBudgetSection(sec);
+}
+function budgetRepeatClose(){const s=_budgetRepeat&&_budgetRepeat.sec;_budgetRepeat=null;if(s)renderBudgetSection(s);}
+function budgetRepeatToggle(k){
+  const r=_budgetRepeat;if(!r||!r.sel)return;
+  if(r.sel.has(k))r.sel.delete(k);else r.sel.add(k);
+  renderBudgetSection(r.sec);
+}
+function budgetRepeatAll(on){
+  const r=_budgetRepeat;if(!r)return;
+  r.sel=new Set(on?_budgetRepeatMonths():[]);renderBudgetSection(r.sec);
+}
+function budgetRepeatPanel(sec,i,row){
+  const r=_budgetRepeat;
+  if(!r||r.key!==_bKeyOf(sec,row)||!_bNum(row.amount))return '';
+  const amt=_bNum(row.amount),name=(row.name||'').trim();
+  const wrap=html=>`<div style="background:rgba(66,235,214,.06);border:1px solid var(--teal-border);border-radius:10px;padding:8px 10px;margin:-2px 0 10px;font-size:12.5px">${html}</div>`;
+  if(r.mode==='offer')return wrap(`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="flex:1;min-width:0">🔁 הוצאה קבועה? אפשר להחיל <b>${iln(fmt(amt))}</b> של "${esc(name)}" גם על חודשים אחרים</span>
+    <button onclick="budgetRepeatOpen('${sec}',${i})" class="btnsave" style="padding:5px 12px;font-size:12px">בחירת חודשים</button>
+    <button onclick="budgetRepeatClose()" title="לא עכשיו" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:15px">✕</button></div>`);
+  const months=_budgetRepeatMonths();
+  const chip=k=>{
+    const ex=_budgetRowIn(k,sec,name),v=ex?_bNum(ex.amount):0,on=r.sel.has(k);
+    const note=!D.budgetMonths[k]?'חודש חדש':v?(v===amt?'כבר '+fmt(v):fmt(v)):'ריק';
+    return `<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 8px;margin:3px;border-radius:8px;cursor:pointer;
+      border:1px solid ${on?'var(--teal-border)':'var(--border)'};background:${on?'rgba(66,235,214,.12)':'var(--s2)'}">
+      <input type="checkbox" ${on?'checked':''} onchange="budgetRepeatToggle('${k}')" style="margin:0">
+      <span>${fmtBudgetMonth(k)}</span><span style="font-size:10.5px;color:${v&&v!==amt?'var(--amber)':'var(--t3)'}">${note}</span></label>`;
+  };
+  const n=r.sel.size,over=[...r.sel].filter(k=>{const ex=_budgetRowIn(k,sec,name);return ex&&_bNum(ex.amount)&&_bNum(ex.amount)!==amt;}).length;
+  return wrap(`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px">
+      <b>🔁 להחיל ${iln(fmt(amt))} של "${esc(name)}" על:</b>
+      <button onclick="budgetRepeatClose()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:15px">✕</button></div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:4px">מסומנים מראש החודשים שבהם השורה עדיין ריקה. חודש עם סכום אחר (בכתום) יתעדכן רק אם תסמנו אותו. "חודש חדש" ייפתח עם הסכום הזה, ויכנס לחישובים רק כשיגיע.</div>
+    <div>${months.map(chip).join('')}</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <button onclick="budgetRepeatApply()" class="btnsave" style="padding:6px 14px;font-size:12.5px"${n?'':' disabled'}>החל על ${n} חודשים${over?` (${over} יידרסו)`:''}</button>
+      <button onclick="budgetRepeatAll(true)" style="background:none;border:none;color:var(--teal);font-family:var(--font);font-size:12px;cursor:pointer;text-decoration:underline">סמן הכל</button>
+      <button onclick="budgetRepeatAll(false)" style="background:none;border:none;color:var(--t3);font-family:var(--font);font-size:12px;cursor:pointer;text-decoration:underline">נקה</button>
+    </div>`);
+}
+function budgetRepeatApply(){
+  const r=_budgetRepeat;if(!r||!r.sel||!r.sel.size)return;
+  const [sec,name]=r.key.split('|');
+  const src=(curBudget()[sec]||[]).find(x=>(x.name||'').trim()===name);if(!src)return;
+  const amt=String(_bNum(src.amount));
+  const keys=[...r.sel].sort();
+  keys.forEach(k=>{
+    if(!D.budgetMonths[k])D.budgetMonths[k]=newBudgetMonthTemplate(); // inherits the category names
+    const m=D.budgetMonths[k];
+    if(!Array.isArray(m[sec]))m[sec]=[];
+    let row=m[sec].find(x=>(x.name||'').trim()===name);
+    if(!row){row={name,amount:''};m[sec].push(row);}
+    row.amount=amt;
+  });
+  _budgetRepeat=null;
+  touchSection('budget');markDirty();renderBudget();
+  showToast(`"${name}" עודכן ל־${fmt(_bNum(amt))} ב־${keys.length} חודשים ✓`);
+}
+
 // ── Bank account check ──
 // 1. Opening / closing balance of the month.
 // 2. Reconciliation: the real change in the account vs. what the budget says

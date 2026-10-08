@@ -55,8 +55,9 @@ function migrateBudget(){
     }
   }
   if(!D.budgetCurMonth||!D.budgetMonths[D.budgetCurMonth]){
-    const keys=Object.keys(D.budgetMonths).sort();
-    D.budgetCurMonth=keys.length?keys[keys.length-1]:currentMonthKey();
+    // latest month that has already arrived (months filled ahead via 🔁 aren't "current")
+    const keys=Object.keys(D.budgetMonths).sort(),past=keys.filter(k=>k<=currentMonthKey());
+    D.budgetCurMonth=past.length?past[past.length-1]:keys.length?keys[keys.length-1]:currentMonthKey();
     if(!D.budgetMonths[D.budgetCurMonth])D.budgetMonths[D.budgetCurMonth]=defBudgetMonth();
   }
 }
@@ -153,7 +154,8 @@ function budgetSavedOf(month){
 // Savings from the most recent month the client actually filled in
 // (income − expenses). Returns {saved, monthKey} or null if none.
 function budgetLastMonthSaved(){
-  const keys=Object.keys(D.budgetMonths||{}).sort();
+  // months that haven't arrived yet (e.g. rent filled ahead via 🔁) don't count
+  const keys=Object.keys(D.budgetMonths||{}).sort().filter(k=>k<=currentMonthKey());
   for(let i=keys.length-1;i>=0;i--){
     const m=D.budgetMonths[keys[i]],s=budgetSavedOf(m);
     if((s.inc||s.exp)>0)return {saved:s.inc-s.exp,monthKey:keys[i]};
@@ -356,11 +358,13 @@ function renderBudgetSection(sec){
         style="flex-shrink:0;background:${open?'rgba(66,235,214,.14)':'var(--s2)'};border:1px solid ${open?'var(--teal-border)':'var(--border)'};color:var(--teal);border-radius:8px;padding:6px 6px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📋${txs.length}${open?'▴':'▾'}</button>`:''}
       <span id="budget-flag-${sec}-${i}" onclick="budgetFlagInfo('${sec}',${i})"
         title="גבוה מהרגיל" style="display:${flagAvg!=null?'inline':'none'};cursor:pointer;font-size:14px;flex-shrink:0">👀</span>
+      ${_bNum(row.amount)&&(row.name||'').trim()?`<button onclick="budgetRepeatOpen('${sec}',${i},true)" title="להחיל את הסכום גם על חודשים אחרים (הוצאה קבועה)"
+        style="flex-shrink:0;background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0 1px">🔁</button>`:''}
       <input type="number" value="${row.amount||''}" placeholder="0" data-no-fmt
-        oninput="updateBudgetRow('${sec}',${i},'amount',this.value)"
+        oninput="updateBudgetRow('${sec}',${i},'amount',this.value)" onchange="budgetRepeatOffer('${sec}',${i})"
         style="width:110px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:${meta.color};font-family:var(--font);font-size:14px;font-weight:700;padding:8px 10px;text-align:center"/>
       <button onclick="removeBudgetRow('${sec}',${i})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 2px;line-height:1;flex-shrink:0">×</button>
-    </div>${open?budgetRowTxPanel(sec,row.name,txs):''}`;
+    </div>${open?budgetRowTxPanel(sec,row.name,txs):''}${budgetRepeatPanel(sec,i,row)}`;
   });
   const total=budgetTotal(sec);
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
@@ -503,7 +507,7 @@ function renderBudgetTrend(){
   const wrap=document.getElementById('budget-trend-card');
   const canvas=document.getElementById('ch-budget');
   if(!wrap||!canvas)return;
-  const keys=Object.keys(D.budgetMonths).sort();
+  const keys=Object.keys(D.budgetMonths).sort().filter(k=>k<=currentMonthKey()); // no future months
   const pts=keys.map(k=>{
     const s=budgetSavedOf(D.budgetMonths[k]);
     return {k,saved:s.inc-s.exp,has:(s.inc||s.exp)>0};
