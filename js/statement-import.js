@@ -510,6 +510,7 @@ function learnedTarget(mk){
 function rebuild(){
   const rows=monthRows();
   SI.txns=[];
+  const seen=new Set(); // fingerprints already counted in this upload
   SI.files.forEach(f=>{
     f.txns=f.error||f.needPassword?[]:extract(f);
     f.sum=f.txns.reduce((a,t)=>a+t.val,0);
@@ -530,10 +531,16 @@ function rebuild(){
       t.month=f.monthOverride||(f.source==='דף בנק'?mkKey(t.date):t.billDate?mkKey(t.billDate):sd?mkKey(sd):f.autoMonth)||'';
     });
     f.months=[...new Set(f.txns.map(t=>t.month).filter(Boolean))].sort();
-    f.fp=f.txns.length+'|'+Math.round(f.sum*100)+'|'+(f.txns[0]?+f.txns[0].date:0);
-    // Already imported? (into any month — the fingerprint is stored on every month it filled)
-    f.dup=Object.values(D.budgetMonths||{}).some(m=>(m.imports||[]).some(x=>x.fp===f.fp));
-    if(f.dup&&f.useDup)f.dup=false;
+    // Fingerprint: count + total + first/last date — order-independent, so the same statement
+    // downloaded once as PDF and once as Excel is recognised as the same
+    const ds=f.txns.map(t=>+t.date);
+    f.fp=f.txns.length+'|'+Math.round(f.sum*100)+'|'+(ds.length?Math.min(...ds)+'|'+Math.max(...ds):'0');
+    // Already imported (into any month — the fingerprint is stored on every month it filled),
+    // or the same statement picked twice in this upload
+    f.dupNow=f.txns.length>0&&seen.has(f.fp);
+    f.dup=f.dupNow||Object.values(D.budgetMonths||{}).some(m=>(m.imports||[]).some(x=>x.fp===f.fp));
+    if(f.dup&&f.useDup&&!f.dupNow)f.dup=false;
+    if(f.txns.length&&!f.dup)seen.add(f.fp);
     if(!f.dup)SI.txns.push(...f.txns);
   });
   SI.txns.forEach(t=>{
@@ -688,7 +695,8 @@ function reviewView(){
     else if(noText){st='ה־PDF הזה הוא תמונה (סרוק) — אין בו טקסט שאפשר לקרוא';col='#fca5a5';}
     else if(!f.txns.length&&f.tables.length){st='הקובץ נפתח, אבל לא הצלחנו לזהות בו את טבלת העסקאות';col='#fca5a5';}
     else if(!f.txns.length){st=f.kind==='pdf'?'הקובץ נפתח, אבל לא מצאנו בו שורות עסקה (תאריך + בית עסק + סכום)':'לא מצאנו בקובץ טבלת עסקאות';col='#fca5a5';}
-    else if(f.dup){st='הקובץ הזה כבר נטען בעבר — לא ייספר שוב';col='var(--amber)';}
+    else if(f.dupNow){st='אותו פירוט כבר נבחר כאן (אולי באקסל ובפורמט PDF) — לא ייספר פעמיים';col='var(--amber)';}
+    else if(f.dup){st='הפירוט הזה כבר נטען בעבר — לא ייספר שוב';col='var(--amber)';}
     else{
       st=`${f.txns.length} עסקאות · ${f.source==='דף בנק'?'יצא מהחשבון ':''}${money(f.spent)}${f.check==='ok'?' · <span style="color:var(--green)">✓ תואם לסה"כ בקובץ</span>':f.check==='diff'?' · <span style="color:var(--amber)">⚠ לא תואם לסה"כ בקובץ — כדאי להציץ</span>':''}`;
       // Which month(s) this file goes to — detected automatically, the client can override
@@ -702,7 +710,7 @@ function reviewView(){
     }
     const pw=f.needPassword?`<div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap"><span style="font-size:12px">🔐 הקובץ נעול בסיסמה${f.pwWrong?' <span style="color:#fca5a5">(שגויה)</span>':''} — בד"כ תעודת הזהות:</span><input type="password" id="si-pw-${f.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);padding:5px 8px;width:130px"><button onclick="SIX.unlock(${f.id})" style="${BTN}background:var(--teal);color:#080c14;border:none;padding:5px 12px;font-weight:700">פתח</button></div>`:'';
     const help=(f.error||(!f.needPassword&&!f.txns.length))?`<div style="font-size:11.5px;color:var(--t3);margin-top:3px">נסו להוריד את הפירוט בפורמט <b>אקסל</b>, או לחצו למטה על "משהו לא נראה נכון?" ושלחו ליועץ את שלד המבנה.${f.error?`<div style="direction:ltr;text-align:left;font-size:10.5px;opacity:.8">${h(f.error)}</div>`:''}</div>`:'';
-    const again=f.dup?` <button style="${LINK}" onclick="SIX.useDup(${f.id})">טען בכל זאת</button>`:'';
+    const again=f.dup&&!f.dupNow?` <button style="${LINK}" onclick="SIX.useDup(${f.id})">טען בכל זאת</button>`:'';
     return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
       <div style="font-size:18px">${f.kind==='pdf'?'📕':'📗'}</div>
       <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(f.source?f.source+' · ':'')}${h(f.name)}</div>
