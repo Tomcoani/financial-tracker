@@ -31,6 +31,12 @@
 #gnotes-editor:empty:before{content:attr(data-placeholder);color:var(--t3);pointer-events:none;}
 #gnotes-editor ul,#gnotes-editor ol{margin:6px 0;padding-inline-start:26px;}
 #gnotes-editor li{margin:2px 0;}
+/* Nested points like Word: • → ◦ → ▪ ; numbered: 1 → א → i */
+#gnotes-editor ul{list-style-type:disc;}
+#gnotes-editor ul ul{list-style-type:circle;margin:2px 0;}
+#gnotes-editor ul ul ul{list-style-type:square;}
+#gnotes-editor ol ol{list-style-type:hebrew;margin:2px 0;}
+#gnotes-editor ol ol ol{list-style-type:lower-roman;}
 /* Net-worth change card (screenshot-ready before/after) */
 #nwchange-card{width:100%;background:linear-gradient(160deg,#10203400,#0a1420),radial-gradient(120% 90% at 50% 0%,rgba(66,235,214,.10),transparent 60%),#0c1622;
   border:1.5px solid var(--teal-border);border-radius:22px;padding:30px 26px 24px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.55);}

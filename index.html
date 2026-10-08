@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=80">
+<link rel="stylesheet" href="styles/main.css?v=81">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -444,7 +444,8 @@
           <span class="nt-sep"></span>
           <button type="button" class="nt-btn" title="נקה עיצוב" onmousedown="event.preventDefault()" onclick="notesExec('removeFormat')">נקה עיצוב</button>
         </div>
-        <div id="gnotes-editor" contenteditable="true" oninput="notesInput()" onpaste="notesPaste(event)"
+        <div style="font-size:11px;color:var(--t3);margin:-2px 0 6px">💡 <b>Tab</b> בתוך רשימה = תת־נקודה · <b>Shift+Tab</b> = חזרה רמה אחת</div>
+        <div id="gnotes-editor" contenteditable="true" oninput="notesInput()" onpaste="notesPaste(event)" onkeydown="notesKeydown(event)"
           data-placeholder="כל מה שעל הלב..."></div>
       </div>
     </div>
@@ -838,17 +839,17 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=80"></script>
-<script defer src="js/cashflow-goals.js?v=80"></script>
-<script defer src="js/pension.js?v=80"></script>
-<script defer src="js/networth.js?v=80"></script>
-<script defer src="js/portfolio.js?v=80"></script>
-<script defer src="js/dashboard.js?v=80"></script>
-<script defer src="js/settings.js?v=80"></script>
-<script defer src="js/admin.js?v=80"></script>
-<script defer src="js/misc.js?v=80"></script>
-<script defer src="js/budget.js?v=80"></script>
-<script defer src="js/budget-detail.js?v=80"></script>
-<script defer src="js/statement-import.js?v=80"></script>
+<script defer src="js/core.js?v=81"></script>
+<script defer src="js/cashflow-goals.js?v=81"></script>
+<script defer src="js/pension.js?v=81"></script>
+<script defer src="js/networth.js?v=81"></script>
+<script defer src="js/portfolio.js?v=81"></script>
+<script defer src="js/dashboard.js?v=81"></script>
+<script defer src="js/settings.js?v=81"></script>
+<script defer src="js/admin.js?v=81"></script>
+<script defer src="js/misc.js?v=81"></script>
+<script defer src="js/budget.js?v=81"></script>
+<script defer src="js/budget-detail.js?v=81"></script>
+<script defer src="js/statement-import.js?v=81"></script>
 </body>
 </html>

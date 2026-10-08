@@ -545,6 +545,26 @@ function notesExec(cmd){
   const ge=document.getElementById('gnotes-editor');
   if(ge){ge.focus();notesInput();}
 }
+// Tab like in Word: inside a list → a sub-point (• → ◦ → ▪), Shift+Tab → back out a level;
+// outside a list → starts a bulleted list.
+function notesKeydown(e){
+  if(e.key!=='Tab')return;
+  e.preventDefault();
+  try{document.execCommand('styleWithCSS',false,false);}catch(err){}
+  const sel=window.getSelection(),node=sel&&sel.anchorNode;
+  const el=node&&(node.nodeType===1?node:node.parentElement);
+  const inList=!!(el&&el.closest&&el.closest('#gnotes-editor li'));
+  // remember where the cursor was — turning a plain line into a list can throw it to the line start
+  const txtNode=node&&node.nodeType===3?node:null,off=sel?sel.anchorOffset:0,txt=txtNode?txtNode.textContent:null;
+  if(e.shiftKey){if(inList)document.execCommand('outdent',false,null);}
+  else document.execCommand(inList?'indent':'insertUnorderedList',false,null);
+  if(!inList&&!e.shiftKey&&txt!=null){
+    const li=[...document.querySelectorAll('#gnotes-editor li')].find(l=>l.textContent===txt);
+    const tn=li&&[...li.childNodes].find(n=>n.nodeType===3);
+    if(tn){const r=document.createRange();r.setStart(tn,Math.min(off,tn.length));r.collapse(true);sel.removeAllRanges();sel.addRange(r);}
+  }
+  notesInput();
+}
 // Force pasted content to plain text so no foreign markup enters the notes.
 function notesPaste(e){
   e.preventDefault();
