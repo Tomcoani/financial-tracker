@@ -150,6 +150,9 @@ auth.onAuthStateChanged(async user=>{
     document.getElementById('uname').textContent=(D.settings&&D.settings.displayName)||user.displayName||user.email;
     // Show admin nav only for admin email
     document.getElementById('admin-nav-btn').style.display=user.email===ADMIN_EMAIL?'':'none';
+    // Statement import (fill expenses from a card file) — admin-only while it's being tested
+    const importBtn=document.getElementById('budget-import-btn');
+    if(importBtn)importBtn.style.display=user.email===ADMIN_EMAIL?'inline-flex':'none';
     if(!D.settings)D.settings={displayName:'',email:user.email||'',age:'',notifyEmail:user.email||'',gender:'male'};
     if(!D.settings.gender)D.settings.gender='male'; // migrate existing users
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
