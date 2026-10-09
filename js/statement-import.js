@@ -646,7 +646,9 @@ function rebuild(){
     if(!f.dup)SI.txns.push(...f.txns);
   });
   SI.detailTx=SI.files.filter(f=>f.detailOnly).flatMap(f=>f.txns);
+  markDupTx();
   SI.txns.concat(SI.detailTx).forEach(t=>{
+    if(t.dupTx){t.cat='skip';t.target='skip';t.how='dup';return;} // already recorded — never twice
     t.cat=guessCat(t);
     t.biz=isBiz(t);
     const lt=learnedTarget(t.mk);
@@ -661,6 +663,30 @@ function rebuild(){
     if(lt!==null&&(lt==='skip'||!selfEmployed()||lt.startsWith('business|')===t.biz)){
       t.target=lt;t.how=SI.session[t.mk]!==undefined?'session':'learned';return;}
     t.target=t.biz?bizTarget(t.cat,rows):catTarget(t.cat,rows);t.how=t.target?'auto':'';
+  });
+}
+// ── The same transaction twice (overlapping files: two bank exports covering the same weeks,
+// a card statement as PDF and as Excel...) ──
+// A transaction = date + amount + direction + bank-or-card. It's a duplicate when it's already
+// in the budget (month.tx of any month) or in an earlier file of this upload. Counted, not just
+// matched: two identical coffees in one file stay two, and only as many as already exist are dropped.
+function txDupKey(t){return ymd(t.date)+'|'+r2(Math.abs(t.val))+'|'+(t.income?'in':'out')+'|'+(t.bank?'bank':'card');}
+function storedDupKey(x){const sec=String(x.k||'').split('|')[0];
+  return x.d+'|'+r2(Math.abs(x.a))+'|'+(sec==='income'||sec==='bizIncome'?'in':'out')+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card');}
+function markDupTx(){
+  const pool=new Map(),add=(k,n)=>pool.set(k,(pool.get(k)||0)+n);
+  Object.values(D.budgetMonths||{}).forEach(m=>(m.tx||[]).forEach(x=>add(storedDupKey(x),1)));
+  SI.files.forEach(f=>{
+    if(f.dup||!f.txns)return;
+    const mine=new Map();
+    f.txns.forEach(t=>{
+      t.dupTx=false;
+      if(t.kind==='card'||t.kind==='invest'||t.kind==='own')return; // outside the budget anyway
+      const k=txDupKey(t);
+      if((pool.get(k)||0)>0){t.dupTx=true;pool.set(k,pool.get(k)-1);}
+      else mine.set(k,(mine.get(k)||0)+1);
+    });
+    mine.forEach((n,k)=>add(k,n)); // later files in this upload can't count these again
   });
 }
 // ── Personal vs business (self-employed only) ──
@@ -898,9 +924,9 @@ function reviewView(){
   };
   // Not counted in the budget, grouped by why: card bills (their detail comes from the card
   // statement), investments, transfers between the client's own accounts, anything else
-  const KIND_LBL={card:'💳 תשלומי כרטיס אשראי מהבנק (הפירוט מגיע מקובץ הכרטיס)',invest:'📈 השקעות בשוק ההון (קנייה / מכירה של ני"ע)',own:'🔁 העברות בין החשבונות שלך',other:'🚫 לא נספר'};
-  const kindOf=t=>t.kind==='card'||t.kind==='invest'||t.kind==='own'?t.kind:'other';
-  const skipGroups=['invest','card','own','other'].map(kd=>{
+  const KIND_LBL={dup:'🔁 כבר רשום בתקציב (מקובץ קודם או מקובץ חופף) — לא ייספר שוב',card:'💳 תשלומי כרטיס אשראי מהבנק (הפירוט מגיע מקובץ הכרטיס)',invest:'📈 השקעות בשוק ההון (קנייה / מכירה של ני"ע)',own:'🔁 העברות בין החשבונות שלך',other:'🚫 לא נספר'};
+  const kindOf=t=>t.dupTx?'dup':t.kind==='card'||t.kind==='invest'||t.kind==='own'?t.kind:'other';
+  const skipGroups=['dup','invest','card','own','other'].map(kd=>{
     const list=skipped.filter(t=>kindOf(t)===kd);if(!list.length)return '';
     const out=list.filter(t=>!t.income).reduce((a,t)=>a+t.val,0),inn=-list.filter(t=>t.income).reduce((a,t)=>a+t.val,0);
     return `<div style="margin-top:6px"><div style="font-size:12px;color:var(--t2);font-weight:700">${KIND_LBL[kd]} · ${out?money(out)+' יצא':''}${out&&inn?' · ':''}${inn?'<span style="color:var(--teal)">'+money(inn)+' נכנס</span>':''}</div>
@@ -918,6 +944,7 @@ function reviewView(){
     </div>`:'';
   return `<h2>✓ מצאנו ${SI.txns.length} תנועות</h2>
     <div style="font-size:13px;margin:-2px 0 6px">הוצאות <b>${money(total)}</b>${incTotal?` · הכנסות <b style="color:var(--teal)">${money(incTotal)}</b>`:''}</div>
+    ${(()=>{const d=SI.txns.filter(t=>t.dupTx);return d.length?`<div style="background:rgba(66,235,214,.07);border:1px solid var(--teal-border);border-radius:10px;padding:7px 10px;margin-bottom:8px;font-size:12.5px">🔁 <b>${d.length} פעולות כבר רשומות בתקציב</b> (מקובץ שהועלה קודם או מקובץ חופף) — הן לא ייספרו שוב.</div>`:'';})()}
     ${monthsBox}
     ${files}${dropZone(true)}
     ${cardsBox()}${memNote}${unk}
@@ -1133,7 +1160,8 @@ window.SIX={
           a:Math.round((t.income?-t.val:t.val)*100)/100,k:t.target,s:srcLabel(t)});});
       // Bank account: balances + what left it outside the budget (card bills, investments, own transfers)
       if(bankMonths[key])m.bank=Object.assign({},m.bank||{},bankMonths[key]);
-      if(segMonths[key]){m.cardSegs=(m.cardSegs||[]).concat(segMonths[key]);}
+      // card charges — skip ones already stored (same date, amount, issuer)
+      if(segMonths[key]){m.cardSegs=m.cardSegs||[];segMonths[key].forEach(s=>{if(!m.cardSegs.some(x=>x.d===s.d&&Math.abs(x.a-s.a)<0.01&&x.iss===s.iss))m.cardSegs.push(s);});}
       // Remember the file on every month it filled (fingerprint only — no merchant data),
       // so it's never counted twice
       if(!Array.isArray(m.imports))m.imports=[];

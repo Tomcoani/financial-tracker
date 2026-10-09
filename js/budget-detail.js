@@ -179,6 +179,47 @@ function budgetRepeatApply(){
   showToast(`"${name}" עודכן ל־${fmt(_bNum(amt))} ב־${keys.length} חודשים ✓`);
 }
 
+// ── Duplicates already in a month (e.g. overlapping files uploaded before duplicate checks) ──
+// Same date + amount + direction + bank/card, coming from different uploads (the upload is the
+// last part of the transaction id). Each upload's own identical items are legit (two coffees);
+// the extras beyond the largest single upload are duplicates.
+function _bDupKey(x){const sec=String(x.k||'').split('|')[0];
+  return x.d+'|'+Math.round(Math.abs(x.a)*100)/100+'|'+(sec==='income'||sec==='bizIncome'?'in':'out')+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card');}
+function budgetFindDups(m){
+  const groups={};
+  (m.tx||[]).forEach(x=>{(groups[_bDupKey(x)]=groups[_bDupKey(x)]||[]).push(x);});
+  const extra=[];
+  Object.values(groups).forEach(list=>{
+    const byBatch={};list.forEach(x=>{const b=String(x.id).split(':').pop();(byBatch[b]=byBatch[b]||[]).push(x);});
+    const batches=Object.keys(byBatch);if(batches.length<2)return;
+    // keep the batch with the most items (earliest on a tie); everything else is extra
+    batches.sort((a,b)=>byBatch[b].length-byBatch[a].length||parseInt(a,36)-parseInt(b,36));
+    batches.slice(1).forEach(b=>extra.push(...byBatch[b]));
+  });
+  return extra;
+}
+function renderBudgetDups(){
+  const el=document.getElementById('budget-dup-notice');if(!el)return;
+  const d=budgetFindDups(curBudget());
+  if(!d.length){el.innerHTML='';return;}
+  const out=d.filter(x=>!/^(income|bizIncome)\|/.test(x.k)).reduce((s,x)=>s+x.a,0),inn=d.reduce((s,x)=>s+x.a,0)-out;
+  el.innerHTML=`<div class="card" style="border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.06)">
+    <div style="font-size:13.5px;font-weight:800;color:var(--amber);margin-bottom:4px">🔁 נמצאו ${d.length} פעולות שנרשמו פעמיים החודש</div>
+    <div style="font-size:12.5px;color:var(--t2);line-height:1.7;margin-bottom:6px">אותה פעולה (תאריך, סכום ומקור זהים) נכנסה משני קבצים שונים —
+      ${out?'הוצאות כפולות '+iln(fmt(out)):''}${out&&inn?' · ':''}${inn?'הכנסות כפולות '+iln(fmt(inn)):''}.</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:8px">${d.slice(0,6).map(x=>esc(_bShortDate(x.d))+' · '+esc(x.n)+' · '+fmt(x.a)).join('<br>')}${d.length>6?'<br>ועוד '+(d.length-6)+'...':''}</div>
+    <button onclick="budgetRemoveDups()" class="btnsave" style="padding:7px 16px;font-size:12.5px">הסר את הכפילויות ✓</button>
+  </div>`;
+}
+function budgetRemoveDups(){
+  const m=curBudget(),d=budgetFindDups(m);if(!d.length)return;
+  const ids=new Set(d.map(x=>x.id));
+  d.forEach(x=>_budgetMoveAmt(x.k,-x.a)); // take each duplicate's amount out of its row
+  m.tx=m.tx.filter(x=>!ids.has(x.id));
+  touchSection('budget');markDirty();renderBudget();
+  showToast('הוסרו '+d.length+' כפילויות ✓ הסכומים עודכנו');
+}
+
 // ── Bank account check ──
 // 1. Opening / closing balance of the month.
 // 2. Reconciliation: the real change in the account vs. what the budget says
@@ -186,6 +227,7 @@ function budgetRepeatApply(){
 //    double-counted expenses (or missing income).
 // 3. Card bills the bank paid vs. the card statements uploaded.
 function renderBudgetBank(){
+  renderBudgetDups();
   const el=document.getElementById('budget-bank-card');if(!el)return;
   const m=curBudget(),bk=m.bank;
   if(!bk){el.style.display='none';el.innerHTML='';return;}
