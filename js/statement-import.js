@@ -677,7 +677,8 @@ function markDupTx(){
   const pool=new Map(),add=(k,n)=>pool.set(k,(pool.get(k)||0)+n);
   Object.values(D.budgetMonths||{}).forEach(m=>(m.tx||[]).forEach(x=>add(storedDupKey(x),1)));
   SI.files.forEach(f=>{
-    if(f.dup||!f.txns)return;
+    // detail-only files are checked too: a transaction already listed must not be listed again
+    if((f.dup&&!f.detailOnly)||!f.txns)return;
     const mine=new Map();
     f.txns.forEach(t=>{
       t.dupTx=false;

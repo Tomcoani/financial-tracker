@@ -198,10 +198,32 @@ function budgetFindDups(m){
   });
   return extra;
 }
+// Rows whose amount is below the transactions listed in them (📋) — a row can't hold less than
+// its own listed items, so this means an amount was taken out by mistake
+function budgetShortRows(m){
+  const out=[];
+  Object.keys(_BSEC_LBL).forEach(sec=>(m[sec]||[]).forEach(r=>{
+    const name=(r.name||'').trim();if(!name)return;
+    const listed=(m.tx||[]).filter(x=>x.k===sec+'|'+name).reduce((s,x)=>s+x.a,0);
+    if(listed>0&&_bNum(r.amount)<listed-1)out.push({sec,row:r,name,listed:Math.round(listed),now:_bNum(r.amount)});
+  }));
+  return out;
+}
+function budgetRestoreFromTx(){
+  const m=curBudget(),s=budgetShortRows(m);if(!s.length)return;
+  s.forEach(x=>{x.row.amount=String(x.listed);});
+  touchSection('budget');markDirty();renderBudget();
+  showToast('הסכומים הוחזרו לפי העסקאות ב־'+s.length+' שורות ✓');
+}
 function renderBudgetDups(){
   const el=document.getElementById('budget-dup-notice');if(!el)return;
-  const d=budgetFindDups(curBudget());
-  if(!d.length){el.innerHTML='';return;}
+  const m=curBudget(),d=budgetFindDups(m),short=budgetShortRows(m);
+  const shortHtml=short.length?`<div class="card" style="border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.06)">
+    <div style="font-size:13.5px;font-weight:800;color:#fca5a5;margin-bottom:4px">⚠️ ${short.length} שורות נמוכות מסכום העסקאות שבתוכן</div>
+    <div style="font-size:12.5px;color:var(--t2);line-height:1.7;margin-bottom:6px">${short.map(x=>`"${esc(x.name)}": רשום ${iln(fmt(x.now))}, אבל העסקאות בתוכה מסתכמות ב־${iln(fmt(x.listed))}`).join('<br>')}</div>
+    <button onclick="budgetRestoreFromTx()" class="btnsave" style="padding:7px 16px;font-size:12.5px">החזר את הסכומים לפי העסקאות ✓</button>
+  </div>`:'';
+  if(!d.length){el.innerHTML=shortHtml;return;}
   const out=d.filter(x=>!/^(income|bizIncome)\|/.test(x.k)).reduce((s,x)=>s+x.a,0),inn=d.reduce((s,x)=>s+x.a,0)-out;
   el.innerHTML=`<div class="card" style="border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.06)">
     <div style="font-size:13.5px;font-weight:800;color:var(--amber);margin-bottom:4px">🔁 נמצאו ${d.length} פעולות שנרשמו פעמיים החודש</div>
@@ -209,13 +231,21 @@ function renderBudgetDups(){
       ${out?'הוצאות כפולות '+iln(fmt(out)):''}${out&&inn?' · ':''}${inn?'הכנסות כפולות '+iln(fmt(inn)):''}.</div>
     <div style="font-size:12px;color:var(--t3);margin-bottom:8px">${d.slice(0,6).map(x=>esc(_bShortDate(x.d))+' · '+esc(x.n)+' · '+fmt(x.a)).join('<br>')}${d.length>6?'<br>ועוד '+(d.length-6)+'...':''}</div>
     <button onclick="budgetRemoveDups()" class="btnsave" style="padding:7px 16px;font-size:12.5px">הסר את הכפילויות ✓</button>
-  </div>`;
+  </div>`+shortHtml;
 }
 function budgetRemoveDups(){
   const m=curBudget(),d=budgetFindDups(m);if(!d.length)return;
   const ids=new Set(d.map(x=>x.id));
-  d.forEach(x=>_budgetMoveAmt(x.k,-x.a)); // take each duplicate's amount out of its row
   m.tx=m.tx.filter(x=>!ids.has(x.id));
+  // Take the duplicates' amount out of each row — but never below what the row's remaining
+  // transactions add up to (a duplicate listing doesn't always mean the amount was doubled)
+  const per={};d.forEach(x=>{per[x.k]=(per[x.k]||0)+x.a;});
+  Object.entries(per).forEach(([k,dupSum])=>{
+    const [sec,name]=k.split('|');
+    const row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
+    const listed=m.tx.filter(x=>x.k===k).reduce((s,x)=>s+x.a,0);
+    row.amount=String(Math.max(0,Math.round(Math.max(_bNum(row.amount)-dupSum,listed))));
+  });
   touchSection('budget');markDirty();renderBudget();
   showToast('הוסרו '+d.length+' כפילויות ✓ הסכומים עודכנו');
 }
