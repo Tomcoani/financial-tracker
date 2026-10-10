@@ -201,5 +201,7 @@ function renderBudgetCombined(){
       ${Object.keys(c.by).length>1?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${accs.filter(a=>c.by[a.id]).map(a=>esc(a.name)+' '+fmt(c.by[a.id])).join(' · ')}</div>`:`<div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(budgetAccName(Object.keys(c.by)[0]))}</div>`}
     </div>`).join('')}
   </div>`:''}
+  <div class="card" id="budget-period-all" style="display:none"></div>
   <div style="font-size:11.5px;color:var(--t3);text-align:center;margin:-4px 0 14px">לעריכה — בוחרים חשבון בשורה למעלה. העברות בין החשבונות שלכם כדאי לסמן "לא לספור", כדי שלא ייראו כהוצאה וגם כהכנסה.</div>`;
+  if(typeof renderBudgetPeriod==='function')renderBudgetPeriod('budget-period-all',budgetAccEntries());
 }

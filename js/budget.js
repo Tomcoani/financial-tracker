@@ -655,6 +655,7 @@ function renderBudgetSummary(){
   if(!el)return;
   renderBudgetTrend();
   renderBudgetBank(); // the bank check depends on the same totals
+  if(typeof budgetPeriodRefresh==='function')budgetPeriodRefresh();
   const inc=budgetTotal('income'),needs=budgetTotal('needs'),wants=budgetTotal('wants');
   // business payments (combined mode); a bi-monthly VAT payment may be split over two months
   const vatAdj=bizCombined()?vatSplitAdj(D.budgetMonths,D.budgetCurMonth):0;
