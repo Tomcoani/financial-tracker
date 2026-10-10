@@ -48,11 +48,14 @@ function budgetAccAdd(){
   if((budgetAccs()||[]).length>=BUDGET_MAX_ACC){showToast('אפשר עד '+BUDGET_MAX_ACC+' חשבונות');return;}
   if(!budgetAccs()){
     // first time: the budget so far becomes the first account
-    const first=(prompt('איך לקרוא לחשבון הנוכחי (כל מה שכבר רשום כאן)?\nלמשל: החשבון של תום','החשבון שלי')||'').trim();
+    const first=(prompt('איך לקרוא לחשבון הנוכחי (כל מה שכבר רשום כאן)?','בן/בת זוג 1')||'').trim();
     if(!first)return;
     D.budgetAccounts=[{id:'a1',name:first}];D.budgetActiveAcc='a1';D.budgetAccData={};
   }
-  const name=(prompt('שם החשבון החדש:\nלמשל: החשבון של שרון / חשבון משותף','')||'').trim();
+  // suggested names: partner 2, then the joint account
+  const n=D.budgetAccounts.length,taken=new Set(D.budgetAccounts.map(a=>a.name));
+  const sug=['בן/בת זוג 2','חשבון משותף','בן/בת זוג 1'].find(s=>!taken.has(s))||'';
+  const name=(prompt('שם החשבון החדש:',n===1?sug:(taken.has('חשבון משותף')?sug:'חשבון משותף'))||'').trim();
   if(!name){touchSection('budget');markDirty();renderBudget();return;}
   const id=_budgetNewAccId();
   D.budgetAccounts.push({id,name});

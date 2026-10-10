@@ -293,6 +293,42 @@ function budgetGapHtml(m,bk,diff,open){
   </details>`;
 }
 
+// ── "It's fine" on a gap alert, with a note (e.g. "rent is paid from another account") ──
+// month.bank.ack = {note, diff, at}. Kept while the gap is the same amount it was approved for;
+// if the gap changes (a new expense, a new upload) the alert comes back and says so.
+let _bankAckEdit=false;
+function budgetGapAckHtml(bk,diff,warn,box){
+  const ack=bk.ack,same=ack&&Math.abs(ack.diff-diff)<1;
+  const editor=`<div style="margin-top:8px">
+      <textarea id="bank-ack-note" rows="2" dir="rtl" placeholder="למה זה בסדר? למשל: שכר הדירה יורד מחשבון אחר"
+        style="width:100%;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:7px 9px;color:var(--white);font-family:var(--font);font-size:12.5px;resize:vertical">${esc(ack&&ack.note||'')}</textarea>
+      <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+        <button onclick="budgetGapAckSave(${diff})" class="btnsave" style="padding:6px 14px;font-size:12px">✓ הכל בסדר — שמור</button>
+        <button onclick="_bankAckEdit=false;renderBudgetBank()" style="background:none;border:none;color:var(--t3);font-family:var(--font);font-size:12px;cursor:pointer">ביטול</button>
+      </div></div>`;
+  if(same&&!_bankAckEdit)return box('rgba(16,185,129,.08)','rgba(16,185,129,.35)',
+    `<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <span><span style="color:var(--green);font-weight:800">✓ סומן כתקין</span> <span style="color:var(--t3);font-size:11.5px">(פער של ${iln(fmt(Math.abs(diff)))})</span>
+        ${ack.note?`<div style="color:var(--t2);font-size:12px;margin-top:2px">📝 ${esc(ack.note)}</div>`:''}</span>
+      <span style="white-space:nowrap"><button onclick="_bankAckEdit=true;renderBudgetBank()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px">✎ הערה</button>
+        <button onclick="budgetGapAckClear()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px">בטל</button></span>
+    </div>${_bankAckEdit?editor:''}`);
+  const changed=ack&&!same?`<div style="font-size:11.5px;color:var(--t3);margin-top:4px">סומן קודם כתקין בפער של ${iln(fmt(Math.abs(ack.diff)))}${ack.note?' ("'+esc(ack.note)+'")':''} — מאז הפער השתנה.</div>`:'';
+  return warn.replace(/<\/div>$/,'')+changed
+    +(_bankAckEdit?editor:`<div><button onclick="_bankAckEdit=true;renderBudgetBank()" style="margin-top:6px;background:var(--s2);border:1px solid var(--border);color:var(--t2);border-radius:8px;padding:4px 10px;font-family:var(--font);font-size:12px;cursor:pointer">✓ הכל בסדר — סמן והוסף הערה</button></div>`)+'</div>';
+}
+function budgetGapAckSave(diff){
+  const bk=curBudget().bank;if(!bk)return;
+  const el=document.getElementById('bank-ack-note');
+  bk.ack={note:(el?el.value:'').trim(),diff:Math.round(diff*100)/100,at:new Date().toISOString()};
+  _bankAckEdit=false;touchSection('budget');markDirty();renderBudgetBank();
+  showToast('סומן כתקין ✓');
+}
+function budgetGapAckClear(){
+  const bk=curBudget().bank;if(!bk)return;
+  delete bk.ack;_bankAckEdit=false;touchSection('budget');markDirty();renderBudgetBank();
+}
+
 // ── Bank account check ──
 // 1. Opening / closing balance of the month.
 // 2. Reconciliation: the real change in the account vs. what the budget says
@@ -328,6 +364,7 @@ function renderBudgetBank(){
       `⚠️ <b>ירדו מהחשבון ${iln(fmt(-diff))} יותר ממה שרשום בתקציב</b> — כנראה <b>חסרות הוצאות</b>${missing.length?` (למשל ${missing.length} חיובי כרטיס בלי פירוט, ${iln(fmt(missSum))})`:''}.`);
     else verdict=box('rgba(245,158,11,.08)','rgba(245,158,11,.35)',
       `⚠️ <b>נשארו בחשבון ${iln(fmt(diff))} יותר ממה שהתקציב מראה</b> — אולי <b>הוצאה נרשמה פעמיים</b>, או שחסרה הכנסה.`);
+    if(Math.abs(diff)>thr)verdict=budgetGapAckHtml(bk,diff,verdict,box);
   }
   const cardList=!cards.length?'':`<div style="font-size:12.5px;font-weight:800;margin:12px 0 4px">💳 חיובי אשראי שירדו מהחשבון</div>`
     +cards.map(c=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">
@@ -348,7 +385,7 @@ function renderBudgetBank(){
     ${cardList}
     ${inv?`<div style="font-size:12.5px;margin-top:12px">📈 ${inv>0?'הועברו להשקעות בשוק ההון':'נמשכו מהשקעות בשוק ההון'}: <b>${iln(fmt(Math.abs(inv)))}</b> <span style="font-size:11px;color:var(--t3)">— לא נספר כהוצאה או כהכנסה</span></div>`:''}
     ${bk.own?`<div style="font-size:12.5px;margin-top:4px">🔁 העברות בין החשבונות שלך: <b>${signed(-bk.own)}</b> <span style="font-size:11px;color:var(--t3)">— לא נספר</span></div>`:''}
-    ${hasBal&&Math.abs(diff)>=1?budgetGapHtml(m,bk,diff,Math.abs(diff)>thr):''}
+    ${hasBal&&Math.abs(diff)>=1?budgetGapHtml(m,bk,diff,Math.abs(diff)>thr&&!(bk.ack&&Math.abs(bk.ack.diff-diff)<1)):''}
     ${hasBal?`<details style="margin-top:10px;font-size:11.5px;color:var(--t3)"><summary style="cursor:pointer">איך מחושבת הבדיקה?</summary>
       <div style="line-height:1.8;margin-top:4px">לפי התקציב: הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${inv?' − השקעות '+signed(inv):''}${bk.own?' − העברות לחשבונות שלך '+signed(bk.own):''} = ${signed(expected)}<br>
       בפועל בעו"ש: ${signed(actual)} · הפרש: ${signed(diff)}<br>
