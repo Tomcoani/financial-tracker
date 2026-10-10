@@ -3,7 +3,8 @@
 // Works on [{months, profile}] entries: the account being edited, or every account together
 // (the "all accounts" view). Months still ahead (e.g. rent filled in advance via 🔁) don't count,
 // and neither do months with nothing filled in.
-let _bPer={preset:'3',from:'',to:''};
+// open = the card is expanded (collapsed by default; stays as the client left it while they work)
+let _bPer={preset:'3',from:'',to:'',open:false};
 const _BPER_PRESETS=[['3','3 חודשים'],['6','חצי שנה'],['12','שנה'],['year','השנה'],['all','הכל']];
 const _BPER_SECS=[
   ['income','💰 הכנסות','var(--teal)'],['needs','🏠 צרכים','var(--green)'],['wants','🎉 כיף','var(--amber)'],
@@ -72,9 +73,12 @@ function renderBudgetPeriod(elId,entries){
       <tr style="border-top:1px solid var(--border);font-weight:800;font-size:12px;color:var(--t2)">
         <td style="padding:5px 4px">סה"כ ${lbl.replace(/^\S+\s/,'')}</td><td style="padding:5px 4px;text-align:center">${iln(fmt(st))}</td><td style="padding:5px 4px;text-align:center">${iln(fmt(avg(st)))}</td></tr>`;
   }).join('');
-  el.innerHTML=`
-    <div class="ch-title">📅 סיכום לתקופה${entries.length>1?' — כל החשבונות':''}</div>
-    <div class="ch-hint">בחרו תקופה — ותראו כמה נכנס, כמה יצא, ומה הממוצע החודשי של כל קטגוריה.</div>
+  el.innerHTML=`<details${_bPer.open?' open':''} ontoggle="_bPer.open=this.open;this.querySelector('.bper-tg').textContent=this.open?'▲ סגירה':'▼ פתיחה'">
+    <summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span class="ch-title" style="margin:0">📅 סיכום לתקופה${entries.length>1?' — כל החשבונות':''}</span>
+      <span class="bper-tg" style="font-size:12px;color:var(--teal);white-space:nowrap">${_bPer.open?'▲ סגירה':'▼ פתיחה'}</span>
+    </summary>
+    <div class="ch-hint" style="margin-top:6px">בחרו תקופה — ותראו כמה נכנס, כמה יצא, ומה הממוצע החודשי של כל קטגוריה.</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0">
       ${_BPER_PRESETS.map(([v,l])=>btn(p===v,l,`budgetPeriodSet('preset','${v}')`)).join('')}
     </div>
@@ -105,5 +109,6 @@ function renderBudgetPeriod(elId,entries){
           <td style="padding:5px 4px;text-align:center;white-space:nowrap;color:var(--teal)">${iln(fmt(x.inc))}</td>
           <td style="padding:5px 4px;text-align:center;white-space:nowrap">${iln(fmt(x.exp))}</td>
           <td style="padding:5px 4px;text-align:center;white-space:nowrap;font-weight:700;color:${x.inc-x.exp>=0?'var(--teal)':'var(--red)'}">${signed(x.inc-x.exp)}</td></tr>`).join('')}</tbody></table></div>
-    </details>`}`;
+    </details>`}
+  </details>`;
 }
