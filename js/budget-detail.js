@@ -43,7 +43,9 @@ let _skipOpen=false;
 function renderBudgetSkipped(){
   const el=document.getElementById('budget-skip-card');if(!el)return;
   const m=curBudget(),tx=m.tx||[];
-  const skipped=tx.filter(x=>String(x.k).startsWith('skip|')),offs=tx.filter(x=>x.off);
+  // card bills paid from the bank aren't listed here: their expenses are in the categories (from
+  // the card statement), and the bills themselves are shown in the bank check ("💳 חיובי אשראי")
+  const skipped=tx.filter(x=>String(x.k).startsWith('skip|')&&!(x.k==='skip|card'&&m.bank)),offs=tx.filter(x=>x.off);
   if(!skipped.length&&!offs.length){el.style.display='none';el.innerHTML='';return;}
   el.style.display='';
   const sgn=x=>(x.dir==='in'?'+':'')+fmt(x.a);
@@ -119,9 +121,24 @@ function budgetRowTxPanel(sec,name,txs){
     <div style="font-size:11px;color:var(--t3);padding:2px 0 4px">לפי תאריך העסקה · לחיצה על עסקה: העברה לקטגוריה אחרת או תיקון הסכום · ⊘ = לא לספור אותה בחישוב</div>
     ${list.map(item).join('')}
     <div style="display:flex;justify-content:space-between;font-size:12px;padding-top:6px;color:var(--t2)"><span>${list.length-offN} עסקאות${offN?` <span style="color:var(--amber)">(+${offN} שלא נספרות)</span>`:''}</span><b>${iln(fmt(sum))}</b></div>
-    ${Math.abs(manual)>=1?`<div style="font-size:11px;color:var(--t3)">${manual>0?'+':'−'} ${iln(fmt(Math.abs(manual)))} הוקלדו ידנית בשורה</div>`:''}
+    ${Math.abs(manual)>=1?`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--t3)">
+      <span>${manual>0?'+':'−'} ${iln(fmt(Math.abs(manual)))} ${manual>0?'נוספו בשורה מעבר לעסקאות (הוקלדו ידנית, או נספרו פעמיים)':'חסרים בשורה לעומת העסקאות'}</span>
+      <button onclick="budgetRowMatchTx('${sec}','${encodeURIComponent(String(name).trim()).replace(/'/g,'%27')}')" style="background:none;border:1px solid var(--teal-border);border-radius:7px;color:var(--teal);font-family:var(--font);font-size:11px;padding:2px 8px;cursor:pointer">↺ השוו את השורה לעסקאות (${iln(fmt(sum))})</button></div>`:''}
   </div>`;
 }
+// Set a row to exactly what its listed transactions add up to (drops a doubled / stray amount)
+function budgetRowMatchTx(sec,nameEnc){
+  const name=decodeURIComponent(nameEnc),m=curBudget();
+  const row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
+  const sum=(m.tx||[]).filter(x=>!x.off&&x.k===sec+'|'+name).reduce((s,x)=>s+x.a,0);
+  if(!confirm(`לעדכן את "${name}" ל־${fmt(sum)} — בדיוק סכום העסקאות שבה? (סכום שהוקלד ידנית בשורה יימחק)`))return;
+  row.amount=String(Math.max(0,Math.round(sum)));
+  touchSection('budget');markDirty();renderBudget();
+  showToast(`"${name}" עודכן ל־${fmt(sum)} ✓`);
+}
+// Which way the money went (in / out) — kept on the transaction when it moves between rows, so
+// the duplicate check still recognises it when the same file is uploaded again
+function _bTxDir(t){return t.dir||(/^(income|bizIncome)\|/.test(t.k||'')?'in':'out');}
 function budgetTxEdit(id){_budgetEditTx=id;const sec=String(_budgetOpenRow||'').split('|')[0];if(sec)renderBudgetSection(sec);}
 // Move an amount between rows (the row's other, typed-in part stays as it was)
 function _budgetMoveAmt(key,delta){
@@ -137,11 +154,15 @@ function budgetTxSave(id){
   const k=kEl.value,a=parseFloat(aEl.value);
   if(!k||k.startsWith('__new|')||isNaN(a)){showToast('בחרו קטגוריה וסכום');return;}
   if(k===t.k&&a===t.a){budgetTxEdit(null);return;}
+  // money that left the account going into an income row (or the other way) — usually a mistake:
+  // a transfer to investments isn't income
+  const dir=_bTxDir(t),toInc=/^(income|bizIncome)\|/.test(k);
+  if(k!==t.k&&!k.startsWith('skip|')&&(dir==='out')===toInc&&
+    !confirm(dir==='out'?`"${t.n}" — כאן כסף יצא מהחשבון. להכניס אותו לשורת הכנסה? (העברה להשקעות או לחשבון שלכם עדיף לסמן "🚫 לא לספור")`:`"${t.n}" — כאן כסף נכנס לחשבון. להכניס אותו לשורת הוצאה?`))return;
   if(!t.off){_budgetMoveAmt(t.k,-t.a);_budgetMoveAmt(k,a);} // a "לא לספור" one isn't in any row
   const wasOff=!!t.off;
   const moved=k!==t.k;
-  // "לא נספר" items keep which way the money went (in / out); real rows say it themselves
-  if(k.startsWith('skip|')){if(!t.dir)t.dir=/^(income|bizIncome)\|/.test(t.k)?'in':'out';}else delete t.dir;
+  t.dir=dir; // kept wherever it moves (see _bTxDir)
   t.k=k;t.a=a;t.edited=true;_budgetEditTx=null;
   touchSection('budget');markDirty();renderBudget();
   showToast(moved?'העסקה הועברה ל"'+k.split('|')[1]+'" ✓ הסכומים עודכנו':'הסכום עודכן ✓');
@@ -221,7 +242,7 @@ function budgetBulkApply(all){
   let n=0;
   keys.forEach(k=>{const m=D.budgetMonths[k];if(!m)return;
     b.groups[k].forEach(x=>{if(!x.off){_budgetMoveAmtIn(m,x.k,-x.a);_budgetMoveAmtIn(m,b.newK,x.a);}
-      if(b.newK.startsWith('skip|')){if(!x.dir)x.dir=/^(income|bizIncome)\|/.test(x.k)?'in':'out';}else delete x.dir;
+      x.dir=_bTxDir(x); // kept wherever it moves
       x.k=b.newK;x.edited=true;n++;});});
   // remember it for future uploads too
   const [sec,name]=b.newK.split('|');

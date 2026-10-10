@@ -763,14 +763,21 @@ function storedDupKey(x,mk){const sec=String(x.k||'').split('|')[0];
   return x.d+'|'+r2(Math.abs(x.a))+'|'+dir+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card|'+mk);}
 function markDupTx(){
   const pool=new Map(),add=(k,n)=>pool.set(k,(pool.get(k)||0)+n);
-  Object.entries(D.budgetMonths||{}).forEach(([mk,m])=>(m.tx||[]).forEach(x=>add(storedDupKey(x,mk),1)));
+  Object.entries(D.budgetMonths||{}).forEach(([mk,m])=>(m.tx||[]).forEach(x=>{
+    add(storedDupKey(x,mk),1);
+    // moved between rows before the direction was kept (e.g. a transfer OUT put in an income row):
+    // its row no longer tells which way the money went — recognise it either way
+    if(x.edited&&!x.dir&&!String(x.k).startsWith('skip|')){
+      const inc=/^(income|bizIncome)\|/.test(x.k||'');add(storedDupKey(Object.assign({},x,{dir:inc?'out':'in'}),mk),1);}
+  }));
   SI.files.forEach(f=>{
     // detail-only files are checked too: a transaction already listed must not be listed again
     if(f.dupNow||!f.txns)return; // (already-imported files too: what's already listed isn't listed again)
     const mine=new Map();
     f.txns.forEach(t=>{
       t.dupTx=false;
-      if(t.kind==='card'||t.kind==='invest'||t.kind==='own')return; // outside the budget anyway
+      // card bills / investments / own transfers are checked too: they're kept in the "לא נספר"
+      // list (and may have been moved into a row since) — a re-upload mustn't list them again
       const k=txDupKey(t);
       if((pool.get(k)||0)>0){t.dupTx=true;pool.set(k,pool.get(k)-1);}
       else mine.set(k,(mine.get(k)||0)+1);
