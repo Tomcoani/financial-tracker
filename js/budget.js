@@ -154,11 +154,14 @@ function budgetSavedOf(month){
 // Savings from the most recent month the client actually filled in
 // (income − expenses). Returns {saved, monthKey} or null if none.
 function budgetLastMonthSaved(){
-  // months that haven't arrived yet (e.g. rent filled ahead via 🔁) don't count
-  const keys=Object.keys(D.budgetMonths||{}).sort().filter(k=>k<=currentMonthKey());
+  // months that haven't arrived yet (e.g. rent filled ahead via 🔁) don't count.
+  // With several accounts (budget-accounts.js) the household's months are added together.
+  const maps=typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];
+  const keys=[...new Set(maps.flatMap(mm=>Object.keys(mm)))].sort().filter(k=>k<=currentMonthKey());
   for(let i=keys.length-1;i>=0;i--){
-    const m=D.budgetMonths[keys[i]],s=budgetSavedOf(m);
-    if((s.inc||s.exp)>0)return {saved:s.inc-s.exp,monthKey:keys[i]};
+    let inc=0,exp=0;
+    maps.forEach(mm=>{if(mm[keys[i]]){const s=budgetSavedOf(mm[keys[i]]);inc+=s.inc;exp+=s.exp;}});
+    if((inc||exp)>0)return {saved:inc-exp,monthKey:keys[i]};
   }
   return null;
 }
@@ -182,6 +185,8 @@ function renderGoalsSavingsTile(){
 }
 function renderBudget(){
   migrateBudget();
+  // accounts bar; the "all accounts" view replaces the normal page (budget-accounts.js)
+  if(typeof budgetAccRender==='function'&&budgetAccRender())return;
   ensureBizRows(curBudget());
   renderBudgetMonthSelect();
   renderBudgetProfile();

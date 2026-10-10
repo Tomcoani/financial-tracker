@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=85">
+<link rel="stylesheet" href="styles/main.css?v=86">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -142,7 +142,7 @@
       <div class="card" style="background:linear-gradient(135deg,rgba(66,235,214,.06),rgba(66,235,214,.01))">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
           <div class="ch-title" style="margin:0">💵 התנהלות חודשית</div>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <div id="budget-month-controls" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-size:12px;color:var(--t3)">חודש:</span>
             <select id="budget-month-select" onchange="budgetMonthSelect(this)"
               style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:4px 8px"></select>
@@ -152,6 +152,8 @@
               style="background:var(--s2);border:1px solid rgba(239,68,68,.35);border-radius:8px;color:#fca5a5;font-size:13px;cursor:pointer;padding:4px 8px">🗑</button>
           </div>
         </div>
+        <!-- Accounts (e.g. one per partner + a joint one) — see budget-accounts.js -->
+        <div id="budget-acc-bar"></div>
         <div id="budget-month-picker" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;background:var(--s2);border:1px solid var(--teal-border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
           <span id="budget-pick-label" style="font-size:12.5px;color:var(--t2);font-weight:600">איזה חודש להוסיף?</span>
           <select id="budget-pick-month" style="background:var(--s1);border:1px solid var(--border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:13px;font-weight:700;padding:5px 8px"></select>
@@ -173,6 +175,9 @@
         </button>
         <div id="budget-copy-prev-hint" style="display:none;font-size:10.5px;color:var(--t3);margin-top:4px">ממלא רק שדות ריקים לפי שם הקטגוריה — סכומים שכבר הקלדתם לא יידרסו.</div>
       </div>
+      <!-- "All accounts" view: one combined summary + per account (read-only) -->
+      <div id="budget-combined" style="display:none"></div>
+      <div id="budget-edit-area">
       <div class="card" id="budget-profile"></div>
       <div id="budget-dup-notice"></div>
       <div id="budget-summary"></div>
@@ -209,6 +214,7 @@
           style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--white);font-family:var(--font);font-size:13px;line-height:1.6;resize:vertical;outline:none"
           onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'"></textarea>
       </div>
+      </div><!-- /budget-edit-area -->
     </div>
 
     <!-- GOALS -->
@@ -840,17 +846,18 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=85"></script>
-<script defer src="js/cashflow-goals.js?v=85"></script>
-<script defer src="js/pension.js?v=85"></script>
-<script defer src="js/networth.js?v=85"></script>
-<script defer src="js/portfolio.js?v=85"></script>
-<script defer src="js/dashboard.js?v=85"></script>
-<script defer src="js/settings.js?v=85"></script>
-<script defer src="js/admin.js?v=85"></script>
-<script defer src="js/misc.js?v=85"></script>
-<script defer src="js/budget.js?v=85"></script>
-<script defer src="js/budget-detail.js?v=85"></script>
-<script defer src="js/statement-import.js?v=85"></script>
+<script defer src="js/core.js?v=86"></script>
+<script defer src="js/cashflow-goals.js?v=86"></script>
+<script defer src="js/pension.js?v=86"></script>
+<script defer src="js/networth.js?v=86"></script>
+<script defer src="js/portfolio.js?v=86"></script>
+<script defer src="js/dashboard.js?v=86"></script>
+<script defer src="js/settings.js?v=86"></script>
+<script defer src="js/admin.js?v=86"></script>
+<script defer src="js/misc.js?v=86"></script>
+<script defer src="js/budget.js?v=86"></script>
+<script defer src="js/budget-detail.js?v=86"></script>
+<script defer src="js/budget-accounts.js?v=86"></script>
+<script defer src="js/statement-import.js?v=86"></script>
 </body>
 </html>
