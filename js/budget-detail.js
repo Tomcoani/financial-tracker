@@ -168,6 +168,34 @@ function _budgetInvestRow(m){
   if(!Array.isArray(m.invest)||!m.invest.length)m.invest=INVEST_DEFAULT_ROWS();
   return m.invest.find(r=>/שוק ההון|השקע/.test(r.name||''))||m.invest[0];
 }
+// Automatic, once per month (m.invMig): bank transfers TO a broker (פסגות, מיטב, אקסלנס...) that
+// sit in an income row (moved there by hand before) or in "לא נספר" (older uploads) go to the
+// "📈 העברה להשקעות" section. Money that came BACK from investments is left alone. An income row
+// left holding nothing but the same amount again (the doubling fixed in v=109) is removed.
+const _B_TO_BROKER=/(^|[\s.])ל(פסגות|מיטב|אקסלנס|אלטשולר|אינטראקטיב|בלינק|ספארק|אנליסט)|^קניה|קרן כספית/;
+function budgetAutoInvest(){
+  if(!(window.SIX&&SIX.isInvest))return; // importer not loaded yet — try on the next render
+  // tax withheld on securities is a tax, not an investment
+  const isInv=n=>SIX.isInvest(n)&&!/(^|\s)מס ני"?ע|ניכוי מס/.test(n);
+  let moved=0,sum=0;
+  Object.values(D.budgetMonths||{}).forEach(m=>{
+    if(!m||m.invMig||!Array.isArray(m.tx))return;
+    m.invMig=1;
+    const out=t=>/^עו"ש/.test(t.s||'')&&!t.off&&isInv(t.n)&&(t.dir==='out'||(!t.dir&&_B_TO_BROKER.test(t.n)));
+    const list=m.tx.filter(t=>(/^(income|bizIncome)\|/.test(t.k||'')||t.k==='skip|invest')&&out(t));
+    if(!list.length)return;
+    const dest=_budgetInvestRow(m),destK='invest|'+dest.name.trim(),fromRows={};
+    list.forEach(t=>{if(t.k!=='skip|invest')fromRows[t.k]=(fromRows[t.k]||0)+t.a;t.k=destK;t.dir='out';t.edited=true;dest.amount=String(Math.round(_bNum(dest.amount)+t.a));moved++;sum+=t.a;});
+    Object.entries(fromRows).forEach(([k,s])=>{
+      const [sec,name]=k.split('|'),row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
+      const left=Math.max(0,_bNum(row.amount)-s),still=m.tx.some(x=>x.k===k);
+      // nothing else listed, and what's left is zero or exactly the same amount again → it was doubled
+      if(!still&&(left<1||Math.abs(left-s)<1))m[sec]=m[sec].filter(r=>r!==row);
+      else row.amount=String(Math.round(left));
+    });
+  });
+  if(moved){touchSection('budget');markDirty();showToast(`📈 ${moved} העברות לבתי השקעות (${fmt(sum)}) עברו אוטומטית ל"העברה להשקעות" — הן לא הכנסה ולא הוצאה`);}
+}
 // Older uploads put transfers TO investments in "לא נספר" — move this month's into the section
 function budgetSkipInvestToRow(){
   const m=curBudget(),list=(m.tx||[]).filter(x=>x.k==='skip|invest'&&x.dir!=='in');if(!list.length)return;

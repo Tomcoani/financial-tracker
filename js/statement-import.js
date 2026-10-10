@@ -744,7 +744,12 @@ function rebuild(){
     if(t.dupTx){t.cat='skip';t.target='skip';t.how='dup';return;} // already recorded — never twice
     t.cat=guessCat(t);
     t.biz=isBiz(t);
-    const lt=learnedTarget(t.mk);
+    let lt=learnedTarget(t.mk);
+    // A transfer TO investments goes to "📈 העברה להשקעות" even if it was once filed as income or
+    // "לא נספר" (before that section existed); money coming BACK from investments is never income.
+    // Only a choice made right now overrides it.
+    if(t.kind==='invest'&&lt!==null&&SI.session[t.mk]===undefined&&
+      (/^(income|bizIncome)\|/.test(lt)||(!t.income&&lt==='skip')))lt=null;
     if(t.income){
       // a remembered income row is used unless the client just flipped personal/business
       if(lt!==null&&(SI.session[t.mk]!==undefined||SI.bizSession[t.mk]===undefined)){
