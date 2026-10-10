@@ -148,7 +148,7 @@ function renderBudgetCombined(){
   const lines=accs.map(a=>{
     const m=budgetAccMonths(a.id)[k],p=budgetAccProfile(a.id),comb=!!(p.selfEmployed&&p.bizMode!=='separate');
     if(!m)return {a,has:false,inc:0,needs:0,wants:0,biz:0,inv:0,exp:0,saved:0};
-    const s=budgetSavedOf(m,p),biz=comb?sum(m.business):0;
+    const s=budgetSavedOf(m,p,budgetAccMonths(a.id)),biz=comb?sum(m.business)+vatSplitAdj(budgetAccMonths(a.id),k,p):0;
     return {a,has:true,m,comb,inc:s.inc,needs:sum(m.needs),wants:sum(m.wants),biz,inv:s.inv||0,exp:s.exp,saved:s.inc-s.exp};
   });
   const T=lines.reduce((t,l)=>{['inc','needs','wants','biz','inv','exp','saved'].forEach(f=>t[f]+=l[f]);return t;},{inc:0,needs:0,wants:0,biz:0,inv:0,exp:0,saved:0});

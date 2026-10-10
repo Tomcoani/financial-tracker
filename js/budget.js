@@ -113,14 +113,48 @@ function lastVatPaidBefore(key){
   for(let i=keys.length-1;i>=0;i--){const v=_vatOf(D.budgetMonths[keys[i]]);if(v>0)return v;}
   return 0;
 }
+// Splitting a bi-monthly VAT payment: half in the month it was paid, half in the month before
+// (the one with no payment) — a "virtual" expense there: the money actually left the next month.
+// Only the budget's figures use the split; the stored amounts and the bank check stay real cash.
+// A payment in month M is for the reporting period M−2…M−1.
+function _bKeyShift(k,d){const [y,m]=String(k).split('-').map(Number);const t=new Date(y,m-1+d,1);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');}
+function vatSplitOn(prof){const p=prof||D.budgetProfile||{};return !!(p.selfEmployed&&p.bizType==='murshe'&&p.vatBimonthly&&p.vatSplit);}
+// {eff, virt, est}: the VAT this month counts for when splitting; virt = the half borrowed from next
+// month's payment (est = estimated from the last payment, next month not filled in yet)
+function vatSplitInfo(months,key){
+  const a=_vatOf(months[key]),next=months[_bKeyShift(key,1)],an=_vatOf(next);
+  if(a>0)return {eff:a/2,virt:0,est:false};
+  if(an>0)return {eff:an/2,virt:an/2,est:false};
+  // the payment month isn't filled yet → estimate from the most recent payment
+  const prev=Object.keys(months).sort().filter(k=>k<key).reverse().map(k=>_vatOf(months[k])).find(v=>v>0)||0;
+  return {eff:prev/2,virt:prev/2,est:true};
+}
+// how much the split changes a month's business payments (0 when not splitting)
+function vatSplitAdj(months,key,prof){
+  if(!vatSplitOn(prof)||!months||!months[key])return 0;
+  return vatSplitInfo(months,key).eff-_vatOf(months[key]);
+}
 function vatNoticeHtml(){
   if(!vatBimonthlyOn())return '';
-  const cur=_vatOf(curBudget());
+  const key=D.budgetCurMonth,cur=_vatOf(curBudget()),split=vatSplitOn();
   const box=(c,txt)=>`<div style="font-size:11.5px;line-height:1.7;color:${c};background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;margin-bottom:10px">${txt}</div>`;
-  if(cur>0)return box('var(--t2)',`💡 זה <b>חודש תשלום מע"מ</b>. בפועל זה כ־<b>${iln(fmt(cur/2))}</b> לכל חודש — שווה להפריש את הסכום הזה כל חודש, גם בחודשים בלי תשלום.`);
-  const prev=lastVatPaidBefore(D.budgetCurMonth);
-  if(prev>0)return box('var(--amber)',`⚠️ <b>החודש לא שולם מע"מ</b> — בחודש הבא צפוי תשלום של כ־<b>${iln(fmt(prev))}</b>. חלק מהכסף ש"נשאר" החודש שמור בעצם לתשלום הזה.`);
-  return box('var(--t3)','💡 מדווחים מע"מ פעם בחודשיים: בחודש התשלום רשמו את הסכום המלא, ובחודש שאין תשלום השאירו 0.');
+  const mName=k=>fmtBudgetMonth(k).split(' ')[0];
+  const toggle=(a,b)=>`<label style="display:flex;align-items:center;gap:7px;margin-top:6px;cursor:pointer;color:var(--t2)">
+      <input type="checkbox" ${split?'checked':''} onchange="setBudgetProfile('vatSplit',this.checked)" style="accent-color:var(--teal)">
+      לחלק כל תשלום בין שני החודשים (כאן: ${mName(a)} ו${mName(b)})</label>`;
+  if(cur>0){
+    const per=`על תקופת הדיווח <b>${mName(_bKeyShift(key,-2))}–${mName(_bKeyShift(key,-1))}</b>`;
+    return box('var(--t2)',`💡 זה <b>חודש תשלום מע"מ</b> — ${per}. בפועל זה כ־<b>${iln(fmt(cur/2))}</b> לכל חודש.`
+      +(split?`<div style="margin-top:4px;color:var(--teal)">✓ מחולק: בחישוב של החודש נספר רק חצי (${iln(fmt(cur/2))}), והחצי השני מופיע ב${mName(_bKeyShift(key,-1))} כהוצאה מדומה.</div>`
+        :' שווה להפריש את הסכום הזה כל חודש, גם בחודשים בלי תשלום.')
+      +toggle(_bKeyShift(key,-1),key));
+  }
+  const info=vatSplitInfo(D.budgetMonths,key),nextK=_bKeyShift(key,1);
+  if(split&&info.virt>0)return box('var(--t2)',`📎 <b>הוצאה מדומה — מע"מ ${iln(fmt(info.virt))}</b>: חצי מהתשלום של ${mName(nextK)} (על ${mName(_bKeyShift(key,-1))}–${mName(key)})${info.est?' — <i>הערכה לפי התשלום הקודם, עד שתמלאו את '+mName(nextK)+'</i>':''}.
+      <div style="margin-top:2px;color:var(--t3)">הסכום ירד בפועל בחודש העוקב, אבל לצורכי החלוקה הוא מוצג גם בחודש הזה ונכלל בחישוב.</div>`+toggle(key,nextK));
+  const prev=lastVatPaidBefore(key);
+  if(prev>0)return box('var(--amber)',`⚠️ <b>החודש לא שולם מע"מ</b> — בחודש הבא צפוי תשלום של כ־<b>${iln(fmt(prev))}</b>. חלק מהכסף ש"נשאר" החודש שמור בעצם לתשלום הזה.`+toggle(key,nextK));
+  return box('var(--t3)','💡 מדווחים מע"מ פעם בחודשיים: בחודש התשלום רשמו את הסכום המלא, ובחודש שאין תשלום השאירו 0.'+toggle(key,nextK));
 }
 // ── Income guidance: gross vs net depends on the profile ──
 // If business income is recorded AFTER tax while the tax payments are also listed
@@ -183,14 +217,16 @@ function iln(s){return '<span style="direction:ltr;unicode-bidi:isolate;display:
 function budgetTotal(sec){
   return (curBudget()[sec]||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
 }
-function budgetSavedOf(month,prof){
+function budgetSavedOf(month,prof,months){
   const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
   // Combined mode: business payments count as household expenses.
   // Separate mode: the business has its own cashflow, outside the household.
   // prof = that account's employment profile (several accounts); default the active one.
+  // months = that account's months (to split bi-monthly VAT); default the active account's.
   const p=prof||D.budgetProfile||{};
   const comb=!!(p.selfEmployed&&p.bizMode!=='separate');
-  const biz=comb?sum(month.business):0;
+  const ms=months||D.budgetMonths||{},key=Object.keys(ms).find(k=>ms[k]===month);
+  const biz=comb?sum(month.business)+(key?vatSplitAdj(ms,key,p):0):0;
   // deposits to pension / study fund leave the cashflow too (counted in exp), but are reported
   // apart as inv — they're savings, not spending
   const inv=comb?sum(month.bizInvest):0;
@@ -205,7 +241,7 @@ function budgetLastMonthSaved(){
   const keys=[...new Set(ents.flatMap(e=>Object.keys(e.months)))].sort().filter(k=>k<=currentMonthKey());
   for(let i=keys.length-1;i>=0;i--){
     let inc=0,exp=0;
-    ents.forEach(e=>{const mm=e.months;if(mm[keys[i]]){const s=budgetSavedOf(mm[keys[i]],e.profile);inc+=s.inc;exp+=s.exp;}});
+    ents.forEach(e=>{const mm=e.months;if(mm[keys[i]]){const s=budgetSavedOf(mm[keys[i]],e.profile,mm);inc+=s.inc;exp+=s.exp;}});
     if((inc||exp)>0)return {saved:inc-exp,monthKey:keys[i]};
   }
   return null;
@@ -564,7 +600,7 @@ function renderBizNet(){
   if(!el)return;
   if(!bizSeparate()){el.innerHTML='';return;}
   // deposits to investments leave the business cashflow, but are shown apart (they're savings)
-  const inc=budgetTotal('bizIncome'),exp=budgetTotal('business'),inv=budgetTotal('bizInvest'),net=inc-exp-inv,pos=net>=0;
+  const inc=budgetTotal('bizIncome'),exp=budgetTotal('business')+vatSplitAdj(D.budgetMonths,D.budgetCurMonth),inv=budgetTotal('bizInvest'),net=inc-exp-inv,pos=net>=0;
   el.innerHTML=`<div style="margin-top:12px;background:var(--s2);border:1px solid rgba(167,139,250,.35);border-radius:10px;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <span style="font-size:12.5px;color:var(--t2);font-weight:700">${pos?'נשאר בעסק החודש':'גירעון בעסק החודש'}</span>
@@ -607,7 +643,9 @@ function renderBudgetSummary(){
   renderBudgetTrend();
   renderBudgetBank(); // the bank check depends on the same totals
   const inc=budgetTotal('income'),needs=budgetTotal('needs'),wants=budgetTotal('wants');
-  const biz=bizCombined()?budgetTotal('business'):0; // business payments (combined mode)
+  // business payments (combined mode); a bi-monthly VAT payment may be split over two months
+  const vatAdj=bizCombined()?vatSplitAdj(D.budgetMonths,D.budgetCurMonth):0;
+  const biz=bizCombined()?budgetTotal('business')+vatAdj:0;
   // deposits to pension / study fund (combined mode): out of the cashflow, but savings — shown apart
   const inv=bizCombined()?budgetTotal('bizInvest'):0;
   const exp=needs+wants+biz,saved=inc-exp-inv;
@@ -676,7 +714,8 @@ function renderBudgetSummary(){
       הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''}${inv>0?' − הפקדות להשקעה '+iln(fmt(inv)):''} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
       ${inv>0?`<div style="margin-top:6px;font-size:12px;color:#60a5fa;font-weight:700">💪 סה"כ חיסכון החודש: ${iln(fmt(Math.max(0,saved)+inv))} — ${iln(fmt(Math.max(0,saved)))} שנשארו פנויים + ${iln(fmt(inv))} שהופקדו לפנסיה / השתלמות</div>`:''}
       ${bizSeparate()?'<div style="margin-top:4px">💼 העסק מנוהל בתזרים נפרד — ראו את כרטיס "עסק" למטה.</div>':''}
-      ${(bizCombined()&&vatBimonthlyOn()&&!_vatOf(curBudget())&&lastVatPaidBefore(D.budgetCurMonth)>0)
+      ${vatAdj?'<div style="margin-top:4px">🧾 מע"מ מחולק בין חודשים: '+(vatAdj>0?'כולל הוצאה מדומה של '+iln(fmt(vatAdj))+' (חצי מתשלום החודש הבא)':'נספר רק חצי מתשלום החודש ('+iln(fmt(-vatAdj))+' עברו לחודש הקודם)')+'</div>':''}
+      ${(bizCombined()&&vatBimonthlyOn()&&!vatSplitOn()&&!_vatOf(curBudget())&&lastVatPaidBefore(D.budgetCurMonth)>0)
         ?`<div style="margin-top:6px;color:var(--amber);font-weight:700">⚠️ החודש לא שולם מע"מ — בחודש הבא צפוי תשלום של כ־${iln(fmt(lastVatPaidBefore(D.budgetCurMonth)))}, אז לא כל מה שנשאר פנוי באמת.</div>`:''}
     </div>
   </div>`;
