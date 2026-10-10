@@ -446,7 +446,7 @@ function renderBudgetSection(sec){
     // Rows filled from a statement keep their transactions — a button opens them under the row
     const txs=budgetRowTx(sec,row.name),open=txs.length&&_budgetOpenRow===sec+'|'+(row.name||'').trim();
     const off=!!row.skip; // "לא לספור": visible, but left out of the figures
-    html+=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px${off?';opacity:.55':''}">
+    html+=`<div id="brow-${sec}-${i}" style="display:flex;gap:8px;align-items:center;margin-bottom:6px${off?';opacity:.55':''}">
       <input type="text" value="${esc(row.name||'')}" placeholder="${meta.ph}" dir="rtl"
         oninput="updateBudgetRow('${sec}',${i},'name',this.value)"
         style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:var(--font);font-size:13px;padding:8px 10px;text-align:right"/>

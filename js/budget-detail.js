@@ -353,6 +353,36 @@ function budgetRemoveDups(){
   showToast('הוסרו '+d.length+' כפילויות ✓ הסכומים עודכנו');
 }
 
+// Jump to a row (from the gap breakdown) and flash it
+function budgetGoToRow(sec,nameEnc){
+  const name=decodeURIComponent(nameEnc);
+  const i=(curBudget()[sec]||[]).findIndex(r=>(r.name||'').trim()===name);
+  const el=document.getElementById('brow-'+sec+'-'+i);if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.style.transition='box-shadow .3s';el.style.boxShadow='0 0 0 2px var(--teal)';el.style.borderRadius='9px';
+  setTimeout(()=>{el.style.boxShadow='';},2200);
+}
+// Card statements recorded this month vs card bills paid from the bank — per card, so it's clear
+// which card makes the difference. Statements are labelled "issuer digits" (e.g. "כאל 1234");
+// a bank bill carries the issuer and sometimes the card digits.
+function budgetCardSplitHtml(m,bk){
+  const isBank=x=>/^עו"ש/.test(x.s||''),isInc=k=>/^(income|bizIncome)\|/.test(k||'');
+  const st={};
+  (m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).forEach(x=>{const k=(x.s||'כרטיס').trim();st[k]=(st[k]||0)+x.a;});
+  const bills={};
+  (bk.cards||[]).forEach(c=>{const k=(c.iss||'כרטיס')+(c.ref?' '+c.ref:'');(bills[k]=bills[k]||{a:0,d:[]}).a+=c.a;bills[k].d.push(_bShortDate(c.d));});
+  const sLine=Object.entries(st).sort((a,b)=>b[1]-a[1]).map(([k,v])=>esc(k)+' '+iln(fmt(v))).join(' · ')||'—';
+  const bLine=Object.entries(bills).sort((a,b)=>b[1].a-a[1].a).map(([k,v])=>esc(k)+' '+iln(fmt(v.a))+' <span style="opacity:.75">('+v.d.join(', ')+')</span>').join(' · ')||'—';
+  // per issuer: which card is off
+  const iss=s=>String(s).split(' ')[0];
+  const byIss={};
+  Object.entries(st).forEach(([k,v])=>{const i=iss(k);(byIss[i]=byIss[i]||{st:0,bill:0}).st+=v;});
+  Object.entries(bills).forEach(([k,v])=>{const i=iss(k);(byIss[i]=byIss[i]||{st:0,bill:0}).bill+=v.a;});
+  const off=Object.entries(byIss).filter(([,v])=>Math.abs(v.st-v.bill)>=1)
+    .map(([i,v])=>`<b>${esc(i)}</b>: ${v.st>v.bill?'בפירוטים '+iln(fmt(v.st-v.bill))+' יותר ממה שירד מהעו"ש':'ירד מהעו"ש '+iln(fmt(v.bill-v.st))+' יותר מהפירוטים'}${!v.st?' — לא הועלה פירוט':''}${!v.bill?' — לא נמצא חיוב בעו"ש הזה':''}`);
+  return `<div style="line-height:1.8">📄 פירוטים שנרשמו החודש: ${sLine}<br>🏦 חיובי כרטיס בעו"ש: ${bLine}</div>`
+    +(off.length?`<div style="margin-top:2px;color:var(--t2)">ההפרש: ${off.join(' · ')}</div>`:'');
+}
 // ── Where does the gap between the budget and the account come from? ──
 // gap = (closing − opening) − (income − expenses − investments − own transfers). Everything the
 // bank file counted appears on both sides and cancels out, so what's left is exactly:
@@ -365,7 +395,7 @@ function budgetGapHtml(m,bk,diff,open){
   const isBank=x=>/^עו"ש/.test(x.s||''),isInc=k=>/^(income|bizIncome)\|/.test(k||'');
   const listed=(sec,n)=>(m.tx||[]).filter(x=>!x.off&&x.k===sec+'|'+n).reduce((s,x)=>s+x.a,0);
   const hand=secs=>{const out=[];secs.forEach(sec=>(m[sec]||[]).forEach(r=>{const n=(r.name||'').trim();if(!n)return;
-    const v=_bNum(r.amount)-listed(sec,n);if(Math.abs(v)>=1)out.push({n,a:v});}));return out;};
+    const v=_bNum(r.amount)-listed(sec,n);if(Math.abs(v)>=1)out.push({n,a:v,sec});}));return out;};
   const manExp=hand(['needs','wants','business','bizInvest']),manInc=hand(['income','bizIncome']);
   const cardTx=(m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).reduce((s,x)=>s+x.a,0);
   const cardBills=(bk.cards||[]).reduce((s,c)=>s+c.a,0);
@@ -375,7 +405,7 @@ function budgetGapHtml(m,bk,diff,open){
   const comps=[
     {lbl:'הוצאות שהוקלדו ידנית — לא עברו בעו"ש הזה (מזומן, חשבון אחר, 🔁 הוצאה קבועה...)',v:tot(manExp),items:manExp},
     {lbl:'פירוטי אשראי שנרשמו בחודש הזה, לעומת חיובי האשראי שירדו בפועל מהעו"ש',v:cardTx-cardBills,
-      note:`בפירוטים ${iln(fmt(cardTx))} · ירד מהעו"ש ${iln(fmt(cardBills))}`},
+      note:budgetCardSplitHtml(m,bk)},
     {lbl:'כסף שנכנס לעו"ש וסומן "לא לספור"',v:tot(skIn),items:skIn.map(x=>({n:_bShortDate(x.d)+' · '+x.n,a:x.a}))},
     {lbl:'כסף שיצא מהעו"ש וסומן "לא לספור"',v:-tot(skOut),items:skOut.map(x=>({n:_bShortDate(x.d)+' · '+x.n,a:x.a}))},
     {lbl:'הכנסות שהוקלדו ידנית — לא עברו בעו"ש הזה',v:-tot(manInc),items:manInc}
@@ -385,7 +415,7 @@ function budgetGapHtml(m,bk,diff,open){
   const line=c=>`<div style="padding:6px 0;border-bottom:1px solid var(--border)">
     <div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span style="color:var(--t1)">${c.lbl}</span><b style="white-space:nowrap;color:${(c.v>0)===(diff>0)?'var(--amber)':'var(--t2)'}">${sgn(c.v)}</b></div>
     ${c.note?`<div style="font-size:11px;color:var(--t3)">${c.note}</div>`:''}
-    ${c.items&&c.items.length?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${c.items.slice(0,6).map(x=>esc(x.n)+' '+fmt(x.a)).join(' · ')}${c.items.length>6?' · ועוד '+(c.items.length-6):''}</div>`:''}
+    ${c.items&&c.items.length?`<div style="font-size:11px;color:var(--t3);margin-top:2px;line-height:1.8">${c.items.slice(0,8).map(x=>x.sec?`<button onclick="budgetGoToRow('${x.sec}','${encodeURIComponent(x.n).replace(/'/g,'%27')}')" title="לקפוץ לשורה" style="background:none;border:none;padding:0;color:var(--teal);font-family:var(--font);font-size:11px;cursor:pointer;text-decoration:underline dotted">${esc(x.n)} (${_BSEC_LBL[x.sec]||''}) ${fmt(x.a)}</button>`:esc(x.n)+' '+fmt(x.a)).join(' · ')}${c.items.length>8?' · ועוד '+(c.items.length-8):''}</div>`:''}
   </div>`;
   return `<details${open?' open':''} style="margin-top:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
     <summary style="cursor:pointer;font-size:12.5px;font-weight:800;color:var(--teal)">🔍 מאיפה הפער של ${iln(fmt(Math.abs(diff)))}?</summary>
