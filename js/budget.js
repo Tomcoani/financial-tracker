@@ -285,6 +285,7 @@ function renderBudget(){
   // accounts bar; the "all accounts" view replaces the normal page (budget-accounts.js)
   if(typeof budgetAccRender==='function'&&budgetAccRender())return;
   ensureBizRows(curBudget());
+  if(typeof budgetAutoFixSigns==='function')budgetAutoFixSigns(); // bank files misread up to v=105 (budget-detail.js)
   if(typeof budgetAutoInvest==='function')budgetAutoInvest(); // transfers to brokers → 📈 (budget-detail.js)
   renderBudgetMonthSelect();
   renderBudgetProfile();

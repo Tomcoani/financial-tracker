@@ -196,6 +196,40 @@ function budgetAutoInvest(){
   });
   if(moved){touchSection('budget');markDirty();showToast(`📈 ${moved} העברות לבתי השקעות (${fmt(sum)}) עברו אוטומטית ל"העברה להשקעות" — הן לא הכנסה ולא הוצאה`);}
 }
+// Automatic, once per month (m.signFix): up to v=105 a bank file with one signed "זכות/חובה"
+// column (Discount) was read wrongly — money that LEFT the account (card bills, rent, transfers)
+// went into income rows, mostly with a NEGATIVE amount (a correctly imported bank transaction is
+// never negative in a row). Moving such an item out of a row then ADDED to that row. In a month
+// where that happened, that whole bank upload is undone (its transactions — same upload time as
+// the negative ones), and every row it touched is set back to exactly its remaining transactions
+// (empty if none). Re-uploading the bank file then brings it all in correctly.
+function budgetAutoFixSigns(){
+  let fixed=0,months=0;
+  const isBank=x=>/^עו"ש/.test(x.s||'');
+  const stamp=x=>parseInt(String(x.id||'').split(':').pop(),36)||0;
+  Object.values(D.budgetMonths||{}).forEach(m=>{
+    if(!m||m.signFix||!Array.isArray(m.tx))return;
+    m.signFix=1;
+    const neg=m.tx.filter(x=>isBank(x)&&!String(x.k||'').startsWith('skip|')&&x.a<0);
+    if(!neg.length)return;
+    const times=neg.map(stamp);
+    const sameUpload=x=>isBank(x)&&times.some(t=>Math.abs(stamp(x)-t)<10000); // within 10 s
+    const bad=m.tx.filter(sameUpload);
+    const touched=new Set(bad.map(x=>x.k).filter(k=>!String(k).startsWith('skip|')));
+    m.tx.filter(x=>isBank(x)&&!bad.includes(x)).forEach(x=>{if(!String(x.k).startsWith('skip|'))touched.add(x.k);});
+    m.tx=m.tx.filter(x=>!bad.includes(x));
+    touched.forEach(k=>{
+      const [sec,name]=k.split('|'),row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
+      const rest=m.tx.filter(x=>!x.off&&x.k===k).reduce((s,x)=>s+x.a,0);
+      row.amount=rest>0?String(Math.round(rest)):'';
+    });
+    delete m.bank; // its balances came from the misread file — the re-upload brings them back
+    fixed+=bad.length;months++;
+  });
+  if(fixed){touchSection('budget');markDirty();
+    showToast(`🧹 נמצאה העלאה ישנה של קובץ עו"ש שנקלט הפוך (כסף שיצא נרשם כהכנסה) ב־${months} חודשים — היא בוטלה (${fixed} פעולות). העלו שוב את קובץ העו"ש של החשבון הזה — הכל ייכנס נכון`);}
+  return fixed;
+}
 // Older uploads put transfers TO investments in "לא נספר" — move this month's into the section
 function budgetSkipInvestToRow(){
   const m=curBudget(),list=(m.tx||[]).filter(x=>x.k==='skip|invest'&&x.dir!=='in');if(!list.length)return;
