@@ -1061,7 +1061,8 @@ function bankStats(){
 // statement) with its date — to match against the card bills seen in the bank account
 function cardSegs(){
   const out={};
-  SI.files.filter(f=>f.source!=='דף בנק'&&!f.dupNow&&f.txns&&f.txns.length) // (re-uploads too: saving them again is harmless — duplicates are skipped).forEach(f=>{
+  // (re-uploads too: saving them again is harmless — duplicates are skipped)
+  SI.files.filter(f=>f.source!=='דף בנק'&&!f.dupNow&&f.txns&&f.txns.length).forEach(f=>{
     const g={};
     f.txns.forEach(t=>{const k=t.month+'|'+(t.seg!==undefined&&f.segDates&&f.segDates[t.seg]?t.seg:'all');
       (g[k]=g[k]||{month:t.month,seg:t.seg,sum:0,card:t.card}).sum+=t.val;});
