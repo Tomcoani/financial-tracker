@@ -278,7 +278,11 @@ function budgetTxSave(id){
   const wasOff=!!t.off;
   const moved=k!==t.k;
   t.dir=dir; // kept wherever it moves (see _bTxDir)
+  if(a!==t.a&&t.a0===undefined)t.a0=t.a; // the file's amount — the duplicate check keeps using it
   t.k=k;t.a=a;t.edited=true;_budgetEditTx=null;
+  // remember the merchant's new place for the next uploads too (like the "all months" popup does)
+  if(moved&&!wasOff){const mk=_bMk(t.n);if(mk){const [sec,name]=k.split('|');
+    D.importMerchants=D.importMerchants||{};D.importMerchants[mk]=sec==='skip'?'skip':{sec,name};}}
   touchSection('budget');markDirty();renderBudget();
   showToast(moved?'העסקה הועברה ל"'+k.split('|')[1]+'" ✓ הסכומים עודכנו':'הסכום עודכן ✓');
   if(moved&&!wasOff)budgetBulkOffer(t,k);
@@ -370,6 +374,8 @@ function budgetTxRemove(id){
   const b=curBudget(),t=(b.tx||[]).find(x=>x.id===id);if(!t)return;
   if(!confirm('להסיר את "'+t.n+'" ('+fmt(t.a)+') מהקטגוריה? הסכום יירד מהשורה.'))return;
   if(!t.off)_budgetMoveAmt(t.k,-t.a);
+  // remembered, so uploading the same file again doesn't bring it back
+  (b.txGone=b.txGone||[]).push({d:t.d,a:t.a0!==undefined?t.a0:t.a,dir:_bTxDir(t),s:t.s||'',k:t.k});
   b.tx=b.tx.filter(x=>x.id!==id);_budgetEditTx=null;
   touchSection('budget');markDirty();renderBudget();
   showToast('העסקה הוסרה ✓');

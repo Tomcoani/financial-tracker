@@ -766,13 +766,17 @@ function rebuild(){
     // for the detail only — its amounts are already in the budget and are NOT added again
     f.detailOnly=f.dup&&!f.dupNow&&recs.length>0&&recs.every(x=>!x.v);
     if(f.txns.length&&!f.dup)seen.add(f.fp);
-    if(!f.dup)SI.txns.push(...f.txns);
+    // A bank file imported before (with its transaction list): imported again transaction by
+    // transaction — what's already in the budget is recognised (markDupTx) and not counted again,
+    // what's missing (e.g. taken out by the v=114 clean-up) comes back. Removed by the client = stays out.
+    f.refill=f.dup&&!f.dupNow&&!f.detailOnly&&f.source==='דף בנק';
+    if(!f.dup||f.refill)SI.txns.push(...f.txns);
   });
   SI.detailTx=SI.files.filter(f=>f.detailOnly).flatMap(f=>f.txns);
   // a bank file already imported: categorised again only to refresh the bank figures (nothing is counted)
   // a file already imported: categorised again to refresh the bank figures and to fill in missing
   // transaction lists (📋) — nothing is counted again
-  SI.statTx=SI.files.filter(f=>f.dup&&!f.detailOnly&&!f.dupNow).flatMap(f=>f.txns);
+  SI.statTx=SI.files.filter(f=>f.dup&&!f.detailOnly&&!f.dupNow&&!f.refill).flatMap(f=>f.txns);
   markDupTx();
   SI.txns.concat(SI.detailTx,SI.statTx).forEach(t=>{
     if(t.dupTx){t.cat='skip';t.target='skip';t.how='dup';return;} // already recorded — never twice
@@ -807,9 +811,11 @@ function rebuild(){
 function txDupKey(t){return ymd(t.date)+'|'+r2(Math.abs(t.val))+'|'+(t.income?'in':'out')+'|'+(t.bank?'bank':'card|'+(t.month||SI.month));}
 function storedDupKey(x,mk){const sec=String(x.k||'').split('|')[0];
   const dir=x.dir||(sec==='income'||sec==='bizIncome'?'in':'out'); // "not counted" items carry their own direction
-  return x.d+'|'+r2(Math.abs(x.a))+'|'+dir+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card|'+mk);}
+  // a0 = the amount as it came from the file (kept when the client corrects the amount)
+  return x.d+'|'+r2(Math.abs(x.a0!==undefined?x.a0:x.a))+'|'+dir+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card|'+mk);}
 function markDupTx(){
   const pool=new Map(),add=(k,n)=>pool.set(k,(pool.get(k)||0)+n);
+  Object.entries(D.budgetMonths||{}).forEach(([mk,m])=>(m.txGone||[]).forEach(x=>add(storedDupKey(x,mk),1))); // removed by the client: stays out
   Object.entries(D.budgetMonths||{}).forEach(([mk,m])=>(m.tx||[]).forEach(x=>{
     add(storedDupKey(x,mk),1);
     // moved between rows before the direction was kept (e.g. a transfer OUT put in an income row):
@@ -983,7 +989,8 @@ function reviewView(){
     else if(!f.txns.length&&f.tables.length){st='הקובץ נפתח, אבל לא הצלחנו לזהות בו את טבלת העסקאות';col='#fca5a5';}
     else if(!f.txns.length){st=f.kind==='pdf'?'הקובץ נפתח, אבל לא מצאנו בו שורות עסקה (תאריך + בית עסק + סכום)':'לא מצאנו בקובץ טבלת עסקאות';col='#fca5a5';}
     else if(f.dupNow){st='אותו פירוט כבר נבחר כאן (אולי באקסל ובפורמט PDF) — לא ייספר פעמיים';col='var(--amber)';}
-    else if(f.dup&&f.source==='דף בנק'&&!f.detailOnly){st='✓ קובץ העו"ש הזה כבר נטען — לא ייספר שוב. נעדכן רק את נתוני החשבון (יתרות ופעולות שלא נספרו), כדי להסביר פערים';col='var(--teal)';}
+    else if(f.refill){const miss=f.txns.filter(t=>!t.dupTx).length;
+      st=`✓ קובץ העו"ש הזה כבר נטען — מה שכבר רשום לא ייספר שוב. ${miss?`${miss} פעולות שחסרות בתקציב יתווספו`:'אין פעולות חסרות'}, ונתוני החשבון יתעדכנו`;col='var(--teal)';}
     else if(f.detailOnly){st='✓ הפירוט הזה כבר נטען בעבר (בגרסה קודמת). הסכומים לא ייספרו שוב — נשלים רק את רשימת העסקאות ואת ההתאמה לעו"ש';col='var(--teal)';}
     else if(f.dup){st='✓ הפירוט הזה כבר נטען — לא ייספר שוב. אם בקטגוריות חסר פירוט עסקאות (📋), נשלים אותו מהקובץ';col='var(--teal)';}
     else{
@@ -1404,7 +1411,7 @@ window.SIX={
     SIX.close();
     renderBudget();
     if(!SI.txns.length&&recovered){showToast('נוספו '+recovered+' תשלומים (עסקאות בתשלומים) שלא נספרו קודם ✓');return;}
-    if(!SI.txns.length){showToast(filled?'נוסף פירוט ל־'+filled+' עסקאות שהיו רשומות בלי פירוט ✓ (הסכומים לא השתנו)':'אין פירוט חסר להשלים — נתוני העו"ש עודכנו ✓');return;}
+    if(!SI.txns.length||!n){showToast(filled?'נוסף פירוט ל־'+filled+' עסקאות שהיו רשומות בלי פירוט ✓ (הסכומים לא השתנו)':'אין פירוט חסר להשלים — נתוני העו"ש עודכנו ✓');return;}
     showToast((keys.length>1?`מולאו ${keys.length} חודשים (${fmtBudgetMonth(keys[0])} – ${fmtBudgetMonth(keys[keys.length-1])}) מ־${n} עסקאות ✓`:`מולאו ${rowsFilled} קטגוריות מ־${n} עסקאות ב${fmtBudgetMonth(key)} ✓`)+(learnedNow?` · 🧠 זכרנו ${learnedNow} בתי עסק — בפעם הבאה הם יזוהו לבד`:' אפשר לתקן כל סכום ידנית')
       +(placeholders?` · 📈 ${placeholders} שורות "השקעות" שהוקלדו ידנית בהכנסות הוחלפו בהעברה האמיתית מהבנק`:''));
   }
