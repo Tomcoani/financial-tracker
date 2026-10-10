@@ -421,9 +421,22 @@ function budgetMatchCardBills(bills,segs){
       if(Math.abs(sum-c.a)<=1&&(!best||cnt<best.cnt))best={mask,cnt};
       if(best&&best.cnt===1)break;
     }
-    if(best)for(let i=0;i<n;i++)if(best.mask&(1<<i))pool[i].used=true;
+    if(best)for(let i=0;i<n;i++)if(best.mask&(1<<i)){pool[i].used=true;pool[i].by=c.iss;}
     return Object.assign({},c,{ok:!!best,parts:best?best.cnt:0});
   });
+}
+// Is this unmatched card bill an immediate charge? The issuer's regular bill = its biggest bill in
+// each month; immediate charges fall on other days.
+function _budgetIsImmediate(c){
+  const day=d=>+String(d||'').slice(8,10)||0,iss=c.iss||'';
+  const reg={};
+  Object.values(D.budgetMonths||{}).forEach(m=>{
+    const big=((m.bank||{}).cards||[]).filter(x=>(x.iss||'')===iss&&(!c.ref||!x.ref||x.ref===c.ref)).sort((a,b)=>b.a-a.a)[0];
+    if(big&&day(big.d))reg[day(big.d)]=(reg[day(big.d)]||0)+1;
+  });
+  const usual=Object.entries(reg).sort((a,b)=>b[1]-a[1])[0];
+  if(!usual||usual[1]<2)return false; // not enough history to tell
+  return Math.abs(day(c.d)-(+usual[0]))>2;
 }
 // Jump to a row (from the gap breakdown) and flash it
 function budgetGoToRow(sec,nameEnc){
@@ -440,7 +453,13 @@ function budgetGoToRow(sec,nameEnc){
 function budgetCardSplitHtml(m,bk){
   const isBank=x=>/^עו"ש/.test(x.s||''),isInc=k=>/^(income|bizIncome)\|/.test(k||'');
   const st={};
-  (m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).forEach(x=>{const k=(x.s||'כרטיס').trim();st[k]=(st[k]||0)+x.a;});
+  // an Excel statement doesn't name its issuer ("כרטיס 1234") — take it from the bank bill with those digits
+  const issOfRef={};(bk.cards||[]).forEach(c=>{if(c.ref&&c.iss)issOfRef[c.ref]=c.iss;});
+  // …or from the bank bill its charges matched (the bank doesn't always print the card digits)
+  const segs=(m.cardSegs||[]).map(s=>Object.assign({},s,{used:false}));budgetMatchCardBills(bk.cards||[],segs);
+  segs.forEach(s=>{if(s.used&&s.by&&s.card&&!issOfRef[s.card])issOfRef[s.card]=s.by;});
+  const lbl=s=>{const mm=s.match(/^כרטיס (\d{4})$/);return mm&&issOfRef[mm[1]]?issOfRef[mm[1]]+' '+mm[1]:s;};
+  (m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).forEach(x=>{const k=lbl((x.s||'כרטיס').trim());st[k]=(st[k]||0)+(x.dir==='in'?-x.a:x.a);});
   const bills={};
   (bk.cards||[]).forEach(c=>{const k=(c.iss||'כרטיס')+(c.ref?' '+c.ref:'');(bills[k]=bills[k]||{a:0,d:[]}).a+=c.a;bills[k].d.push(_bShortDate(c.d));});
   const sLine=Object.entries(st).sort((a,b)=>b[1]-a[1]).map(([k,v])=>esc(k)+' '+iln(fmt(v))).join(' · ')||'—';
@@ -558,7 +577,11 @@ function renderBudgetBank(){
   // Card bills ↔ uploaded card statements (same amount ±₪1, same issuer when both are known)
   const segs=(m.cardSegs||[]).map(s=>Object.assign({},s,{used:false}));
   const cards=budgetMatchCardBills(bk.cards||[],segs);
+  // A bill off the issuer's usual day with no statement yet = an immediate charge (abroad / online):
+  // it shows up on that card's NEXT statement, and is filed under this month once that's uploaded
+  cards.forEach(c=>{if(!c.ok)c.now=_budgetIsImmediate(c);});
   const missing=cards.filter(c=>!c.ok),missSum=missing.reduce((s,c)=>s+c.a,0);
+  const missReg=missing.filter(c=>!c.now),missNow=missing.filter(c=>c.now);
   const extra=segs.filter(s=>!s.used&&s.d&&bk.from&&s.d>=bk.from&&s.d<=bk.to);
   const signed=v=>iln((v>=0?'+':'−')+fmt(Math.abs(v)));
   const box=(bg,bd,html)=>`<div style="background:${bg};border:1px solid ${bd};border-radius:10px;padding:8px 10px;font-size:12.5px;line-height:1.6">${html}</div>`;
@@ -574,8 +597,9 @@ function renderBudgetBank(){
   const cardList=!cards.length?'':`<div style="font-size:12.5px;font-weight:800;margin:12px 0 4px">💳 חיובי אשראי שירדו מהחשבון</div>`
     +cards.map(c=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">
       <span>${c.ok?'✅':'⚠️'} ${esc(c.iss||'כרטיס')}${c.ref?' · '+esc(c.ref):''} <span style="color:var(--t3)">· ${_bShortDate(c.d)}</span></span>
-      <span style="white-space:nowrap">${iln(fmt(c.a))} <span style="font-size:11px;color:${c.ok?'var(--green)':'var(--amber)'}">${c.ok?'תואם לפירוט':'אין פירוט'}</span></span></div>`).join('')
-    +(missing.length?`<div style="font-size:11.5px;color:var(--amber);margin-top:4px">כדאי להעלות את פירוט הכרטיס של החיובים המסומנים ב־⚠️ — עד אז ההוצאות שבהם לא בתקציב.</div>`:'')
+      <span style="white-space:nowrap">${iln(fmt(c.a))} <span style="font-size:11px;color:${c.ok?'var(--green)':'var(--amber)'}">${c.ok?'תואם לפירוט':c.now?'חיוב מיידי — בפירוט הבא':'אין פירוט'}</span></span></div>`).join('')
+    +(missReg.length?`<div style="font-size:11.5px;color:var(--amber);margin-top:4px">כדאי להעלות את פירוט הכרטיס של החיובים המסומנים ב־⚠️ — עד אז ההוצאות שבהם לא בתקציב.</div>`:'')
+    +(missNow.length?`<div style="font-size:11.5px;color:var(--t2);margin-top:4px">⚡ <b>חיוב מיידי</b> = עסקה (בדרך כלל בחו"ל או באינטרנט) שירדה מהעו"ש מיד, לא ביום החיוב הרגיל של הכרטיס. היא תופיע <b>בפירוט של החודש הבא</b> של הכרטיס — כשתעלה אותו, ההוצאה תיכנס אוטומטית <b>לחודש הזה</b> (לפי היום שבו ירדה) ולא תיספר פעמיים.</div>`:'')
     // a statement uploaded before the matching existed has no charge data — re-uploading fixes it
     +(missing.length&&(m.imports||[]).some(x=>!x.v)?`<div style="font-size:11.5px;color:var(--t2);margin-top:4px">💡 כבר העלית את הפירוט? אם הוא הועלה לפני שנוספה ההתאמה לעו"ש — העלה אותו שוב. הסכומים לא ייספרו פעמיים, רק החיבור יושלם.</div>`:'')
     +(extra.length?`<div style="font-size:11.5px;color:var(--t3);margin-top:4px">${extra.length} חיובי כרטיס מהפירוט לא נמצאו בעו"ש (${extra.map(s=>esc(s.iss||'כרטיס')+' '+fmt(s.a)).join(', ')}) — אולי יורדים מחשבון אחר.</div>`:'');

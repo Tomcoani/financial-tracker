@@ -718,13 +718,15 @@ function rebuild(){
 // A transaction = date + amount + direction + bank-or-card. It's a duplicate when it's already
 // in the budget (month.tx of any month) or in an earlier file of this upload. Counted, not just
 // matched: two identical coffees in one file stay two, and only as many as already exist are dropped.
-function txDupKey(t){return ymd(t.date)+'|'+r2(Math.abs(t.val))+'|'+(t.income?'in':'out')+'|'+(t.bank?'bank':'card');}
-function storedDupKey(x){const sec=String(x.k||'').split('|')[0];
+// Cards also key on the billing month: an installment ("תשלום 3 מ - 12") repeats the same date and
+// amount on every month's statement, and each month's payment is real.
+function txDupKey(t){return ymd(t.date)+'|'+r2(Math.abs(t.val))+'|'+(t.income?'in':'out')+'|'+(t.bank?'bank':'card|'+(t.month||SI.month));}
+function storedDupKey(x,mk){const sec=String(x.k||'').split('|')[0];
   const dir=x.dir||(sec==='income'||sec==='bizIncome'?'in':'out'); // "not counted" items carry their own direction
-  return x.d+'|'+r2(Math.abs(x.a))+'|'+dir+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card');}
+  return x.d+'|'+r2(Math.abs(x.a))+'|'+dir+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card|'+mk);}
 function markDupTx(){
   const pool=new Map(),add=(k,n)=>pool.set(k,(pool.get(k)||0)+n);
-  Object.values(D.budgetMonths||{}).forEach(m=>(m.tx||[]).forEach(x=>add(storedDupKey(x),1)));
+  Object.entries(D.budgetMonths||{}).forEach(([mk,m])=>(m.tx||[]).forEach(x=>add(storedDupKey(x,mk),1)));
   SI.files.forEach(f=>{
     // detail-only files are checked too: a transaction already listed must not be listed again
     if(f.dupNow||!f.txns)return; // (already-imported files too: what's already listed isn't listed again)
@@ -1246,7 +1248,8 @@ window.SIX={
     // its row holds that amount without listing it (the amount is there, the detail isn't) —
     // nothing is ever added to the amounts. Unassigned merchants went to "שונות" back then.
     const fallback=t=>t.income?'income|הכנסות אחרות':t.biz?'business|'+BIZ_ROWS.other.name:'needs|שונות';
-    let filled=0;
+    let filled=0,recovered=0;
+    const statSet=new Set(SI.statTx||[]);
     (SI.detailTx||[]).concat(SI.statTx||[]).forEach(t=>{
       if(t.dupTx)return;
       const m=D.budgetMonths[txMonth(t)];if(!m)return;
@@ -1259,9 +1262,19 @@ window.SIX={
         return;
       }
       const k=t.target||fallback(t),[sec,name]=k.split('|');
-      const row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
       const a=r2(t.income?-t.val:t.val);if(a<=0)return;
       if(!Array.isArray(m.tx))m.tx=[];
+      // An installment missing from a file imported with full detail was dropped by the old duplicate
+      // check (same date + amount as last month's payment) — it was never counted, so add it now
+      if(t.inst&&!t.bank&&statSet.has(t)){
+        if(!Array.isArray(m[sec]))m[sec]=[];
+        let r=m[sec].find(x=>(x.name||'').trim()===name);
+        if(!r){r={name,amount:''};m[sec].push(r);}
+        r.amount=String(Math.round(num(r.amount)+a));
+        m.tx.push({id:t.key+':i'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),a,k,s:srcLabel(t)});
+        recovered++;return;
+      }
+      const row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
       const listed=m.tx.filter(x=>!x.off&&x.k===k).reduce((s,x)=>s+x.a,0);
       if(num(row.amount)-listed<a-1)return; // the row doesn't hold this amount unlisted
       m.tx.push({id:t.key+':f'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),a,k,s:srcLabel(t)});
@@ -1283,6 +1296,7 @@ window.SIX={
     touchSection('budget');markDirty();
     SIX.close();
     renderBudget();
+    if(!SI.txns.length&&recovered){showToast('נוספו '+recovered+' תשלומים (עסקאות בתשלומים) שלא נספרו קודם ✓');return;}
     if(!SI.txns.length){showToast(filled?'נוסף פירוט ל־'+filled+' עסקאות שהיו רשומות בלי פירוט ✓ (הסכומים לא השתנו)':'אין פירוט חסר להשלים — נתוני העו"ש עודכנו ✓');return;}
     showToast((keys.length>1?`מולאו ${keys.length} חודשים (${fmtBudgetMonth(keys[0])} – ${fmtBudgetMonth(keys[keys.length-1])}) מ־${n} עסקאות ✓`:`מולאו ${rowsFilled} קטגוריות מ־${n} עסקאות ב${fmtBudgetMonth(key)} ✓`)+(learnedNow?` · 🧠 זכרנו ${learnedNow} בתי עסק — בפעם הבאה הם יזוהו לבד`:' אפשר לתקן כל סכום ידנית'));
   }
