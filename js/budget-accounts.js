@@ -144,7 +144,7 @@ function renderBudgetCombined(){
   const keys=[...new Set(accs.flatMap(a=>Object.keys(budgetAccMonths(a.id))))].sort().reverse();
   const k=_budgetAllMonth&&keys.includes(_budgetAllMonth)?_budgetAllMonth:(keys.includes(D.budgetCurMonth)?D.budgetCurMonth:keys[0]);
   _budgetAllMonth=k;
-  const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
+  const sum=rows=>(rows||[]).reduce((s,r)=>s+budgetRowAmt(r),0);
   const lines=accs.map(a=>{
     const m=budgetAccMonths(a.id)[k],p=budgetAccProfile(a.id),comb=!!(p.selfEmployed&&p.bizMode!=='separate');
     if(!m)return {a,has:false,inc:0,needs:0,wants:0,biz:0,inv:0,exp:0,saved:0};
@@ -157,7 +157,7 @@ function renderBudgetCombined(){
   // categories with the same name across accounts are added together
   const cats={};
   lines.filter(l=>l.has).forEach(l=>['needs','wants'].concat(l.comb?['business']:[]).forEach(sec=>(l.m[sec]||[]).forEach(r=>{
-    const n=(r.name||'').trim(),v=parseFloat(String(r.amount||0).replace(/,/g,''))||0;if(!n||!v)return;
+    const n=(r.name||'').trim(),v=budgetRowAmt(r);if(!n||!v)return;
     const c=cats[sec+'|'+n]=cats[sec+'|'+n]||{sec,n,total:0,by:{}};c.total+=v;c.by[l.a.id]=(c.by[l.a.id]||0)+v;})));
   const catList=Object.values(cats).sort((a,b)=>b.total-a.total);
   const SEC_C={needs:'var(--green)',wants:'var(--amber)',business:'#a78bfa'};

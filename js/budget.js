@@ -125,9 +125,8 @@ function vatSplitInfo(months,key){
   const a=_vatOf(months[key]),next=months[_bKeyShift(key,1)],an=_vatOf(next);
   if(a>0)return {eff:a/2,virt:0,est:false};
   if(an>0)return {eff:an/2,virt:an/2,est:false};
-  // the payment month isn't filled yet → estimate from the most recent payment
-  const prev=Object.keys(months).sort().filter(k=>k<key).reverse().map(k=>_vatOf(months[k])).find(v=>v>0)||0;
-  return {eff:prev/2,virt:prev/2,est:true};
+  // the next payment isn't recorded yet — nothing is guessed; the half appears once it is
+  return {eff:0,virt:0,est:false};
 }
 // how much the split changes a month's business payments (0 when not splitting)
 function vatSplitAdj(months,key,prof){
@@ -150,10 +149,10 @@ function vatNoticeHtml(){
       +toggle(_bKeyShift(key,-1),key));
   }
   const info=vatSplitInfo(D.budgetMonths,key),nextK=_bKeyShift(key,1);
-  if(split&&info.virt>0)return box('var(--t2)',`📎 <b>הוצאה מדומה — מע"מ ${iln(fmt(info.virt))}</b>: חצי מהתשלום של ${mName(nextK)} (על ${mName(_bKeyShift(key,-1))}–${mName(key)})${info.est?' — <i>הערכה לפי התשלום הקודם, עד שתמלאו את '+mName(nextK)+'</i>':''}.
+  if(split&&info.virt>0)return box('var(--t2)',`📎 <b>הוצאה מדומה — מע"מ ${iln(fmt(info.virt))}</b>: חצי מהתשלום של ${mName(nextK)} (על ${mName(_bKeyShift(key,-1))}–${mName(key)}).
       <div style="margin-top:2px;color:var(--t3)">הסכום ירד בפועל בחודש העוקב, אבל לצורכי החלוקה הוא מוצג גם בחודש הזה ונכלל בחישוב.</div>`+toggle(key,nextK));
-  const prev=lastVatPaidBefore(key);
-  if(prev>0)return box('var(--amber)',`⚠️ <b>החודש לא שולם מע"מ</b> — בחודש הבא צפוי תשלום של כ־<b>${iln(fmt(prev))}</b>. חלק מהכסף ש"נשאר" החודש שמור בעצם לתשלום הזה.`+toggle(key,nextK));
+  // no forecasts: only what's recorded is described
+  if(split)return box('var(--t3)',`💡 החודש לא שולם מע"מ. החצי של התשלום יופיע כאן כהוצאה מדומה ברגע שתרשמו את תשלום המע"מ של ${mName(nextK)}.`+toggle(key,nextK));
   return box('var(--t3)','💡 מדווחים מע"מ פעם בחודשיים: בחודש התשלום רשמו את הסכום המלא, ובחודש שאין תשלום השאירו 0.'+toggle(key,nextK));
 }
 // ── Income guidance: gross vs net depends on the profile ──
@@ -214,11 +213,14 @@ function budgetMoveBizIncome(toCombined){
 // Force LTR rendering for money amounts inside RTL text, so "−₪1,120" doesn't
 // get bidi-scrambled into "1,120₪−".
 function iln(s){return '<span style="direction:ltr;unicode-bidi:isolate;display:inline-block">'+s+'</span>';}
+// Rows marked "לא לספור" (row.skip) stay visible but don't count in the budget's figures.
+// (The bank check still counts them: the money really moved.)
+function budgetRowAmt(r){return r&&r.skip?0:(parseFloat(String(r&&r.amount||0).replace(/,/g,''))||0);}
 function budgetTotal(sec){
-  return (curBudget()[sec]||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
+  return (curBudget()[sec]||[]).reduce((s,r)=>s+budgetRowAmt(r),0);
 }
 function budgetSavedOf(month,prof,months){
-  const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
+  const sum=rows=>(rows||[]).reduce((s,r)=>s+budgetRowAmt(r),0);
   // Combined mode: business payments count as household expenses.
   // Separate mode: the business has its own cashflow, outside the household.
   // prof = that account's employment profile (several accounts); default the active one.
@@ -443,10 +445,12 @@ function renderBudgetSection(sec){
     const flagAvg=budgetRowFlag(sec,row.name,row.amount);
     // Rows filled from a statement keep their transactions — a button opens them under the row
     const txs=budgetRowTx(sec,row.name),open=txs.length&&_budgetOpenRow===sec+'|'+(row.name||'').trim();
-    html+=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+    const off=!!row.skip; // "לא לספור": visible, but left out of the figures
+    html+=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px${off?';opacity:.55':''}">
       <input type="text" value="${esc(row.name||'')}" placeholder="${meta.ph}" dir="rtl"
         oninput="updateBudgetRow('${sec}',${i},'name',this.value)"
         style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:var(--font);font-size:13px;padding:8px 10px;text-align:right"/>
+      ${off?`<span style="flex-shrink:0;font-size:10.5px;color:var(--amber);white-space:nowrap">לא נספר</span>`:''}
       ${txs.length?`<button onclick="budgetToggleRowTx('${sec}',${i})" title="מה נכלל בקטגוריה הזו"
         style="flex-shrink:0;background:${open?'rgba(66,235,214,.14)':'var(--s2)'};border:1px solid ${open?'var(--teal-border)':'var(--border)'};color:var(--teal);border-radius:8px;padding:6px 6px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📋${txs.length}${open?'▴':'▾'}</button>`:''}
       <span id="budget-flag-${sec}-${i}" onclick="budgetFlagInfo('${sec}',${i})"
@@ -455,16 +459,25 @@ function renderBudgetSection(sec){
         style="flex-shrink:0;background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0 1px">🔁</button>`:''}
       <input type="number" value="${row.amount||''}" placeholder="0" data-no-fmt
         oninput="updateBudgetRow('${sec}',${i},'amount',this.value)" onchange="budgetRepeatOffer('${sec}',${i})"
-        style="width:110px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:${meta.color};font-family:var(--font);font-size:14px;font-weight:700;padding:8px 10px;text-align:center"/>
+        style="width:110px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:${meta.color};font-family:var(--font);font-size:14px;font-weight:700;padding:8px 10px;text-align:center${off?';text-decoration:line-through':''}"/>
+      ${_bNum(row.amount)||off?`<button onclick="budgetRowSkip('${sec}',${i})" title="${off?'להחזיר לחישוב':'לא לספור בחישוב (למשל הוצאה חד־פעמית, או כזו שתוחזר לכם)'}"
+        style="flex-shrink:0;background:none;border:none;color:${off?'var(--amber)':'var(--t3)'};cursor:pointer;font-size:14px;padding:0 1px">${off?'↩':'⊘'}</button>`:''}
       <button onclick="removeBudgetRow('${sec}',${i})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 2px;line-height:1;flex-shrink:0">×</button>
     </div>${open?budgetRowTxPanel(sec,row.name,txs):''}${budgetRepeatPanel(sec,i,row)}`;
   });
   const total=budgetTotal(sec);
+  const offSum=rows.filter(r=>r.skip).reduce((s,r)=>s+_bNum(r.amount),0);
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
-    <span style="font-size:12px;color:var(--t3)">${meta.totalLbl}</span>
+    <span style="font-size:12px;color:var(--t3)">${meta.totalLbl}${offSum?` <span style="color:var(--amber)">(לא כולל ${fmt(offSum)} שסומנו "לא לספור")</span>`:''}</span>
     <span id="budget-total-${sec}" style="font-size:15px;font-weight:800;color:${meta.color}">${fmt(total)}</span>
   </div>`;
   el.innerHTML=html;
+}
+function budgetRowSkip(sec,i){
+  const row=(curBudget()[sec]||[])[i];if(!row)return;
+  if(row.skip)delete row.skip;else row.skip=true;
+  touchSection('budget');markDirty();renderBudget();
+  showToast(row.skip?'"'+(row.name||'')+'" לא נספר בחישוב — אפשר להחזיר עם ↩':'"'+(row.name||'')+'" חזר לחישוב ✓');
 }
 function updateBudgetRow(sec,i,field,val){
   const b=curBudget();
@@ -715,8 +728,6 @@ function renderBudgetSummary(){
       ${inv>0?`<div style="margin-top:6px;font-size:12px;color:#60a5fa;font-weight:700">💪 סה"כ חיסכון החודש: ${iln(fmt(Math.max(0,saved)+inv))} — ${iln(fmt(Math.max(0,saved)))} שנשארו פנויים + ${iln(fmt(inv))} שהופקדו לפנסיה / השתלמות</div>`:''}
       ${bizSeparate()?'<div style="margin-top:4px">💼 העסק מנוהל בתזרים נפרד — ראו את כרטיס "עסק" למטה.</div>':''}
       ${vatAdj?'<div style="margin-top:4px">🧾 מע"מ מחולק בין חודשים: '+(vatAdj>0?'כולל הוצאה מדומה של '+iln(fmt(vatAdj))+' (חצי מתשלום החודש הבא)':'נספר רק חצי מתשלום החודש ('+iln(fmt(-vatAdj))+' עברו לחודש הקודם)')+'</div>':''}
-      ${(bizCombined()&&vatBimonthlyOn()&&!vatSplitOn()&&!_vatOf(curBudget())&&lastVatPaidBefore(D.budgetCurMonth)>0)
-        ?`<div style="margin-top:6px;color:var(--amber);font-weight:700">⚠️ החודש לא שולם מע"מ — בחודש הבא צפוי תשלום של כ־${iln(fmt(lastVatPaidBefore(D.budgetCurMonth)))}, אז לא כל מה שנשאר פנוי באמת.</div>`:''}
     </div>
   </div>`;
 }
