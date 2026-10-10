@@ -1162,6 +1162,8 @@ function cardSegs(){
 window.SIX={
   // the merchant key used to remember merchants — also used by the budget page (budget-detail.js)
   mk:merchantKey,
+  // a bank description that's a transfer to / from investments (broker, "ני"ע", money-market fund)
+  isInvest:s=>BROKER_RE.test(String(s||'')),
   open(){
     if(typeof D!=='object'||!D)return;
     // Admin-only while it's being tested (the button is hidden for everyone else too)

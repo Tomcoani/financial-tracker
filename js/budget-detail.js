@@ -32,7 +32,12 @@ function _bRowOptions(sel){
     `<optgroup label="${_BSEC_LBL[s]}">`+b[s].filter(r=>(r.name||'').trim()).map(r=>{
       const v=s+'|'+r.name.trim();return `<option value="${esc(v)}"${v===sel?' selected':''}>${esc(r.name.trim())}</option>`;}).join('')+'</optgroup>').join('')
     +`<optgroup label="חדש">${add.map(([s,l])=>`<option value="__new|${s}">${l}</option>`).join('')}</optgroup>`
-    +`<optgroup label="אחר"><option value="skip|other"${String(sel).startsWith('skip|')?' selected':''}>🚫 לא לספור בתקציב</option></optgroup>`;
+    // money that only moved (to investments / between the client's own accounts) — neither
+    // income nor an expense: kept in "לא נספר" under its own heading
+    +`<optgroup label="לא הכנסה ולא הוצאה">`
+    +[['skip|invest','📈 העברה להשקעות (כסף קיים שעבר)'],['skip|own','🔁 העברה בין החשבונות שלי'],['skip|other','🚫 לא לספור בתקציב']]
+      .map(([v,l])=>`<option value="${v}"${v===sel||(v==='skip|other'&&String(sel).startsWith('skip|')&&!/^skip\|(invest|own)$/.test(sel))?' selected':''}>${l}</option>`).join('')
+    +`</optgroup>`;
 }
 // ── "לא נספר בתקציב": everything that came from a file but isn't in the budget ──
 // (month.tx with k "skip|<why>": card bills, investments, own transfers, marked "לא לספור" on
@@ -124,7 +129,35 @@ function budgetRowTxPanel(sec,name,txs){
     ${Math.abs(manual)>=1?`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--t3)">
       <span>${manual>0?'+':'−'} ${iln(fmt(Math.abs(manual)))} ${manual>0?'נוספו בשורה מעבר לעסקאות (הוקלדו ידנית, או נספרו פעמיים)':'חסרים בשורה לעומת העסקאות'}</span>
       <button onclick="budgetRowMatchTx('${sec}','${encodeURIComponent(String(name).trim()).replace(/'/g,'%27')}')" style="background:none;border:1px solid var(--teal-border);border-radius:7px;color:var(--teal);font-family:var(--font);font-size:11px;padding:2px 8px;cursor:pointer">↺ השוו את השורה לעסקאות (${iln(fmt(sum))})</button></div>`:''}
+    ${(()=>{const inv=_bInvestInIncome(sec,list);if(!inv.length)return '';
+      return `<div style="margin-top:8px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.35);border-radius:9px;padding:7px 9px;font-size:11.5px;line-height:1.6;color:var(--t2)">
+        📈 <b>${inv.length===list.filter(t=>!t.off).length?'כל העסקאות כאן':inv.length+' מהעסקאות כאן'} הן העברות להשקעות</b> (${iln(fmt(inv.reduce((s,t)=>s+t.a,0)))}) — זו לא הכנסה, רק כסף קיים שעבר מהחשבון להשקעה.
+        <button onclick="budgetIncomeToInvest('${sec}','${encodeURIComponent(String(name).trim()).replace(/'/g,'%27')}')" style="margin-top:5px;display:block;background:#60a5fa;border:none;border-radius:7px;color:#0b1220;font-family:var(--font);font-size:11.5px;font-weight:700;padding:4px 10px;cursor:pointer">להוציא מההכנסות ✓</button></div>`;})()}
   </div>`;
+}
+// Transfers to investments sitting in an income row: money that LEFT the account (kept direction),
+// or — moved before the direction was kept — a broker / securities transfer from the bank file
+function _bInvestInIncome(sec,list){
+  if(sec!=='income'&&sec!=='bizIncome')return [];
+  const isInv=n=>!!(window.SIX&&SIX.isInvest&&SIX.isInvest(n));
+  return list.filter(t=>!t.off&&/^עו"ש/.test(t.s||'')&&(t.dir==='out'||(!t.dir&&isInv(t.n))));
+}
+// Take them out of income → "לא נספר" as investments. When nothing else is left in the row, the
+// row goes too (it may also hold the same amount added twice — see the duplicate fix in v=109).
+function budgetIncomeToInvest(sec,nameEnc){
+  const name=decodeURIComponent(nameEnc),m=curBudget(),k=sec+'|'+name;
+  const row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
+  const all=(m.tx||[]).filter(x=>x.k===k),inv=_bInvestInIncome(sec,all),invSum=inv.reduce((s,t)=>s+t.a,0);
+  const rest=all.filter(x=>!inv.includes(x)),onlyInv=!rest.length;
+  if(!confirm(onlyInv
+    ?`להוציא את "${name}" מההכנסות?\n${inv.length} העברות להשקעות (${fmt(invSum)}) יעברו ל"לא נספר" (📈 השקעות), והשורה (${fmt(_bNum(row.amount))}) תימחק.`
+    :`להוציא ${inv.length} העברות להשקעות (${fmt(invSum)}) מ"${name}"? הן יעברו ל"לא נספר" (📈 השקעות).`))return;
+  inv.forEach(t=>{t.k='skip|invest';t.dir='out';t.edited=true;});
+  if(onlyInv)m[sec]=m[sec].filter(r=>r!==row);
+  else row.amount=String(Math.max(0,Math.round(_bNum(row.amount)-invSum)));
+  _budgetOpenRow=null;
+  touchSection('budget');markDirty();renderBudget();
+  showToast(`הוצאו ${fmt(invSum)} מההכנסות ✓ — מופיעים עכשיו ב"לא נספר" כהעברה להשקעות`);
 }
 // Set a row to exactly what its listed transactions add up to (drops a doubled / stray amount)
 function budgetRowMatchTx(sec,nameEnc){
@@ -158,7 +191,7 @@ function budgetTxSave(id){
   // a transfer to investments isn't income
   const dir=_bTxDir(t),toInc=/^(income|bizIncome)\|/.test(k);
   if(k!==t.k&&!k.startsWith('skip|')&&(dir==='out')===toInc&&
-    !confirm(dir==='out'?`"${t.n}" — כאן כסף יצא מהחשבון. להכניס אותו לשורת הכנסה? (העברה להשקעות או לחשבון שלכם עדיף לסמן "🚫 לא לספור")`:`"${t.n}" — כאן כסף נכנס לחשבון. להכניס אותו לשורת הוצאה?`))return;
+    !confirm(dir==='out'?`"${t.n}" — כאן כסף יצא מהחשבון. להכניס אותו לשורת הכנסה? (העברה להשקעות או לחשבון שלכם היא לא הכנסה — בחרו "📈 העברה להשקעות" או "🔁 העברה בין החשבונות שלי")`:`"${t.n}" — כאן כסף נכנס לחשבון. להכניס אותו לשורת הוצאה?`))return;
   if(!t.off){_budgetMoveAmt(t.k,-t.a);_budgetMoveAmt(k,a);} // a "לא לספור" one isn't in any row
   const wasOff=!!t.off;
   const moved=k!==t.k;
