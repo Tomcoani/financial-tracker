@@ -646,8 +646,10 @@ function rebuild(){
     if(!f.dup)SI.txns.push(...f.txns);
   });
   SI.detailTx=SI.files.filter(f=>f.detailOnly).flatMap(f=>f.txns);
+  // a bank file already imported: categorised again only to refresh the bank figures (nothing is counted)
+  SI.statTx=SI.files.filter(f=>f.dup&&!f.detailOnly&&!f.dupNow&&f.source==='דף בנק').flatMap(f=>f.txns);
   markDupTx();
-  SI.txns.concat(SI.detailTx).forEach(t=>{
+  SI.txns.concat(SI.detailTx,SI.statTx).forEach(t=>{
     if(t.dupTx){t.cat='skip';t.target='skip';t.how='dup';return;} // already recorded — never twice
     t.cat=guessCat(t);
     t.biz=isBiz(t);
@@ -839,6 +841,7 @@ function reviewView(){
     else if(!f.txns.length&&f.tables.length){st='הקובץ נפתח, אבל לא הצלחנו לזהות בו את טבלת העסקאות';col='#fca5a5';}
     else if(!f.txns.length){st=f.kind==='pdf'?'הקובץ נפתח, אבל לא מצאנו בו שורות עסקה (תאריך + בית עסק + סכום)':'לא מצאנו בקובץ טבלת עסקאות';col='#fca5a5';}
     else if(f.dupNow){st='אותו פירוט כבר נבחר כאן (אולי באקסל ובפורמט PDF) — לא ייספר פעמיים';col='var(--amber)';}
+    else if(f.dup&&f.source==='דף בנק'&&!f.detailOnly){st='✓ קובץ העו"ש הזה כבר נטען — לא ייספר שוב. נעדכן רק את נתוני החשבון (יתרות ופעולות שלא נספרו), כדי להסביר פערים';col='var(--teal)';}
     else if(f.detailOnly){st='✓ הפירוט הזה כבר נטען בעבר (בגרסה קודמת). הסכומים לא ייספרו שוב — נשלים רק את רשימת העסקאות ואת ההתאמה לעו"ש';col='var(--teal)';}
     else if(f.dup){st='הפירוט הזה כבר נטען בעבר — לא ייספר שוב';col='var(--amber)';}
     else{
@@ -854,7 +857,7 @@ function reviewView(){
     }
     const pw=f.needPassword?`<div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap"><span style="font-size:12px">🔐 הקובץ נעול בסיסמה${f.pwWrong?' <span style="color:#fca5a5">(שגויה)</span>':''} — בד"כ תעודת הזהות:</span><input type="password" id="si-pw-${f.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);padding:5px 8px;width:130px"><button onclick="SIX.unlock(${f.id})" style="${BTN}background:var(--teal);color:#080c14;border:none;padding:5px 12px;font-weight:700">פתח</button></div>`:'';
     const help=(f.error||(!f.needPassword&&!f.txns.length))?`<div style="font-size:11.5px;color:var(--t3);margin-top:3px">נסו להוריד את הפירוט בפורמט <b>אקסל</b>, או לחצו למטה על "משהו לא נראה נכון?" ושלחו ליועץ את שלד המבנה.${f.error?`<div style="direction:ltr;text-align:left;font-size:10.5px;opacity:.8">${h(f.error)}</div>`:''}</div>`:'';
-    const again=f.dup&&!f.dupNow&&!f.detailOnly?` <button style="${LINK}" onclick="SIX.useDup(${f.id})">טען בכל זאת</button>`:'';
+    const again=f.dup&&!f.dupNow&&!f.detailOnly&&f.source!=='דף בנק'?` <button style="${LINK}" onclick="SIX.useDup(${f.id})">טען בכל זאת</button>`:'';
     return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
       <div style="font-size:18px">${f.kind==='pdf'?'📕':'📗'}</div>
       <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(f.source?f.source+' · ':'')}${h(f.name)}</div>
@@ -864,9 +867,9 @@ function reviewView(){
   }).join('');
   if(!SI.txns.length){
     // only older imports re-uploaded → one button that adds their detail (no amounts)
-    const canDetail=(SI.detailTx||[]).length>0;
+    const canDetail=(SI.detailTx||[]).length>0||(SI.statTx||[]).length>0;
     return `<h2>📄 מילוי הוצאות מקובץ</h2>${files}${dropZone(true)}${techView()}
-      <div class="modal-btns">${canDetail?`<button class="btnsnap primary" style="flex:1" onclick="SIX.apply()">השלם פרטים והתאמה לעו"ש ✓</button>`:''}
+      <div class="modal-btns">${canDetail?`<button class="btnsnap primary" style="flex:1" onclick="SIX.apply()">${(SI.detailTx||[]).length?'השלם פרטים והתאמה לעו"ש ✓':'עדכן את נתוני העו"ש ✓'}</button>`:''}
       <button class="btnsnap" style="background:var(--s2);color:var(--t2);border:1px solid var(--border)" onclick="SIX.close()">${canDetail?'ביטול':'סגירה'}</button></div>`;
   }
   const counted=SI.txns.filter(t=>t.target&&t.target!=='skip');
@@ -1019,7 +1022,8 @@ function srcLabel(t){const f=SI.files.find(x=>x.id===t.fileId)||{};
 // the file's own order for same-day rows (bank exports are newest-first or oldest-first).
 function bankStats(){
   const out={};
-  SI.files.filter(f=>f.source==='דף בנק'&&(!f.dup||f.detailOnly)&&f.txns&&f.txns.length).forEach(f=>{
+  // (an already-imported bank file is read again too — this only refreshes month.bank)
+  SI.files.filter(f=>f.source==='דף בנק'&&!f.dupNow&&f.txns&&f.txns.length).forEach(f=>{
     const tx=f.txns.slice();
     const desc=tx.length>1&&tx[0].date>tx[tx.length-1].date;
     tx.sort((a,b)=>(a.date-b.date)||(desc?b.ri-a.ri:a.ri-b.ri));
@@ -1033,6 +1037,10 @@ function bankStats(){
         inn:-sum(t=>t.income),out:sum(t=>!t.income),
         invest:sum(t=>t.kind==='invest'),own:sum(t=>t.kind==='own'),
         cards:list.filter(t=>t.kind==='card').map(t=>({d:ymd(t.date),a:r2(t.val),iss:issuerOf(t.merchant),ref:t.ref||''})),
+        // money that moved in this account but isn't in the budget (marked "לא לספור") —
+        // shown when explaining a gap between the budget and the account
+        skipped:list.filter(t=>t.target==='skip'&&!t.dupTx&&t.kind!=='card'&&t.kind!=='invest'&&t.kind!=='own')
+          .map(t=>({d:ymd(t.date),n:String(t.merchant).slice(0,50),a:r2(Math.abs(t.val)),dir:t.income?'in':'out'})),
         from:ymd(first.date),to:ymd(last.date),at:new Date().toISOString()};
     });
   });
@@ -1187,7 +1195,7 @@ window.SIX={
     touchSection('budget');markDirty();
     SIX.close();
     renderBudget();
-    if(!SI.txns.length){showToast('הפרטים הושלמו ✓ — רשימת העסקאות בכל קטגוריה וההתאמה לעו"ש');return;}
+    if(!SI.txns.length){showToast((SI.detailTx||[]).length?'הפרטים הושלמו ✓ — רשימת העסקאות בכל קטגוריה וההתאמה לעו"ש':'נתוני העו"ש עודכנו ✓');return;}
     showToast((keys.length>1?`מולאו ${keys.length} חודשים (${fmtBudgetMonth(keys[0])} – ${fmtBudgetMonth(keys[keys.length-1])}) מ־${n} עסקאות ✓`:`מולאו ${rowsFilled} קטגוריות מ־${n} עסקאות ב${fmtBudgetMonth(key)} ✓`)+(learnedNow?` · 🧠 זכרנו ${learnedNow} בתי עסק — בפעם הבאה הם יזוהו לבד`:' אפשר לתקן כל סכום ידנית'));
   }
 };

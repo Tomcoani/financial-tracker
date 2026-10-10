@@ -250,6 +250,49 @@ function budgetRemoveDups(){
   showToast('הוסרו '+d.length+' כפילויות ✓ הסכומים עודכנו');
 }
 
+// ── Where does the gap between the budget and the account come from? ──
+// gap = (closing − opening) − (income − expenses − investments − own transfers). Everything the
+// bank file counted appears on both sides and cancels out, so what's left is exactly:
+//   + expenses typed by hand (not from this account: cash, another account…)
+//   + card-statement expenses recorded this month − card bills the bank actually paid
+//   + money in that was marked "לא לספור"   − money out that was marked "לא לספור"
+//   − income typed by hand
+// Anything still unexplained is shown as such.
+function budgetGapHtml(m,bk,diff,open){
+  const isBank=x=>/^עו"ש/.test(x.s||''),isInc=k=>/^(income|bizIncome)\|/.test(k||'');
+  const listed=(sec,n)=>(m.tx||[]).filter(x=>x.k===sec+'|'+n).reduce((s,x)=>s+x.a,0);
+  const hand=secs=>{const out=[];secs.forEach(sec=>(m[sec]||[]).forEach(r=>{const n=(r.name||'').trim();if(!n)return;
+    const v=_bNum(r.amount)-listed(sec,n);if(Math.abs(v)>=1)out.push({n,a:v});}));return out;};
+  const manExp=hand(['needs','wants','business']),manInc=hand(['income','bizIncome']);
+  const cardTx=(m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).reduce((s,x)=>s+x.a,0);
+  const cardBills=(bk.cards||[]).reduce((s,c)=>s+c.a,0);
+  const sk=Array.isArray(bk.skipped)?bk.skipped:null;
+  const skIn=sk?sk.filter(x=>x.dir==='in'):[],skOut=sk?sk.filter(x=>x.dir==='out'):[];
+  const tot=l=>l.reduce((s,x)=>s+x.a,0);
+  const comps=[
+    {lbl:'הוצאות שהוקלדו ידנית — לא עברו בעו"ש הזה (מזומן, חשבון אחר, 🔁 הוצאה קבועה...)',v:tot(manExp),items:manExp},
+    {lbl:'פירוטי אשראי שנרשמו בחודש הזה, לעומת חיובי האשראי שירדו בפועל מהעו"ש',v:cardTx-cardBills,
+      note:`בפירוטים ${iln(fmt(cardTx))} · ירד מהעו"ש ${iln(fmt(cardBills))}`},
+    {lbl:'כסף שנכנס לעו"ש וסומן "לא לספור"',v:tot(skIn),items:skIn.map(x=>({n:_bShortDate(x.d)+' · '+x.n,a:x.a}))},
+    {lbl:'כסף שיצא מהעו"ש וסומן "לא לספור"',v:-tot(skOut),items:skOut.map(x=>({n:_bShortDate(x.d)+' · '+x.n,a:x.a}))},
+    {lbl:'הכנסות שהוקלדו ידנית — לא עברו בעו"ש הזה',v:-tot(manInc),items:manInc}
+  ].filter(c=>Math.abs(c.v)>=1);
+  const rest=diff-comps.reduce((s,c)=>s+c.v,0);
+  const sgn=v=>iln((v>=0?'+':'−')+fmt(Math.abs(v)));
+  const line=c=>`<div style="padding:6px 0;border-bottom:1px solid var(--border)">
+    <div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span style="color:var(--t1)">${c.lbl}</span><b style="white-space:nowrap;color:${(c.v>0)===(diff>0)?'var(--amber)':'var(--t2)'}">${sgn(c.v)}</b></div>
+    ${c.note?`<div style="font-size:11px;color:var(--t3)">${c.note}</div>`:''}
+    ${c.items&&c.items.length?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${c.items.slice(0,6).map(x=>esc(x.n)+' '+fmt(x.a)).join(' · ')}${c.items.length>6?' · ועוד '+(c.items.length-6):''}</div>`:''}
+  </div>`;
+  return `<details${open?' open':''} style="margin-top:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
+    <summary style="cursor:pointer;font-size:12.5px;font-weight:800;color:var(--teal)">🔍 מאיפה הפער של ${iln(fmt(Math.abs(diff)))}?</summary>
+    <div style="font-size:11px;color:var(--t3);margin:4px 0 2px">מה שהגיע מקובץ העו"ש רשום גם בתקציב וגם בחשבון, ולכן מתקזז. הפער נוצר רק מהדברים האלה (בכתום: מה שדוחף לכיוון הפער):</div>
+    ${comps.map(line).join('')}
+    ${Math.abs(rest)>=1?`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:6px 0"><span>לא מוסבר${sk?'':' (כולל פעולות בעו"ש שסומנו "לא לספור")'}</span><b>${sgn(rest)}</b></div>`:''}
+    ${!sk?`<div style="font-size:11px;color:var(--t2);margin-top:4px">💡 כדי לראות גם אילו פעולות בעו"ש לא נספרו — העלה שוב את קובץ העו"ש. שום דבר לא ייספר פעמיים, רק נתוני החשבון יתעדכנו.</div>`:''}
+  </details>`;
+}
+
 // ── Bank account check ──
 // 1. Opening / closing balance of the month.
 // 2. Reconciliation: the real change in the account vs. what the budget says
@@ -305,6 +348,7 @@ function renderBudgetBank(){
     ${cardList}
     ${inv?`<div style="font-size:12.5px;margin-top:12px">📈 ${inv>0?'הועברו להשקעות בשוק ההון':'נמשכו מהשקעות בשוק ההון'}: <b>${iln(fmt(Math.abs(inv)))}</b> <span style="font-size:11px;color:var(--t3)">— לא נספר כהוצאה או כהכנסה</span></div>`:''}
     ${bk.own?`<div style="font-size:12.5px;margin-top:4px">🔁 העברות בין החשבונות שלך: <b>${signed(-bk.own)}</b> <span style="font-size:11px;color:var(--t3)">— לא נספר</span></div>`:''}
+    ${hasBal&&Math.abs(diff)>=1?budgetGapHtml(m,bk,diff,Math.abs(diff)>thr):''}
     ${hasBal?`<details style="margin-top:10px;font-size:11.5px;color:var(--t3)"><summary style="cursor:pointer">איך מחושבת הבדיקה?</summary>
       <div style="line-height:1.8;margin-top:4px">לפי התקציב: הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${inv?' − השקעות '+signed(inv):''}${bk.own?' − העברות לחשבונות שלך '+signed(bk.own):''} = ${signed(expected)}<br>
       בפועל בעו"ש: ${signed(actual)} · הפרש: ${signed(diff)}<br>
