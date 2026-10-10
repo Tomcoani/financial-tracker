@@ -134,9 +134,42 @@ function renderIncomeHint(){
   el.innerHTML=t;
 }
 function setBudgetProfile(field,val){
+  const wasSep=bizSeparate();
   budgetProfile()[field]=val;
+  // Business income lives in its own section only in "separate" mode. Switching modes moves it,
+  // so it never disappears from view or from the totals.
+  const nowSep=bizSeparate();
+  let moved=0;
+  if(wasSep&&!nowSep)moved=budgetMoveBizIncome(true);
+  else if(!wasSep&&nowSep)moved=budgetMoveBizIncome(false);
   touchSection('budget');markDirty();
   renderBudget();
+  if(moved)showToast(nowSep?'הכנסות העסק הועברו לחלק "הכנסות העסק" ✓':'הכנסות העסק הועברו לחלק "הכנסות" ✓ הן נכללות עכשיו בחישוב של הבית');
+}
+// toCombined: every month's business income rows → the income section (added to a same-named
+// row if there is one). Otherwise: income rows about the business (name mentions עסק) → business
+// income. Every month of every account; the transactions behind the rows move with them.
+// Returns how many amounts moved.
+function budgetMoveBizIncome(toCombined){
+  const maps=typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];
+  const num=v=>parseFloat(String(v||0).replace(/,/g,''))||0;
+  let moved=0;
+  maps.forEach(months=>Object.values(months).forEach(m=>{
+    const from=toCombined?'bizIncome':'income',to=toCombined?'income':'bizIncome';
+    const src=(m[from]||[]).filter(r=>toCombined?true:/עסק/.test(r.name||''));
+    if(!src.length)return;
+    if(!Array.isArray(m[to]))m[to]=[];
+    src.forEach(r=>{
+      const name=(r.name||'').trim()||'הכנסות העסק';
+      const dest=m[to].find(x=>(x.name||'').trim()===name);
+      if(dest){if(num(r.amount))dest.amount=String(num(dest.amount)+num(r.amount));}
+      else m[to].push({name,amount:r.amount||''});
+      if(num(r.amount))moved++;
+      (m.tx||[]).forEach(t=>{if(t.k===from+'|'+name)t.k=to+'|'+name;});
+    });
+    m[from]=(m[from]||[]).filter(r=>!src.includes(r));
+  }));
+  return moved;
 }
 // Force LTR rendering for money amounts inside RTL text, so "−₪1,120" doesn't
 // get bidi-scrambled into "1,120₪−".
@@ -185,6 +218,13 @@ function renderGoalsSavingsTile(){
 }
 function renderBudget(){
   migrateBudget();
+  // Business income left in its own section while not in "separate" mode (e.g. switched before
+  // modes moved it) is invisible and uncounted — bring it into the income section.
+  if(!bizSeparate()){
+    const maps=typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];
+    const hidden=maps.some(ms=>Object.values(ms).some(m=>(m.bizIncome||[]).some(r=>parseFloat(String(r.amount||0).replace(/,/g,''))||0)));
+    if(hidden&&budgetMoveBizIncome(true)){touchSection('budget');markDirty();showToast('הכנסות העסק הוחזרו לחלק "הכנסות" ✓');}
+  }
   // accounts bar; the "all accounts" view replaces the normal page (budget-accounts.js)
   if(typeof budgetAccRender==='function'&&budgetAccRender())return;
   ensureBizRows(curBudget());
