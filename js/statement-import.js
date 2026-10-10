@@ -46,6 +46,8 @@ const CATS={
   pro:      {name:'שירותים מקצועיים',    sec:'needs',row:/שירותים מקצועיים|יעוץ|ייעוץ/},
   // Money sent to people (Bit / PayBox / bank transfers) — its own row, personal or business
   xfer:     {name:XFER_NAME,              sec:'wants',row:/פייבוקס|העברות|ביט(?!וח)/},
+  // Money moved TO investments (any account) → the "📈 העברה להשקעות" section: not spending, savings
+  invest:   {name:'השקעות בשוק ההון',      sec:'invest',row:/שוק ההון|השקע/},
   // Self-employed deposits to pension / study fund → the business "העברה להשקעות" rows (savings)
   pension:  {name:'הפקדה לפנסיה',          sec:'bizInvest',row:/פנסי/,     alt:{name:'חיסכון ופנסיה',sec:'needs',row:/פנסי|חיסכון/}},
   hishtal:  {name:'הפקדה לקרן השתלמות',    sec:'bizInvest',row:/השתלמות/,  alt:{name:'חיסכון ופנסיה',sec:'needs',row:/פנסי|חיסכון/}}
@@ -597,7 +599,9 @@ function ownNameTokens(){
 }
 function bankKind(t){
   const txt=t.merchant+' '+t.opType;
-  if(/ניירות ערך/.test(t.opType)||BROKER_RE.test(t.merchant))return 'invest';
+  // tax withheld on securities ("מס ני"ע", "ניכוי מס מניירות ערך") is a tax, not money moved to investments
+  const secTax=/(^|\s)מס ני"?ע|ניכוי מס/.test(t.merchant);
+  if(!secTax&&(/ניירות ערך/.test(t.opType)||BROKER_RE.test(t.merchant)))return 'invest';
   // card bills — and card credits coming back into the account (refunds already in the statement)
   if(CARD_PAY_RE.test(t.merchant))return 'card';
   const own=ownNameTokens();
@@ -605,7 +609,9 @@ function bankKind(t){
   return t.income?'income':'expense';
 }
 function guessCat(t){
-  if(t.kind==='card'||t.kind==='invest'||t.kind==='own')return 'skip';
+  // to investments → its own section; back from investments (money coming in) isn't income → skip
+  if(t.kind==='invest')return t.income?'skip':'invest';
+  if(t.kind==='card'||t.kind==='own')return 'skip';
   if(t.income)return 'income';
   const nm=normTxt(t.merchant),words=nm.split(' ');
   let best=null,bl=0;
@@ -629,7 +635,8 @@ function monthRows(){
   const biz=selfEmployed()?(names('business').length?names('business'):BIZ_DEFAULT_ROWS().map(r=>r.name)):[];
   const bizInv=selfEmployed()?(names('bizInvest').length?names('bizInvest'):['הפקדה לפנסיה','הפקדה לקרן השתלמות']):[];
   const sep=selfEmployed()&&(D.budgetProfile||{}).bizMode==='separate';
-  return {needs:names('needs'),wants:names('wants'),business:biz,bizInvest:bizInv,income:names('income'),
+  const inv=names('invest').length?names('invest'):['השקעות בשוק ההון','קרן כספית / פיקדון'];
+  return {needs:names('needs'),wants:names('wants'),invest:inv,business:biz,bizInvest:bizInv,income:names('income'),
     bizIncome:sep?(names('bizIncome').length?names('bizIncome'):['הכנסות העסק']):[]};
 }
 // ── Income (money coming into a bank account) ──
@@ -658,6 +665,7 @@ function catTarget(cat,rows){
   let c=CATS[cat];
   if((c.sec==='business'||c.sec==='bizInvest')&&!selfEmployed())c=c.alt;
   if(c.sec==='bizInvest'){const hit=rows.bizInvest.find(n=>c.row.test(n));return 'bizInvest|'+(hit||c.name);}
+  if(c.sec==='invest'){const hit=rows.invest.find(n=>c.row.test(n))||rows.invest[0];return 'invest|'+(hit||c.name);}
   if(c.sec==='business'){const hit=rows.business.find(n=>c.row.test(n));return 'business|'+(hit||c.name);}
   for(const sec of [c.sec,c.sec==='needs'?'wants':'needs']){
     const hit=rows[sec].find(n=>c.row.test(n)&&!(c.not&&c.not.test(n)));
@@ -789,7 +797,7 @@ function markDupTx(){
 // Order: what the client set for this merchant (now / remembered) → tax & ads are always
 // business → the card is marked as a business card → otherwise personal.
 function isBiz(t){
-  if(!selfEmployed()||t.cat==='skip')return false;
+  if(!selfEmployed()||t.cat==='skip'||t.cat==='invest')return false; // investments stay the household's
   if(SI.bizSession[t.mk]!==undefined)return SI.bizSession[t.mk];
   const mb=(D.importMerchantBiz||{})[t.mk];if(mb!==undefined)return mb;
   if(t.income&&(PROCESSOR_RE.test(t.merchant)||BIZ_INCOME_RE.test(t.merchant)))return true; // client payments
@@ -870,6 +878,7 @@ function targetOptions(sel,rows,income){
   }
   o+='<optgroup label="צרכים">'+rows.needs.map(n=>opt('needs|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('needs|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   o+='<optgroup label="כיף">'+rows.wants.map(n=>opt('wants|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('wants|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
+  o+='<optgroup label="📈 העברה להשקעות">'+rows.invest.map(n=>opt('invest|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('invest|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   if(selfEmployed())o+='<optgroup label="עסק">'+rows.business.map(n=>opt('business|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('business|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   if(selfEmployed())o+='<optgroup label="עסק — העברה להשקעות">'+rows.bizInvest.map(n=>opt('bizInvest|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('bizInvest|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   o+='<optgroup label="אחר">'+opt('skip','🚫 לא לספור (העברה / החזר)')+opt('__new_needs','➕ קטגוריה חדשה בצרכים...')+opt('__new_wants','➕ קטגוריה חדשה בכיף...')+'</optgroup>';
@@ -1049,7 +1058,7 @@ function reviewView(){
     <div style="font-size:13.5px;font-weight:800;margin-top:14px">כך זה ייכנס לתקציב${oneMonth?'':' <span style="font-weight:400;font-size:11.5px;color:var(--t3)">(סה"כ לכל החודשים — כל חודש יקבל את החלק שלו)</span>'}</div>
     <div style="font-size:11.5px;color:var(--t3)">לחיצה על קטגוריה מציגה את בתי העסק — ואפשר להעביר כל אחד לקטגוריה אחרת.</div>
     ${secBlock('income','💰 הכנסות','var(--teal)')}${secBlock('bizIncome','💼 הכנסות העסק','var(--teal)')}
-    ${secBlock('needs','🏠 צרכים','var(--green)')}${secBlock('wants','🎉 כיף','var(--amber)')}${secBlock('business','💼 עסק','#c4b5fd')}${secBlock('bizInvest','📈 עסק — העברה להשקעות','#60a5fa')}
+    ${secBlock('needs','🏠 צרכים','var(--green)')}${secBlock('wants','🎉 כיף','var(--amber)')}${secBlock('invest','📈 העברה להשקעות','#60a5fa')}${secBlock('business','💼 עסק','#c4b5fd')}${secBlock('bizInvest','📈 עסק — העברה להשקעות','#60a5fa')}
     ${skipBlock}${modeBox}${techView()}
     <div class="modal-btns" style="margin-top:16px">
       <button class="btnsnap primary" style="flex:1" onclick="SIX.apply()">מלא את ההוצאות ✓</button>

@@ -7,7 +7,7 @@
 let _bPer={preset:'3',from:'',to:'',open:false};
 const _BPER_PRESETS=[['3','3 חודשים'],['6','חצי שנה'],['12','שנה'],['year','השנה'],['all','הכל']];
 const _BPER_SECS=[
-  ['income','💰 הכנסות','var(--teal)'],['needs','🏠 צרכים','var(--green)'],['wants','🎉 כיף','var(--amber)'],
+  ['income','💰 הכנסות','var(--teal)'],['needs','🏠 צרכים','var(--green)'],['wants','🎉 כיף','var(--amber)'],['invest','📈 העברה להשקעות','#60a5fa'],
   ['business','💼 עסק','#a78bfa'],['bizInvest','📈 הועבר להשקעות','#60a5fa'],['bizIncome','💼 הכנסות העסק','var(--teal)']];
 
 function budgetPeriodSet(field,val){
@@ -47,7 +47,7 @@ function renderBudgetPeriod(elId,entries){
     ks.forEach((k,i)=>{const m=(e.months||{})[k];if(!m)return;
       const s=budgetSavedOf(m,pr,e.months);per[i].inc+=s.inc;per[i].exp+=s.exp;per[i].inv+=s.inv||0;
       if(sep){per[i].bizIn+=sum(m.bizIncome);per[i].bizOut+=sum(m.business)+sum(m.bizInvest);}
-      const secs=['income','needs','wants'].concat(comb||sep?['business','bizInvest']:[]).concat(sep?['bizIncome']:[]);
+      const secs=['income','needs','wants','invest'].concat(comb||sep?['business','bizInvest']:[]).concat(sep?['bizIncome']:[]);
       secs.forEach(sec=>(m[sec]||[]).forEach(r=>{const n=(r.name||'').trim(),v=budgetRowAmt(r);if(!n||!v)return;
         const c=cats[sec+'|'+n]=cats[sec+'|'+n]||{sec,n,total:0,months:new Set()};c.total+=v;c.months.add(k);}));
     });
@@ -92,7 +92,7 @@ function renderBudgetPeriod(elId,entries){
       ${tile('💸 יצא',iln(fmt(T.exp)),'var(--white)','ממוצע '+iln(fmt(avg(T.exp)))+' לחודש')}
       ${tile(left>=0?'✅ נשאר':'⚠️ גירעון',signed(left),left>=0?'var(--teal)':'var(--red)','ממוצע '+signed(avg(left))+' לחודש')}
     </div>
-    ${T.inv>0?`<div style="font-size:11.5px;color:#60a5fa;margin-top:6px">📈 מתוך היציאות, ${iln(fmt(T.inv))} הופקדו לפנסיה / השתלמות (ממוצע ${iln(fmt(avg(T.inv)))} לחודש) — זה חיסכון, לא בזבוז. סה"כ חיסכון בתקופה: ${iln(fmt(Math.max(0,left)+T.inv))}</div>`:''}
+    ${T.inv>0?`<div style="font-size:11.5px;color:#60a5fa;margin-top:6px">📈 מתוך היציאות, ${iln(fmt(T.inv))} הועברו להשקעות (ממוצע ${iln(fmt(avg(T.inv)))} לחודש) — זה חיסכון, לא בזבוז. חיסכון נטו בתקופה (מה שנשאר + מה שהועבר להשקעות): ${signed(left+T.inv)}</div>`:''}
     ${sepBiz&&(T.bizIn||T.bizOut)?`<div style="font-size:11.5px;color:var(--t2);margin-top:6px">💼 העסק (תזרים נפרד, לא כלול למעלה): נכנסו ${iln(fmt(T.bizIn))}, יצאו ${iln(fmt(T.bizOut))} — נשאר ${signed(T.bizIn-T.bizOut)}</div>`:''}
     <details open style="margin-top:12px">
       <summary style="cursor:pointer;font-size:13px;font-weight:800">📊 ממוצע לפי קטגוריה</summary>

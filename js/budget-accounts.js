@@ -156,11 +156,11 @@ function renderBudgetCombined(){
   const anyBiz=lines.some(l=>l.biz),anyInv=lines.some(l=>l.inv);
   // categories with the same name across accounts are added together
   const cats={};
-  lines.filter(l=>l.has).forEach(l=>['needs','wants'].concat(l.comb?['business']:[]).forEach(sec=>(l.m[sec]||[]).forEach(r=>{
+  lines.filter(l=>l.has).forEach(l=>['needs','wants','invest'].concat(l.comb?['business']:[]).forEach(sec=>(l.m[sec]||[]).forEach(r=>{
     const n=(r.name||'').trim(),v=budgetRowAmt(r);if(!n||!v)return;
     const c=cats[sec+'|'+n]=cats[sec+'|'+n]||{sec,n,total:0,by:{}};c.total+=v;c.by[l.a.id]=(c.by[l.a.id]||0)+v;})));
   const catList=Object.values(cats).sort((a,b)=>b.total-a.total);
-  const SEC_C={needs:'var(--green)',wants:'var(--amber)',business:'#a78bfa'};
+  const SEC_C={needs:'var(--green)',wants:'var(--amber)',invest:'#60a5fa',business:'#a78bfa'};
   // combined bank balances, where accounts have them
   const banks=lines.filter(l=>l.has&&l.m.bank&&l.m.bank.opening!=null&&l.m.bank.closing!=null);
   const cell=(v,c)=>`<td style="padding:7px 6px;text-align:center;white-space:nowrap${c?';color:'+c:''}">${iln(fmt(v))}</td>`;
@@ -176,7 +176,7 @@ function renderBudgetCombined(){
       <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${pos?'נשאר לכם החודש — בכל החשבונות':'גירעון החודש — בכל החשבונות'}</div>
       <div style="font-size:30px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${signed(T.saved)}</div>
       ${T.inc>0&&pos?`<div style="font-size:12px;color:var(--t2)">${pct(T.saved)}% מההכנסה של כולם נשארו פנויים</div>`:''}
-      ${T.inv>0?`<div style="font-size:12px;color:#60a5fa;font-weight:700;margin-top:3px">💪 סה"כ חיסכון: ${iln(fmt(Math.max(0,T.saved)+T.inv))} (כולל ${iln(fmt(T.inv))} שהופקדו לפנסיה / השתלמות)</div>`:''}
+      ${T.inv>0?`<div style="font-size:12px;color:#60a5fa;font-weight:700;margin-top:3px">💪 חיסכון נטו: ${iln((T.saved+T.inv>=0?"":"−")+fmt(Math.abs(T.saved+T.inv)))} (כולל ${iln(fmt(T.inv))} שהועברו להשקעות)</div>`:''}
     </div>
     <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:12.5px">
