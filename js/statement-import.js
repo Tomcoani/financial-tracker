@@ -228,19 +228,53 @@ async function readFile(f){
   }catch(e){file.error=e.message||String(e);console.error(e);}
   return file;
 }
+// Comma / tab / semicolon separated text → rows of strings. Lenient about quotes, because banks
+// aren't: a quote inside a field ("עמלת מט"י", "מכירת ני"ע", "הו"ק") is just text — only a quote
+// that opens a field starts a quoted field, and only one followed by a separator / line end closes it.
+function parseDelimited(txt){
+  const first=(txt.split(/\r?\n/).find(l=>l.trim())||'');
+  const cnt=ch=>first.split(ch).length-1;
+  const delim=[['\t',cnt('\t')],[',',cnt(',')],[';',cnt(';')]].sort((a,b)=>b[1]-a[1])[0][0];
+  const rows=[];let row=[],cur='',inQ=false,start=true;
+  const endField=()=>{row.push(cur);cur='';start=true;};
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(inQ){
+      if(c==='"'){
+        const n=txt[i+1];
+        if(n==='"'){cur+='"';i++;}
+        else if(n===undefined||n===delim||n==='\r'||n==='\n')inQ=false;
+        else cur+='"';
+      }else cur+=c;
+      continue;
+    }
+    if(c==='"'&&start){inQ=true;start=false;continue;}
+    if(c===delim){endField();continue;}
+    if(c==='\n'){endField();rows.push(row);row=[];continue;}
+    if(c==='\r')continue;
+    cur+=c;start=false;
+  }
+  if(cur||row.length){endField();rows.push(row);}
+  return rows;
+}
 function readSheet(file){
   const buf=file.raw;
-  const head=new TextDecoder().decode(new Uint8Array(buf.slice(0,400))).trim().toLowerCase();
+  const u8=new Uint8Array(buf);
+  // a real spreadsheet saved with a .csv name (old Excel / xlsx) — let SheetJS read it as such
+  const binary=(u8[0]===0xD0&&u8[1]===0xCF&&u8[2]===0x11&&u8[3]===0xE0)||(u8[0]===0x50&&u8[1]===0x4B);
+  const csv=/\.(csv|tsv|txt)$/i.test(file.name)&&!binary;
+  const head=new TextDecoder().decode(u8.slice(0,400)).trim().toLowerCase();
   // CSV / HTML-as-xls: keep text as-is, otherwise "01/09/2026" is read US-style (Jan 9)
-  const textual=/\.csv$/i.test(file.name)||head.startsWith('<');
+  const textual=csv||head.startsWith('<');
   let wb;
-  if(/\.csv$/i.test(file.name)){
-    // Some banks don't escape quotes inside a quoted field ("עמלת מט"י", "מכירת ני"ע"), which
-    // shifts every column after it. A quote with text on both sides is part of the text → "".
-    let txt=new TextDecoder('utf-8').decode(new Uint8Array(buf));
-    if(txt.includes('�'))txt=new TextDecoder('windows-1255').decode(new Uint8Array(buf));
-    txt=txt.replace(/^﻿/,'').replace(/([^,\r\n"])"(?=[^,\r\n"])/g,'$1""');
-    wb=XLSX.read(txt,{type:'string',raw:true});
+  if(csv){
+    // Encoding: UTF-16 (Excel's "Unicode text", BOM FF FE), UTF-8, or the old Hebrew Windows one
+    let txt;
+    if(u8[0]===0xFF&&u8[1]===0xFE)txt=new TextDecoder('utf-16le').decode(u8);
+    else if(u8[0]===0xFE&&u8[1]===0xFF)txt=new TextDecoder('utf-16be').decode(u8);
+    else{txt=new TextDecoder('utf-8').decode(u8);if(txt.includes('\uFFFD'))txt=new TextDecoder('windows-1255').decode(u8);}
+    const rows=parseDelimited(txt.replace(/^\uFEFF/,''));
+    wb={SheetNames:['Sheet1'],Sheets:{Sheet1:XLSX.utils.aoa_to_sheet(rows)}};
   }else wb=XLSX.read(buf,textual?{type:'array',raw:true}:{type:'array',cellDates:true});
   file.sheets=[];let headText='';
   wb.SheetNames.forEach(sn=>{
@@ -1302,6 +1336,19 @@ window.SIX={
       // v:2 = imported with detail (transactions + bank matching)
       SI.files.filter(f=>!f.dup&&f.txns&&f.txns.some(t=>txMonth(t)===key)).forEach(f=>m.imports.push({fp:f.fp,n:f.txns.length,source:f.source||'',v:2,at:new Date().toISOString()}));
     });
+    // A transfer to investments typed by hand into an income row (no transactions behind it) before
+    // the bank file could be read: now that the real transfer arrived in "📈 העברה להשקעות", the
+    // hand-typed row of exactly that amount is the same money — remove it so it isn't counted twice
+    let placeholders=0;
+    keys.forEach(key=>{const m=D.budgetMonths[key];if(!m||!Array.isArray(m.income))return;
+      const inv=SI.txns.filter(t=>txMonth(t)===key&&String(t.target).startsWith('invest|')).map(t=>r2(t.val));
+      if(!inv.length)return;
+      const total=r2(inv.reduce((a,v)=>a+v,0));
+      m.income=m.income.filter(r=>{const n=(r.name||'').trim(),a=num(r.amount);
+        if(!/השקע/.test(n)||!a||(m.tx||[]).some(x=>x.k==='income|'+n))return true;
+        const same=Math.abs(a-total)<1||inv.some(v=>Math.abs(a-v)<1);
+        if(same)placeholders++;return !same;});
+    });
     // detail completed for older imports → mark them, so they're not offered again
     SI.files.filter(f=>f.detailOnly).forEach(f=>Object.values(D.budgetMonths).forEach(m=>(m.imports||[]).forEach(x=>{if(x.fp===f.fp)x.v=2;})));
     // Missing transaction lists (📋) from files imported before: a transaction is listed only where
@@ -1358,7 +1405,8 @@ window.SIX={
     renderBudget();
     if(!SI.txns.length&&recovered){showToast('נוספו '+recovered+' תשלומים (עסקאות בתשלומים) שלא נספרו קודם ✓');return;}
     if(!SI.txns.length){showToast(filled?'נוסף פירוט ל־'+filled+' עסקאות שהיו רשומות בלי פירוט ✓ (הסכומים לא השתנו)':'אין פירוט חסר להשלים — נתוני העו"ש עודכנו ✓');return;}
-    showToast((keys.length>1?`מולאו ${keys.length} חודשים (${fmtBudgetMonth(keys[0])} – ${fmtBudgetMonth(keys[keys.length-1])}) מ־${n} עסקאות ✓`:`מולאו ${rowsFilled} קטגוריות מ־${n} עסקאות ב${fmtBudgetMonth(key)} ✓`)+(learnedNow?` · 🧠 זכרנו ${learnedNow} בתי עסק — בפעם הבאה הם יזוהו לבד`:' אפשר לתקן כל סכום ידנית'));
+    showToast((keys.length>1?`מולאו ${keys.length} חודשים (${fmtBudgetMonth(keys[0])} – ${fmtBudgetMonth(keys[keys.length-1])}) מ־${n} עסקאות ✓`:`מולאו ${rowsFilled} קטגוריות מ־${n} עסקאות ב${fmtBudgetMonth(key)} ✓`)+(learnedNow?` · 🧠 זכרנו ${learnedNow} בתי עסק — בפעם הבאה הם יזוהו לבד`:' אפשר לתקן כל סכום ידנית')
+      +(placeholders?` · 📈 ${placeholders} שורות "השקעות" שהוקלדו ידנית בהכנסות הוחלפו בהעברה האמיתית מהבנק`:''));
   }
 };
 window.openStatementImport=()=>SIX.open();
