@@ -24,9 +24,27 @@ function budgetToggleRowTx(sec,i){
 function _bShortDate(d){const p=String(d||'').split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0].slice(2):d;}
 function _bRowOptions(sel){
   const b=curBudget();
+  const biz=!!((D.budgetProfile||{}).selfEmployed);
+  // + a new row right from here (e.g. "בעלי חיים" that this month doesn't have yet)
+  const add=[['needs','➕ קטגוריה חדשה בצרכים...'],['wants','➕ קטגוריה חדשה בכיף...']]
+    .concat(biz?[['business','➕ קטגוריה חדשה בעסק...']]:[]).concat([['income','➕ שורת הכנסה חדשה...']]);
   return Object.keys(_BSEC_LBL).filter(s=>(b[s]||[]).some(r=>(r.name||'').trim())).map(s=>
     `<optgroup label="${_BSEC_LBL[s]}">`+b[s].filter(r=>(r.name||'').trim()).map(r=>{
-      const v=s+'|'+r.name.trim();return `<option value="${esc(v)}"${v===sel?' selected':''}>${esc(r.name.trim())}</option>`;}).join('')+'</optgroup>').join('');
+      const v=s+'|'+r.name.trim();return `<option value="${esc(v)}"${v===sel?' selected':''}>${esc(r.name.trim())}</option>`;}).join('')+'</optgroup>').join('')
+    +`<optgroup label="חדש">${add.map(([s,l])=>`<option value="__new|${s}">${l}</option>`).join('')}</optgroup>`;
+}
+// Picking "➕ ..." in the transaction editor: name the row, add it to this month, select it
+function budgetTxNewRow(sel){
+  if(!String(sel.value).startsWith('__new|')){sel.dataset.prev=sel.value;return;}
+  const sec=sel.value.split('|')[1];
+  const name=(prompt('שם הקטגוריה החדשה ('+_BSEC_LBL[sec]+'):','')||'').trim();
+  if(!name){sel.value=sel.dataset.prev||'';return;}
+  const b=curBudget();if(!Array.isArray(b[sec]))b[sec]=[];
+  if(!b[sec].some(r=>(r.name||'').trim()===name))b[sec].push({name,amount:''});
+  touchSection('budget');markDirty();
+  const v=sec+'|'+name;
+  sel.innerHTML=_bRowOptions(v);sel.value=v;sel.dataset.prev=v;
+  showToast('נוספה הקטגוריה "'+name+'" ב'+_BSEC_LBL[sec]+' — לחצו "שמור" כדי להעביר אליה את העסקה');
 }
 function budgetRowTxPanel(sec,name,txs){
   const list=txs.slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
@@ -38,7 +56,7 @@ function budgetRowTxPanel(sec,name,txs){
     if(_budgetEditTx===t.id)return `<div style="background:var(--s1);border:1px solid var(--teal-border);border-radius:9px;padding:8px;margin:4px 0">
       <div style="font-size:12px;font-weight:700;margin-bottom:6px">${esc(t.n)} <span style="color:var(--t3);font-weight:400">· ${_bShortDate(t.d)}${t.s?' · '+esc(t.s):''}</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <select id="btx-k" style="flex:1;min-width:150px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);font-family:var(--font);font-size:12px;padding:5px">${_bRowOptions(t.k)}</select>
+        <select id="btx-k" data-prev="${esc(t.k)}" onchange="budgetTxNewRow(this)" style="flex:1;min-width:150px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);font-family:var(--font);font-size:12px;padding:5px">${_bRowOptions(t.k)}</select>
         <input id="btx-a" type="number" step="0.01" value="${t.a}" data-no-fmt style="width:95px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);font-family:var(--font);font-size:12.5px;padding:5px;text-align:center">
         <button onclick="budgetTxSave('${t.id}')" class="btnsave" style="padding:5px 12px;font-size:12px">שמור</button>
         <button onclick="budgetTxRemove('${t.id}')" title="הסר את העסקה מהקטגוריה (למשל אם נספרה פעמיים)" style="background:none;border:1px solid rgba(239,68,68,.35);color:#fca5a5;border-radius:7px;padding:5px 8px;font-family:var(--font);font-size:11.5px;cursor:pointer">🗑 הסר</button>
@@ -72,7 +90,7 @@ function budgetTxSave(id){
   const kEl=document.getElementById('btx-k'),aEl=document.getElementById('btx-a');
   if(!t||!kEl||!aEl)return;
   const k=kEl.value,a=parseFloat(aEl.value);
-  if(!k||isNaN(a)){showToast('בחרו קטגוריה וסכום');return;}
+  if(!k||k.startsWith('__new|')||isNaN(a)){showToast('בחרו קטגוריה וסכום');return;}
   if(k===t.k&&a===t.a){budgetTxEdit(null);return;}
   if(!t.off){_budgetMoveAmt(t.k,-t.a);_budgetMoveAmt(k,a);} // a "לא לספור" one isn't in any row
   const wasOff=!!t.off;
