@@ -71,7 +71,7 @@ const CAT2BIZ={ads:'ads',subs:'soft',transport:'car',food:'food',super:'food',sh
 // → bills, not super). Keywords of ≤3 letters must match a whole word.
 const DICT={
   super:['מרקט','market','תבלינים','חלב ודבש','קצב','בשר','מיט','דגים','ירקות','חממה','מעדני','מכולת','שוק','סופר','שופרסל','רמי לוי','יוחננוף','ויקטורי','אושר עד','מגה בעיר','טיב טעם','יינות ביתן','חצי חינם','קרפור','carrefour','am pm','ampm','מכולת','מינימרקט','פרש מרקט','freshmarket','קשת טעמים','זול ובגדול','סופר יודה','שוק העיר','מחסני השוק','היפר כהן','סופרמרקט','סופר','קינג סטור','נתיב החסד','סופר דוש','פירות וירקות','ירקן','מאפיה','קצביה','שוק'],
-  transport:['מוטורס','motors','תחבורה','רב פס','רבפס','קנסות','תח"צ','תחצ','פז','דלק','סונול','דור אלון','אלון','ten','טן','yellow','ילו','רב קו','רבקו','moovit','מוביט','gett','גט','yango','יאנגו','כביש 6','כביש חוצה','נתיבי איילון','פנגו','pango','סלופארק','cellopark','חניון','חניה','אחוזות החוף','רכבת ישראל','אגד','דן','מטרופולין','אפיקים','קווים','מוסך','צמיגים','טסט','רישוי','ליסינג','lime','bird'],
+  transport:['uber','bolt','cabify','lyft','free now','מוטורס','motors','תחבורה','רב פס','רבפס','קנסות','תח"צ','תחצ','פז','דלק','סונול','דור אלון','אלון','ten','טן','yellow','ילו','רב קו','רבקו','moovit','מוביט','gett','גט','yango','יאנגו','כביש 6','כביש חוצה','נתיבי איילון','פנגו','pango','סלופארק','cellopark','חניון','חניה','אחוזות החוף','רכבת ישראל','אגד','דן','מטרופולין','אפיקים','קווים','מוסך','צמיגים','טסט','רישוי','ליסינג','lime','bird'],
   bills:['מים בע"מ','תמי 4','תמי4','מי עדן','חשבון לשרותי','חברת החשמל','חשמל לישראל','מי אביבים','מי שבע','הגיחון','מי רעננה','מי כרמל','מי עדן','מיתב','תאגיד','עיריית','עירית','מועצה','ארנונה','סופרגז','אמישראגז','פזגז','גז','בזק','הוט','hot','yes','פרטנר','partner','סלקום','cellcom','פלאפון','pelephone','גולן טלקום','הוט מובייל','רמי לוי תקשורת','we4g','019','012','013','אקספון','בזק בינלאומי'],
   insurance:['ריבית','עמלת','עמלה','פרעון מוקדם','פירעון מוקדם','דמי כרטיס','ביטוח','הראל','מגדל','כלל ביטוח','הפניקס','מנורה','איילון','ביטוח ישיר','9 מיליון','aig','ליברה','שירביט','הכשרה','הלוואה','משכנתא'],
   rent:['שכר דירה','שכ"ד'],
@@ -80,7 +80,7 @@ const DICT={
   kids:['קידי','kids','צהרון','גן ילדים','בית ספר','מתנ"ס','חוג','קייטנה','toys','טויס','שילב','אוניברסיטה','מכללה','שכר לימוד','ועד הורים','גן'],
   food:['קפיטריה','חומוס','ממתקים','מאפים','פלאפל','גריל','בורקס','קייטרינג','מתוק','sweet','מסעדה','מסעדת','קפה','cafe','coffee','ארומה','aroma','קופיקס','cofix','גרג','לנדוור','מקדונלד','mcdonald','ברגר','burger','פיצה','pizza','דומינו','wolt','וולט','תן ביס','10bis','סיבוס','cibus','שווארמה','פלאפל','סושי','בר','פאב','יס פלאנט','yes planet','סינמה סיטי','cinema','רב חן','סינמה','eventim','לאן','תיאטרון','הופעה','בירה','אגדיר','גירף','ג׳ירף','בורגר','קונדיטוריה','גלידה','שיפודי','מאפה','בייגל','bakery'],
   shopping:['paypal','פייפאל','אופנה','סטייל','style','קניון','מול','סלון','פרחים','flower','צעצועים','טויס','זארה','zara','h&m','קסטרו','castro','פוקס','fox','אמריקן איגל','american eagle','רנואר','גולף','טרמינל איקס','terminal x','עליאקספרס','aliexpress','amazon','אמזון','shein','שיין','asos','ebay','איביי','ksp','באג','bug','איבורי','ivory','מחסני חשמל','שקם אלקטריק','ace','אייס','הום סנטר','איקאה','ikea','נעמן','ורדינון','מגה ספורט','דקטלון','decathlon','adidas','nike','נייקי','אדידס','next','temu','טמו','סטימצקי','צומת ספרים','מקס סטוק','max stock','המשביר','נעליים','אופיס דיפו','ביגוד','הלבשה','תכשיטים','פנדורה'],
-  travel:['אל על','el al','elal','ישראייר','ארקיע','booking','בוקינג','airbnb','expedia','hotels.com','מלון','hotel','ryanair','wizz','easyjet','agoda','אגודה','issta','איסתא','דיזנהאוס','נופשונית','השכרת רכב','duty free','דיוטי פרי'],
+  travel:['iberia','vueling','lufthansa','klm','air france','british airways','turkish airlines','aegean','pegasus','tap air','swiss','austrian','emirates','אל על','el al','elal','ישראייר','ארקיע','booking','בוקינג','airbnb','expedia','hotels.com','מלון','hotel','ryanair','wizz','easyjet','agoda','אגודה','issta','איסתא','דיזנהאוס','נופשונית','השכרת רכב','duty free','דיוטי פרי'],
   subs:['בריכת','בריכה','netflix','נטפליקס','spotify','ספוטיפיי','apple.com','icloud','google','youtube','disney','דיסני','prime video','hbo','chatgpt','openai','claude','anthropic','microsoft','adobe','canva','holmes place','הולמס פלייס','גו אקטיב','go active','חדר כושר','כושר','dropbox','zoom','audible','storytel','סטורי טל','sting','סטינג','patreon','מנוי'],
   ads:['facebk','facebook','meta','fb.me','google ads','googleads','manychat','tiktok','linkedin','mailchimp','פרסום','קידום'],
   pro:['יעוץ','ייעוץ','יועץ','רואה חשבון','רו"ח','עורך דין','עו"ד','הנהלת חשבונות','משרד עורכי'],
@@ -89,7 +89,7 @@ const DICT={
   hishtal:['השתלמות','קרן השתלמות','קה"ש'],
   biz_tax:['מס הכנסה','נציבות מס','רשות המסים','מקדמות מס','פקיד שומה'],
   biz_ni:['ביטוח לאומי','המוסד לביטוח לאומי'],
-  biz_vat:['מע"מ','מס ערך מוסף'],
+  biz_vat:['מע"מ','מס ערך מוסף','ומע"מ','מכס ומע"מ','המכס ומע"מ','אגף המכס','מעמ אינטרנט'],
   xfer:['העברה','bit','ביט','paybox','פייבוקס','העברה בbit','העברה ב-bit'],
   skip:['כרטיסי אשראי','משיכת מזומן','כספומט','מזומן','תשלום כרטיס','ישראכרט','מקס איט','לאומי קארד','כאל','ויזה','אמריקן אקספרס','דיינרס']
 };
@@ -168,6 +168,7 @@ function autoMap(headers){
   pick('balance',/^י ?תרה/);
   pick('opType',/^סוג פעולה/);
   pick('billDate',/(תאריך|מועד).*חיוב/);
+  pick('billDate',/חיוב בחשבון/); // Isracard "חיוב מחוץ למועד": the day it reached the bank
   pick('date',/תאריך|^date/);
   pick('charge',/סכום.*(חיוב|ש ?ח|בשקל)|חיוב.*ש ?ח|^חובה/);
   pick('amount',/סכום|amount/);
@@ -510,7 +511,7 @@ function extract(file){
         date,billDate:parseDate(cell('billDate')),merchant:p.display,mk:merchantKey(p.name),val,income,bank,
         balance:bank?parseAmt(cell('balance')):null,opType:String(cell('opType')??'').trim(),ref:p.ref,
         inst:inst&&+inst[2]>1&&+inst[1]<=+inst[2]?inst[1]+'/'+inst[2]:'',fx:cur&&!/₪|ש"?ח|ils|nis|שקל/i.test(cur)?cur:'',
-        srcCat:String(cell('srcCat')??'').trim()};
+        srcCat:String(cell('srcCat')??'').trim(),abroad:/בוצע בחו"?ל/.test(rowTxt)};
       tx.kind=bank?bankKind(tx):'expense';
       out.push(tx);
     });
@@ -543,7 +544,8 @@ function ownNameTokens(){
 function bankKind(t){
   const txt=t.merchant+' '+t.opType;
   if(/ניירות ערך/.test(t.opType)||BROKER_RE.test(t.merchant))return 'invest';
-  if(!t.income&&CARD_PAY_RE.test(t.merchant))return 'card';
+  // card bills — and card credits coming back into the account (refunds already in the statement)
+  if(CARD_PAY_RE.test(t.merchant))return 'card';
   const own=ownNameTokens();
   if(own.length>=2&&own.every(w=>txt.includes(w)))return 'own';
   return t.income?'income':'expense';
@@ -560,6 +562,7 @@ function guessCat(t){
   if(best)return best;
   if(t.srcCat)for(const [re,cat] of SRC_CAT)if(re.test(t.srcCat))return cat;
   if(t.bank&&/העבר/.test(t.opType))return 'xfer'; // money sent to a person from the bank
+  if(t.abroad)return 'travel'; // paid in person abroad ("בוצע בחו\"ל") — almost always a trip
   return '';
 }
 
@@ -1063,11 +1066,14 @@ function cardSegs(){
   const out={};
   // (re-uploads too: saving them again is harmless — duplicates are skipped)
   SI.files.filter(f=>f.source!=='דף בנק'&&!f.dupNow&&f.txns&&f.txns.length).forEach(f=>{
+    // one charge per section (rows between total lines) and per bank date — e.g. Isracard's
+    // "חיוב מחוץ למועד" refunds each reach the bank on their own day, apart from the monthly charge
     const g={};
-    f.txns.forEach(t=>{const k=t.month+'|'+(t.seg!==undefined&&f.segDates&&f.segDates[t.seg]?t.seg:'all');
-      (g[k]=g[k]||{month:t.month,seg:t.seg,sum:0,card:t.card}).sum+=t.val;});
+    f.txns.forEach(t=>{const bd=t.billDate?ymd(t.billDate):'';
+      const k=t.month+'|'+(t.seg!==undefined?t.seg:'all')+'|'+bd+'|'+(t.card||'');
+      (g[k]=g[k]||{month:t.month,seg:t.seg,bd,sum:0,card:t.card}).sum+=t.val;});
     Object.values(g).forEach(s=>{if(!s.month)return;
-      const d=s.seg!==undefined&&f.segDates&&f.segDates[s.seg]?ymd(f.segDates[s.seg]):'';
+      const d=s.bd||(s.seg!==undefined&&f.segDates&&f.segDates[s.seg]?ymd(f.segDates[s.seg]):'');
       (out[s.month]=out[s.month]||[]).push({d,a:r2(s.sum),iss:f.source||'',card:s.card||'',fp:f.fp});});
   });
   return out;
