@@ -353,6 +353,28 @@ function budgetRemoveDups(){
   showToast('הוסרו '+d.length+' כפילויות ✓ הסכומים עודכנו');
 }
 
+// Card bills in the bank ↔ charges from the uploaded card statements. A statement is often split
+// into sections with their own totals (domestic / abroad, one per card) while the bank takes ONE
+// amount for all of them — so a bill matches one charge or a combination of charges (±₪1), of the
+// same issuer when both are known, preferring the same card digits and the fewest pieces.
+function budgetMatchCardBills(bills,segs){
+  const ok=(s,c)=>!s.iss||!c.iss||s.iss===c.iss;
+  return bills.map(c=>{
+    let pool=segs.filter(s=>!s.used&&ok(s,c));
+    if(c.ref&&pool.some(s=>s.card===c.ref))pool=pool.filter(s=>!s.card||s.card===c.ref);
+    pool=pool.slice(0,14); // keeps the search small
+    let best=null;
+    const n=pool.length;
+    for(let mask=1;mask<(1<<n);mask++){
+      let sum=0,cnt=0;
+      for(let i=0;i<n;i++)if(mask&(1<<i)){sum+=pool[i].a;cnt++;}
+      if(Math.abs(sum-c.a)<=1&&(!best||cnt<best.cnt))best={mask,cnt};
+      if(best&&best.cnt===1)break;
+    }
+    if(best)for(let i=0;i<n;i++)if(best.mask&(1<<i))pool[i].used=true;
+    return Object.assign({},c,{ok:!!best,parts:best?best.cnt:0});
+  });
+}
 // Jump to a row (from the gap breakdown) and flash it
 function budgetGoToRow(sec,nameEnc){
   const name=decodeURIComponent(nameEnc);
@@ -484,10 +506,7 @@ function renderBudgetBank(){
   const diff=actual-expected,thr=Math.max(200,(bk.out||0)*0.02);
   // Card bills ↔ uploaded card statements (same amount ±₪1, same issuer when both are known)
   const segs=(m.cardSegs||[]).map(s=>Object.assign({},s,{used:false}));
-  const cards=(bk.cards||[]).map(c=>{
-    const s=segs.find(x=>!x.used&&Math.abs(x.a-c.a)<=1&&(!x.iss||!c.iss||x.iss===c.iss));
-    if(s)s.used=true;return Object.assign({},c,{ok:!!s});
-  });
+  const cards=budgetMatchCardBills(bk.cards||[],segs);
   const missing=cards.filter(c=>!c.ok),missSum=missing.reduce((s,c)=>s+c.a,0);
   const extra=segs.filter(s=>!s.used&&s.d&&bk.from&&s.d>=bk.from&&s.d<=bk.to);
   const signed=v=>iln((v>=0?'+':'−')+fmt(Math.abs(v)));
