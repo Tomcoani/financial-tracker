@@ -460,8 +460,8 @@ function renderBudgetSection(sec){
       <input type="number" value="${row.amount||''}" placeholder="0" data-no-fmt
         oninput="updateBudgetRow('${sec}',${i},'amount',this.value)" onchange="budgetRepeatOffer('${sec}',${i})"
         style="width:110px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:${meta.color};font-family:var(--font);font-size:14px;font-weight:700;padding:8px 10px;text-align:center${off?';text-decoration:line-through':''}"/>
-      ${_bNum(row.amount)||off?`<button onclick="budgetRowSkip('${sec}',${i})" title="${off?'להחזיר לחישוב':'לא לספור בחישוב (למשל הוצאה חד־פעמית, או כזו שתוחזר לכם)'}"
-        style="flex-shrink:0;background:none;border:none;color:${off?'var(--amber)':'var(--t3)'};cursor:pointer;font-size:14px;padding:0 1px">${off?'↩':'⊘'}</button>`:''}
+      ${off?`<button onclick="budgetRowSkip('${sec}',${i})" title="להחזיר לחישוב"
+        style="flex-shrink:0;background:none;border:none;color:var(--amber);cursor:pointer;font-size:14px;padding:0 1px">↩</button>`:''}
       <button onclick="removeBudgetRow('${sec}',${i})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 2px;line-height:1;flex-shrink:0">×</button>
     </div>${open?budgetRowTxPanel(sec,row.name,txs):''}${budgetRepeatPanel(sec,i,row)}`;
   });
