@@ -45,7 +45,10 @@ const CATS={
   ads:      {name:'פרסום ושיווק',        sec:'business',row:/פרסום|שיווק/, alt:{name:'מנויים (סטרימינג, חדר כושר)',sec:'wants',row:/מנוי|סטרימינג/}},
   pro:      {name:'שירותים מקצועיים',    sec:'needs',row:/שירותים מקצועיים|יעוץ|ייעוץ/},
   // Money sent to people (Bit / PayBox / bank transfers) — its own row, personal or business
-  xfer:     {name:XFER_NAME,              sec:'wants',row:/פייבוקס|העברות|ביט(?!וח)/}
+  xfer:     {name:XFER_NAME,              sec:'wants',row:/פייבוקס|העברות|ביט(?!וח)/},
+  // Self-employed deposits to pension / study fund → the business "העברה להשקעות" rows (savings)
+  pension:  {name:'הפקדה לפנסיה',          sec:'bizInvest',row:/פנסי/,     alt:{name:'חיסכון ופנסיה',sec:'needs',row:/פנסי|חיסכון/}},
+  hishtal:  {name:'הפקדה לקרן השתלמות',    sec:'bizInvest',row:/השתלמות/,  alt:{name:'חיסכון ופנסיה',sec:'needs',row:/פנסי|חיסכון/}}
 };
 // Business section rows for expenses on a business card (or marked "עסקי"): personal category →
 // business row. An existing business row matching `re` is used; otherwise the row is added.
@@ -81,6 +84,9 @@ const DICT={
   subs:['בריכת','בריכה','netflix','נטפליקס','spotify','ספוטיפיי','apple.com','icloud','google','youtube','disney','דיסני','prime video','hbo','chatgpt','openai','claude','anthropic','microsoft','adobe','canva','holmes place','הולמס פלייס','גו אקטיב','go active','חדר כושר','כושר','dropbox','zoom','audible','storytel','סטורי טל','sting','סטינג','patreon','מנוי'],
   ads:['facebk','facebook','meta','fb.me','google ads','googleads','manychat','tiktok','linkedin','mailchimp','פרסום','קידום'],
   pro:['יעוץ','ייעוץ','יועץ','רואה חשבון','רו"ח','עורך דין','עו"ד','הנהלת חשבונות','משרד עורכי'],
+  // (longer than the insurance companies' names, so "מגדל מקפת" isn't read as insurance)
+  pension:['פנסיה','קרן פנסיה','מקפת','מגדל מקפת','מבטחים','מנורה מבטחים','הראל פנסיה','כלל פנסיה','הפניקס פנסיה','קופת גמל','קופ"ג','גמל','פנסיוני','גמל להשקעה'],
+  hishtal:['השתלמות','קרן השתלמות','קה"ש'],
   biz_tax:['מס הכנסה','נציבות מס','רשות המסים','מקדמות מס','פקיד שומה'],
   biz_ni:['ביטוח לאומי','המוסד לביטוח לאומי'],
   biz_vat:['מע"מ','מס ערך מוסף'],
@@ -564,8 +570,9 @@ function monthRows(){
   const names=sec=>(m[sec]||[]).map(r=>(r.name||'').trim()).filter(Boolean);
   // the business section exists only for the self-employed (budget.js ensureBizRows)
   const biz=selfEmployed()?(names('business').length?names('business'):BIZ_DEFAULT_ROWS().map(r=>r.name)):[];
+  const bizInv=selfEmployed()?(names('bizInvest').length?names('bizInvest'):['הפקדה לפנסיה','הפקדה לקרן השתלמות']):[];
   const sep=selfEmployed()&&(D.budgetProfile||{}).bizMode==='separate';
-  return {needs:names('needs'),wants:names('wants'),business:biz,income:names('income'),
+  return {needs:names('needs'),wants:names('wants'),business:biz,bizInvest:bizInv,income:names('income'),
     bizIncome:sep?(names('bizIncome').length?names('bizIncome'):['הכנסות העסק']):[]};
 }
 // ── Income (money coming into a bank account) ──
@@ -592,7 +599,8 @@ function catTarget(cat,rows){
   if(!cat)return '';
   if(cat==='skip')return 'skip';
   let c=CATS[cat];
-  if(c.sec==='business'&&!selfEmployed())c=c.alt;
+  if((c.sec==='business'||c.sec==='bizInvest')&&!selfEmployed())c=c.alt;
+  if(c.sec==='bizInvest'){const hit=rows.bizInvest.find(n=>c.row.test(n));return 'bizInvest|'+(hit||c.name);}
   if(c.sec==='business'){const hit=rows.business.find(n=>c.row.test(n));return 'business|'+(hit||c.name);}
   for(const sec of [c.sec,c.sec==='needs'?'wants':'needs']){
     const hit=rows[sec].find(n=>c.row.test(n)&&!(c.not&&c.not.test(n)));
@@ -700,12 +708,12 @@ function isBiz(t){
   if(SI.bizSession[t.mk]!==undefined)return SI.bizSession[t.mk];
   const mb=(D.importMerchantBiz||{})[t.mk];if(mb!==undefined)return mb;
   if(t.income&&(PROCESSOR_RE.test(t.merchant)||BIZ_INCOME_RE.test(t.merchant)))return true; // client payments
-  if(!t.income&&t.cat&&CATS[t.cat]&&CATS[t.cat].sec==='business')return true;
+  if(!t.income&&t.cat&&CATS[t.cat]&&(CATS[t.cat].sec==='business'||CATS[t.cat].sec==='bizInvest'))return true;
   return !!SI.bizCards[t.cardKey];
 }
 function bizTarget(cat,rows){
   if(cat==='skip')return 'skip';
-  if(cat&&CATS[cat]&&CATS[cat].sec==='business'&&cat!=='ads')return catTarget(cat,rows); // tax rows
+  if(cat&&CATS[cat]&&(CATS[cat].sec==='business'||CATS[cat].sec==='bizInvest')&&cat!=='ads')return catTarget(cat,rows); // tax / deposit rows
   if(!cat)return ''; // unknown — the client picks (business rows are offered first)
   const def=BIZ_ROWS[CAT2BIZ[cat]||'other'];
   const hit=rows.business.find(n=>def.re.test(n));
@@ -778,6 +786,7 @@ function targetOptions(sel,rows,income){
   o+='<optgroup label="צרכים">'+rows.needs.map(n=>opt('needs|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('needs|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   o+='<optgroup label="כיף">'+rows.wants.map(n=>opt('wants|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('wants|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   if(selfEmployed())o+='<optgroup label="עסק">'+rows.business.map(n=>opt('business|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('business|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
+  if(selfEmployed())o+='<optgroup label="עסק — העברה להשקעות">'+rows.bizInvest.map(n=>opt('bizInvest|'+n,n)).join('')+newOnes.filter(t=>t.startsWith('bizInvest|')).map(t=>opt(t,t.split('|')[1]+' (חדש)')).join('')+'</optgroup>';
   o+='<optgroup label="אחר">'+opt('skip','🚫 לא לספור (העברה / החזר)')+opt('__new_needs','➕ קטגוריה חדשה בצרכים...')+opt('__new_wants','➕ קטגוריה חדשה בכיף...')+'</optgroup>';
   return o;
 }
@@ -955,7 +964,7 @@ function reviewView(){
     <div style="font-size:13.5px;font-weight:800;margin-top:14px">כך זה ייכנס לתקציב${oneMonth?'':' <span style="font-weight:400;font-size:11.5px;color:var(--t3)">(סה"כ לכל החודשים — כל חודש יקבל את החלק שלו)</span>'}</div>
     <div style="font-size:11.5px;color:var(--t3)">לחיצה על קטגוריה מציגה את בתי העסק — ואפשר להעביר כל אחד לקטגוריה אחרת.</div>
     ${secBlock('income','💰 הכנסות','var(--teal)')}${secBlock('bizIncome','💼 הכנסות העסק','var(--teal)')}
-    ${secBlock('needs','🏠 צרכים','var(--green)')}${secBlock('wants','🎉 כיף','var(--amber)')}${secBlock('business','💼 עסק','#c4b5fd')}
+    ${secBlock('needs','🏠 צרכים','var(--green)')}${secBlock('wants','🎉 כיף','var(--amber)')}${secBlock('business','💼 עסק','#c4b5fd')}${secBlock('bizInvest','📈 עסק — העברה להשקעות','#60a5fa')}
     ${skipBlock}${modeBox}${techView()}
     <div class="modal-btns" style="margin-top:16px">
       <button class="btnsnap primary" style="flex:1" onclick="SIX.apply()">מלא את ההוצאות ✓</button>

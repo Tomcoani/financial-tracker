@@ -147,13 +147,13 @@ function renderBudgetCombined(){
   const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
   const lines=accs.map(a=>{
     const m=budgetAccMonths(a.id)[k],p=budgetAccProfile(a.id),comb=!!(p.selfEmployed&&p.bizMode!=='separate');
-    if(!m)return {a,has:false,inc:0,needs:0,wants:0,biz:0,exp:0,saved:0};
+    if(!m)return {a,has:false,inc:0,needs:0,wants:0,biz:0,inv:0,exp:0,saved:0};
     const s=budgetSavedOf(m,p),biz=comb?sum(m.business):0;
-    return {a,has:true,m,comb,inc:s.inc,needs:sum(m.needs),wants:sum(m.wants),biz,exp:s.exp,saved:s.inc-s.exp};
+    return {a,has:true,m,comb,inc:s.inc,needs:sum(m.needs),wants:sum(m.wants),biz,inv:s.inv||0,exp:s.exp,saved:s.inc-s.exp};
   });
-  const T=lines.reduce((t,l)=>{['inc','needs','wants','biz','exp','saved'].forEach(f=>t[f]+=l[f]);return t;},{inc:0,needs:0,wants:0,biz:0,exp:0,saved:0});
+  const T=lines.reduce((t,l)=>{['inc','needs','wants','biz','inv','exp','saved'].forEach(f=>t[f]+=l[f]);return t;},{inc:0,needs:0,wants:0,biz:0,inv:0,exp:0,saved:0});
   const pos=T.saved>=0,pct=v=>T.inc>0?Math.round(v/T.inc*100):0;
-  const anyBiz=lines.some(l=>l.biz);
+  const anyBiz=lines.some(l=>l.biz),anyInv=lines.some(l=>l.inv);
   // categories with the same name across accounts are added together
   const cats={};
   lines.filter(l=>l.has).forEach(l=>['needs','wants'].concat(l.comb?['business']:[]).forEach(sec=>(l.m[sec]||[]).forEach(r=>{
@@ -176,18 +176,19 @@ function renderBudgetCombined(){
       <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${pos?'נשאר לכם החודש — בכל החשבונות':'גירעון החודש — בכל החשבונות'}</div>
       <div style="font-size:30px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${signed(T.saved)}</div>
       ${T.inc>0&&pos?`<div style="font-size:12px;color:var(--t2)">${pct(T.saved)}% מההכנסה של כולם נשארו פנויים</div>`:''}
+      ${T.inv>0?`<div style="font-size:12px;color:#60a5fa;font-weight:700;margin-top:3px">💪 סה"כ חיסכון: ${iln(fmt(Math.max(0,T.saved)+T.inv))} (כולל ${iln(fmt(T.inv))} שהופקדו לפנסיה / השתלמות)</div>`:''}
     </div>
     <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:12.5px">
       <thead><tr style="color:var(--t3);font-size:11.5px">
-        <th style="text-align:right;padding:6px">חשבון</th><th>הכנסות</th><th><span style="color:var(--green)">●</span> צרכים</th><th><span style="color:var(--amber)">●</span> כיף</th>${anyBiz?'<th><span style="color:#a78bfa">●</span> עסק</th>':''}<th>נשאר</th></tr></thead>
+        <th style="text-align:right;padding:6px">חשבון</th><th>הכנסות</th><th><span style="color:var(--green)">●</span> צרכים</th><th><span style="color:var(--amber)">●</span> כיף</th>${anyBiz?'<th><span style="color:#a78bfa">●</span> עסק</th>':''}${anyInv?'<th><span style="color:#60a5fa">●</span> להשקעות</th>':''}<th>נשאר</th></tr></thead>
       <tbody>
       ${lines.map(l=>`<tr style="border-top:1px solid var(--border)">
         <td style="padding:7px 6px;font-weight:700"><button onclick="budgetAccSwitch('${l.a.id}')" title="למעבר לחשבון" style="background:none;border:none;color:var(--white);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline dotted">${esc(l.a.name)}</button>${l.has?'':' <span style="font-size:10.5px;color:var(--t3)">(אין נתונים לחודש)</span>'}</td>
-        ${cell(l.inc,'var(--teal)')}${cell(l.needs)}${cell(l.wants)}${anyBiz?cell(l.biz):''}
+        ${cell(l.inc,'var(--teal)')}${cell(l.needs)}${cell(l.wants)}${anyBiz?cell(l.biz):''}${anyInv?cell(l.inv,'#60a5fa'):''}
         <td style="padding:7px 6px;text-align:center;font-weight:800;white-space:nowrap;color:${l.saved>=0?'var(--teal)':'var(--red)'}">${signed(l.saved)}</td></tr>`).join('')}
       <tr style="border-top:2px solid var(--teal-border);font-weight:800">
-        <td style="padding:7px 6px">סה"כ</td>${cell(T.inc,'var(--teal)')}${cell(T.needs)}${cell(T.wants)}${anyBiz?cell(T.biz):''}
+        <td style="padding:7px 6px">סה"כ</td>${cell(T.inc,'var(--teal)')}${cell(T.needs)}${cell(T.wants)}${anyBiz?cell(T.biz):''}${anyInv?cell(T.inv,'#60a5fa'):''}
         <td style="padding:7px 6px;text-align:center;white-space:nowrap;color:${pos?'var(--teal)':'var(--red)'}">${signed(T.saved)}</td></tr>
       </tbody></table></div>
     ${banks.length?`<div style="font-size:12px;color:var(--t2);margin-top:10px">🏦 יתרה כוללת בעו"ש${banks.length<lines.length?' (בחשבונות שהועלה להם עו"ש)':''}: ${iln(fmt(banks.reduce((s,l)=>s+l.m.bank.opening,0)))} בתחילת החודש → ${iln(fmt(banks.reduce((s,l)=>s+l.m.bank.closing,0)))} בסוף</div>`:''}

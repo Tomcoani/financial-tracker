@@ -9,7 +9,7 @@
 // amounts follow (only the difference moves, so typed-in amounts are kept).
 let _budgetOpenRow=null,_budgetEditTx=null;
 const _bNum=v=>parseFloat(String(v||0).replace(/,/g,''))||0;
-const _BSEC_LBL={income:'הכנסות',needs:'צרכים',wants:'כיף',business:'עסק',bizIncome:'הכנסות העסק'};
+const _BSEC_LBL={income:'הכנסות',needs:'צרכים',wants:'כיף',business:'עסק',bizInvest:'עסק — העברה להשקעות',bizIncome:'הכנסות העסק'};
 function budgetRowTx(sec,name){
   const tx=curBudget().tx;if(!Array.isArray(tx)||!name)return [];
   const k=sec+'|'+String(name).trim();
@@ -263,7 +263,7 @@ function budgetGapHtml(m,bk,diff,open){
   const listed=(sec,n)=>(m.tx||[]).filter(x=>x.k===sec+'|'+n).reduce((s,x)=>s+x.a,0);
   const hand=secs=>{const out=[];secs.forEach(sec=>(m[sec]||[]).forEach(r=>{const n=(r.name||'').trim();if(!n)return;
     const v=_bNum(r.amount)-listed(sec,n);if(Math.abs(v)>=1)out.push({n,a:v});}));return out;};
-  const manExp=hand(['needs','wants','business']),manInc=hand(['income','bizIncome']);
+  const manExp=hand(['needs','wants','business','bizInvest']),manInc=hand(['income','bizIncome']);
   const cardTx=(m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).reduce((s,x)=>s+x.a,0);
   const cardBills=(bk.cards||[]).reduce((s,c)=>s+c.a,0);
   const sk=Array.isArray(bk.skipped)?bk.skipped:null;
@@ -342,7 +342,7 @@ function renderBudgetBank(){
   if(!bk){el.style.display='none';el.innerHTML='';return;}
   el.style.display='';
   const sum=rows=>(rows||[]).reduce((s,r)=>s+_bNum(r.amount),0);
-  const inc=sum(m.income)+sum(m.bizIncome),exp=sum(m.needs)+sum(m.wants)+sum(m.business);
+  const inc=sum(m.income)+sum(m.bizIncome),exp=sum(m.needs)+sum(m.wants)+sum(m.business)+sum(m.bizInvest);
   const hasBal=bk.opening!=null&&bk.closing!=null;
   const actual=hasBal?bk.closing-bk.opening:0;
   const expected=inc-exp-(bk.invest||0)-(bk.own||0);

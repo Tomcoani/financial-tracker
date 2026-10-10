@@ -43,6 +43,7 @@ function newBudgetMonthTemplate(){
   // Business categories repeat month to month too
   if(Array.isArray(last.business)&&last.business.length)t.business=strip(last.business);
   if(Array.isArray(last.bizIncome)&&last.bizIncome.length)t.bizIncome=strip(last.bizIncome);
+  if(Array.isArray(last.bizInvest)&&last.bizInvest.length)t.bizInvest=strip(last.bizInvest);
   return t;
 }
 // Migrate the old single-month shape (D.monthlyBudget) into D.budgetMonths
@@ -67,8 +68,12 @@ const BUDGET_SECTIONS={
   needs:{color:'var(--green)',ph:'הוצאה חיונית...',totalLbl:'סה"כ צרכים'},
   wants:{color:'var(--amber)',ph:'הוצאת כיף...',totalLbl:'סה"כ כיף'},
   business:{color:'#c4b5fd',ph:'תשלום / הוצאה של העסק...',totalLbl:'סה"כ תשלומי העסק'},
-  bizIncome:{color:'var(--teal)',ph:'מקור הכנסה של העסק...',totalLbl:'סה"כ הכנסות העסק'}
+  bizIncome:{color:'var(--teal)',ph:'מקור הכנסה של העסק...',totalLbl:'סה"כ הכנסות העסק'},
+  // self-employed deposits to pension / study fund: money out of the cashflow, but into savings —
+  // kept apart from the business payments and shown separately in the summary
+  bizInvest:{color:'#60a5fa',ph:'הפקדה (פנסיה, קרן השתלמות...)',totalLbl:'סה"כ הועבר להשקעות'}
 };
+const BIZ_INVEST_DEFAULT_ROWS=()=>[{name:'הפקדה לפנסיה',amount:''},{name:'הפקדה לקרן השתלמות',amount:''}];
 // ── Employment profile (global, not per month): שכיר / עצמאי (or both) ──
 // D.budgetProfile = {salaried, selfEmployed, bizType:'patur'|'zair'|'murshe'|'',
 //                    bizMode:'combined'|'separate'|''}  ('' mode = combined)
@@ -90,6 +95,7 @@ function ensureBizRows(m){
   const p=budgetProfile();
   if(!p.selfEmployed||!m)return;
   if(!Array.isArray(m.business)||!m.business.length)m.business=BIZ_DEFAULT_ROWS();
+  if(!Array.isArray(m.bizInvest)||!m.bizInvest.length)m.bizInvest=BIZ_INVEST_DEFAULT_ROWS();
   if(p.bizMode==='separate'&&(!Array.isArray(m.bizIncome)||!m.bizIncome.length))m.bizIncome=[{name:'הכנסות העסק',amount:''}];
 }
 // ── Bi-monthly VAT (עוסק מורשה) ──
@@ -183,8 +189,12 @@ function budgetSavedOf(month,prof){
   // Separate mode: the business has its own cashflow, outside the household.
   // prof = that account's employment profile (several accounts); default the active one.
   const p=prof||D.budgetProfile||{};
-  const biz=(p.selfEmployed&&p.bizMode!=='separate')?sum(month.business):0;
-  return {inc:sum(month.income),exp:sum(month.needs)+sum(month.wants)+biz};
+  const comb=!!(p.selfEmployed&&p.bizMode!=='separate');
+  const biz=comb?sum(month.business):0;
+  // deposits to pension / study fund leave the cashflow too (counted in exp), but are reported
+  // apart as inv — they're savings, not spending
+  const inv=comb?sum(month.bizInvest):0;
+  return {inc:sum(month.income),exp:sum(month.needs)+sum(month.wants)+biz+inv,inv};
 }
 // Savings from the most recent month the client actually filled in
 // (income − expenses). Returns {saved, monthKey} or null if none.
@@ -263,7 +273,7 @@ function budgetCopyPrevAmounts(){
   if(!pk){showToast('אין חודש קודם עם נתונים להעתקה');return;}
   const prev=D.budgetMonths[pk],cur=curBudget();
   let filled=0;
-  ['income','needs','wants','business','bizIncome'].forEach(sec=>{
+  ['income','needs','wants','business','bizIncome','bizInvest'].forEach(sec=>{
     (cur[sec]||[]).forEach(row=>{
       if(parseFloat(String(row.amount||0).replace(/,/g,''))||0)return; // typed — keep
       const nm=(row.name||'').trim();
@@ -434,7 +444,7 @@ function updateBudgetRow(sec,i,field,val){
     const totEl=document.getElementById('budget-total-'+sec);
     if(totEl)totEl.textContent=fmt(budgetTotal(sec));
     renderBudgetSummary();
-    if(sec==='business'||sec==='bizIncome')renderBizNet();
+    if(sec==='business'||sec==='bizIncome'||sec==='bizInvest')renderBizNet();
     if(sec==='business'){const vn=document.getElementById('budget-vat-notice');if(vn)vn.innerHTML=vatNoticeHtml();}
   }
   // Refresh the "higher than usual" marker for this row
@@ -466,7 +476,7 @@ function removeBudgetRow(sec,i){
   touchSection('budget');markDirty();
   renderBudgetSection(sec);
   renderBudgetSummary();
-  if(sec==='business'||sec==='bizIncome')renderBizNet();
+  if(sec==='business'||sec==='bizIncome'||sec==='bizInvest')renderBizNet();
 }
 // ── Employment profile card (top of the page) ──
 function renderBudgetProfile(){
@@ -536,9 +546,16 @@ function renderBudgetBusiness(){
       <div style="font-size:12.5px;font-weight:800;color:var(--white);margin:16px 0 6px">🧾 תשלומים והוצאות העסק</div>`:''}
     <div id="budget-business"></div>
     <button class="btnadd" onclick="addBudgetRow('business')" style="margin-top:8px">+ הוסף תשלום / הוצאה לעסק</button>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px dashed rgba(96,165,250,.35)">
+      <div style="font-size:12.5px;font-weight:800;color:#60a5fa;margin-bottom:2px">📈 העברה להשקעות</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:6px">הפקדות לפנסיה ולקרן השתלמות — כסף שיוצא מהתזרים אבל נשאר שלכם, כחיסכון. ${sep?'נכלל בחשבון של העסק,':'בסיכום של הבית הוא'} מוצג בנפרד מההוצאות.</div>
+      <div id="budget-bizInvest"></div>
+      <button class="btnadd" onclick="addBudgetRow('bizInvest')" style="margin-top:8px;border-color:rgba(96,165,250,.35);color:#60a5fa">+ הוסף הפקדה להשקעה</button>
+    </div>
     <div id="budget-biz-net"></div>`;
   if(sep)renderBudgetSection('bizIncome');
   renderBudgetSection('business');
+  renderBudgetSection('bizInvest');
   renderBizNet();
 }
 // Business net (separate mode only): business income − business payments.
@@ -546,10 +563,13 @@ function renderBizNet(){
   const el=document.getElementById('budget-biz-net');
   if(!el)return;
   if(!bizSeparate()){el.innerHTML='';return;}
-  const inc=budgetTotal('bizIncome'),exp=budgetTotal('business'),net=inc-exp,pos=net>=0;
-  el.innerHTML=`<div style="margin-top:12px;background:var(--s2);border:1px solid rgba(167,139,250,.35);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px">
-    <span style="font-size:12.5px;color:var(--t2);font-weight:700">${pos?'נשאר בעסק החודש':'גירעון בעסק החודש'}</span>
-    <span style="font-size:16px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${iln((pos?'':'−')+fmt(Math.abs(net)))}</span>
+  // deposits to investments leave the business cashflow, but are shown apart (they're savings)
+  const inc=budgetTotal('bizIncome'),exp=budgetTotal('business'),inv=budgetTotal('bizInvest'),net=inc-exp-inv,pos=net>=0;
+  el.innerHTML=`<div style="margin-top:12px;background:var(--s2);border:1px solid rgba(167,139,250,.35);border-radius:10px;padding:10px 12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span style="font-size:12.5px;color:var(--t2);font-weight:700">${pos?'נשאר בעסק החודש':'גירעון בעסק החודש'}</span>
+      <span style="font-size:16px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${iln((pos?'':'−')+fmt(Math.abs(net)))}</span></div>
+    ${inv?`<div style="font-size:11.5px;color:#60a5fa;margin-top:4px">📈 בנוסף הועברו ${iln(fmt(inv))} להשקעות (פנסיה / השתלמות) — סה"כ חיסכון מהעסק: ${iln(fmt(Math.max(0,net)+inv))}</div>`:''}
   </div>`;
 }
 // ── Savings trend chart: how much was left over, month by month ──
@@ -588,9 +608,11 @@ function renderBudgetSummary(){
   renderBudgetBank(); // the bank check depends on the same totals
   const inc=budgetTotal('income'),needs=budgetTotal('needs'),wants=budgetTotal('wants');
   const biz=bizCombined()?budgetTotal('business'):0; // business payments (combined mode)
-  const exp=needs+wants+biz,saved=inc-exp;
+  // deposits to pension / study fund (combined mode): out of the cashflow, but savings — shown apart
+  const inv=bizCombined()?budgetTotal('bizInvest'):0;
+  const exp=needs+wants+biz,saved=inc-exp-inv;
   const pct=v=>inc>0?Math.round(v/inc*100):0;
-  const needsPct=pct(needs),wantsPct=pct(wants),bizPct=pct(biz),savePct=pct(saved);
+  const needsPct=pct(needs),wantsPct=pct(wants),bizPct=pct(biz),invPct=pct(inv),savePct=pct(saved);
   if(!inc&&!exp){
     el.innerHTML=`<div class="card" style="text-align:center;color:var(--t3);font-size:13px;padding:20px">מלאו הכנסות והוצאות למטה כדי לראות כמה חסכתם החודש 👇</div>`;
     return;
@@ -621,9 +643,9 @@ function renderBudgetSummary(){
       ${cmpHtml}
     </div>
     <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s2);margin-bottom:6px">
-      ${barSeg(needsPct,'var(--green)')}${barSeg(wantsPct,'var(--amber)')}${barSeg(bizPct,'#a78bfa')}${barSeg(savePct,'var(--teal)')}
+      ${barSeg(needsPct,'var(--green)')}${barSeg(wantsPct,'var(--amber)')}${barSeg(bizPct,'#a78bfa')}${barSeg(invPct,'#60a5fa')}${barSeg(savePct,'var(--teal)')}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(${biz>0?4:3},minmax(0,1fr));gap:8px;margin-top:12px">
+    <div style="display:grid;grid-template-columns:repeat(${3+(biz>0?1:0)+(inv>0?1:0)},minmax(0,1fr));gap:8px;margin-top:12px">
       <div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
         <div style="font-size:11px;color:var(--t3)"><span style="color:var(--green)">●</span> צרכים</div>
         <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(needs))}</div>
@@ -639,6 +661,11 @@ function renderBudgetSummary(){
         <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(biz))}</div>
         <div style="font-size:11px;color:var(--t3)">${inc>0?bizPct+'% מההכנסה':''}</div>
       </div>`:''}
+      ${inv>0?`<div style="text-align:center;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:9px 6px">
+        <div style="font-size:11px;color:var(--t3)"><span style="color:#60a5fa">●</span> 📈 להשקעות</div>
+        <div style="font-size:15px;font-weight:800;color:#60a5fa">${iln(fmt(inv))}</div>
+        <div style="font-size:11px;color:var(--t3)">${inc>0?invPct+'% מההכנסה':''}</div>
+      </div>`:''}
       <div style="text-align:center;background:var(--s2);border-radius:10px;padding:9px 6px">
         <div style="font-size:11px;color:var(--t3)"><span style="color:var(--teal)">●</span> נשאר פנוי</div>
         <div style="font-size:15px;font-weight:800;color:var(--white)">${iln(fmt(Math.max(0,saved)))}</div>
@@ -646,7 +673,8 @@ function renderBudgetSummary(){
       </div>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--t3);text-align:center">
-      הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
+      הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''}${inv>0?' − הפקדות להשקעה '+iln(fmt(inv)):''} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
+      ${inv>0?`<div style="margin-top:6px;font-size:12px;color:#60a5fa;font-weight:700">💪 סה"כ חיסכון החודש: ${iln(fmt(Math.max(0,saved)+inv))} — ${iln(fmt(Math.max(0,saved)))} שנשארו פנויים + ${iln(fmt(inv))} שהופקדו לפנסיה / השתלמות</div>`:''}
       ${bizSeparate()?'<div style="margin-top:4px">💼 העסק מנוהל בתזרים נפרד — ראו את כרטיס "עסק" למטה.</div>':''}
       ${(bizCombined()&&vatBimonthlyOn()&&!_vatOf(curBudget())&&lastVatPaidBefore(D.budgetCurMonth)>0)
         ?`<div style="margin-top:6px;color:var(--amber);font-weight:700">⚠️ החודש לא שולם מע"מ — בחודש הבא צפוי תשלום של כ־${iln(fmt(lastVatPaidBefore(D.budgetCurMonth)))}, אז לא כל מה שנשאר פנוי באמת.</div>`:''}
