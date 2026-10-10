@@ -1071,6 +1071,8 @@ function cardSegs(){
 }
 // ── Public handlers ──
 window.SIX={
+  // the merchant key used to remember merchants — also used by the budget page (budget-detail.js)
+  mk:merchantKey,
   open(){
     if(typeof D!=='object'||!D)return;
     // Admin-only while it's being tested (the button is hidden for everyone else too)

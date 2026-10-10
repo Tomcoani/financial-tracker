@@ -76,6 +76,77 @@ function budgetTxSave(id){
   t.k=k;t.a=a;t.edited=true;_budgetEditTx=null;
   touchSection('budget');markDirty();renderBudget();
   showToast(moved?'העסקה הועברה ל"'+k.split('|')[1]+'" ✓ הסכומים עודכנו':'הסכום עודכן ✓');
+  if(moved)budgetBulkOffer(t,k);
+}
+
+// ── Same merchant in other months: re-categorise everywhere, in some months, or only here ──
+// After a transaction is moved to another row, the same merchant (same key the import uses to
+// remember merchants) is looked for in every month of this account wherever it's still in a
+// different row. A popup asks: all of them / pick months / only this one. Moving keeps the
+// rows in each month in step, and the choice is remembered for future uploads.
+let _bulk=null; // {name, mk, newK, groups:{monthKey:[tx]}, picking:boolean, sel:Set}
+function _bMk(n){
+  const base=String(n||'').split(' · ')[0];
+  return (window.SIX&&SIX.mk)?SIX.mk(base):base.toLowerCase().replace(/[\d"'׳״.,\-_/\\*|()]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function budgetBulkOffer(t,newK){
+  const mk=_bMk(t.n);if(!mk)return;
+  const groups={};
+  Object.entries(D.budgetMonths||{}).forEach(([key,m])=>(m.tx||[]).forEach(x=>{
+    if(x.id!==t.id&&x.k!==newK&&_bMk(x.n)===mk)(groups[key]=groups[key]||[]).push(x);}));
+  if(!Object.keys(groups).length)return;
+  _bulk={name:String(t.n).split(' · ')[0],mk,newK,groups,picking:false,sel:new Set(Object.keys(groups))};
+  budgetBulkRender();
+}
+function budgetBulkRender(){
+  let o=document.getElementById('btx-bulk');
+  if(!_bulk){if(o)o.style.display='none';return;}
+  if(!o){o=document.createElement('div');o.className='overlay';o.id='btx-bulk';document.body.appendChild(o);
+    o.addEventListener('click',e=>{if(e.target===o)budgetBulkClose();});}
+  const b=_bulk,keys=Object.keys(b.groups).sort(),newRow=b.newK.split('|')[1];
+  const nTx=keys.reduce((s,k)=>s+b.groups[k].length,0);
+  const monthLine=k=>{const g=b.groups[k],sum=g.reduce((s,x)=>s+x.a,0),cats=[...new Set(g.map(x=>x.k.split('|')[1]))].join(', ');
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12.5px">
+      <input type="checkbox" ${b.sel.has(k)?'checked':''} onchange="budgetBulkToggle('${k}')">
+      <span style="flex:1"><b>${fmtBudgetMonth(k)}</b>${k===D.budgetCurMonth?' <span style="font-size:10.5px;color:var(--teal)">(החודש הזה)</span>':''}
+        <span style="font-size:11px;color:var(--t3)"> · עכשיו ב"${esc(cats)}"</span></span>
+      <span style="white-space:nowrap">${g.length>1?g.length+' × ':''}${iln(fmt(sum))}</span></label>`;};
+  o.innerHTML=`<div class="modal" style="text-align:right;width:min(480px,94vw)">
+    <h2 style="margin-bottom:6px">🔁 אותה הוצאה מופיעה גם ב־${keys.length===1?'חודש אחד':keys.length+' חודשים'}</h2>
+    <p style="margin-bottom:12px">"<b>${esc(b.name)}</b>" מופיע עוד ${nTx} פעמים בסיווג אחר. לשנות את הסיווג ל"<b>${esc(newRow)}</b>" בכל החודשים במערכת, או רק בחלק?</p>
+    ${b.picking?`<div style="max-height:45vh;overflow:auto;margin-bottom:10px">${keys.map(monthLine).join('')}</div>
+      <div class="modal-btns" style="margin-top:6px">
+        <button class="btnsnap primary" style="flex:1" onclick="budgetBulkApply(false)"${b.sel.size?'':' disabled'}>${b.sel.size===1?'שנה בחודש שסומן':'שנה ב־'+b.sel.size+' החודשים שסומנו'}</button>
+        <button class="btnsnap" style="flex:0 0 auto;padding:12px 16px;background:var(--s2);color:var(--t2);border:1px solid var(--border)" onclick="budgetBulkClose()">רק כאן</button></div>`
+    :`<div class="modal-btns" style="flex-wrap:wrap">
+        <button class="btnsnap primary" style="flex:1" onclick="budgetBulkApply(true)">בכל החודשים (${keys.length})</button>
+        <button class="btnsnap" style="flex:1;background:var(--s2);color:var(--teal);border:1px solid var(--teal-border)" onclick="_bulk.picking=true;budgetBulkRender()">רק בחלק — לבחור חודשים</button>
+        <button class="btnsnap" style="flex:0 0 100%;background:none;color:var(--t3);border:none;padding:6px" onclick="budgetBulkClose()">רק בעסקה הזו</button></div>`}
+  </div>`;
+  o.style.display='flex';
+}
+function budgetBulkToggle(k){if(!_bulk)return;if(_bulk.sel.has(k))_bulk.sel.delete(k);else _bulk.sel.add(k);budgetBulkRender();}
+function budgetBulkClose(){_bulk=null;budgetBulkRender();}
+// move an amount between rows of a given month (adds the target row there if it's missing)
+function _budgetMoveAmtIn(m,key,delta){
+  const [sec,name]=String(key).split('|');
+  if(!Array.isArray(m[sec]))m[sec]=[];
+  let row=m[sec].find(r=>(r.name||'').trim()===name);
+  if(!row){if(delta<=0)return;row={name,amount:''};m[sec].push(row);}
+  row.amount=String(Math.max(0,Math.round(_bNum(row.amount)+delta)));
+}
+function budgetBulkApply(all){
+  const b=_bulk;if(!b)return;
+  const keys=Object.keys(b.groups).filter(k=>all||b.sel.has(k));
+  let n=0;
+  keys.forEach(k=>{const m=D.budgetMonths[k];if(!m)return;
+    b.groups[k].forEach(x=>{_budgetMoveAmtIn(m,x.k,-x.a);_budgetMoveAmtIn(m,b.newK,x.a);x.k=b.newK;x.edited=true;n++;});});
+  // remember it for future uploads too
+  const [sec,name]=b.newK.split('|');
+  if(window.SIX&&SIX.mk){D.importMerchants=D.importMerchants||{};D.importMerchants[b.mk]={sec,name};}
+  _bulk=null;budgetBulkRender();
+  touchSection('budget');markDirty();renderBudget();
+  showToast(`"${b.name}" סווג ל"${name}" ב־${keys.length} חודשים נוספים (${n} עסקאות) ✓`);
 }
 function budgetTxRemove(id){
   const b=curBudget(),t=(b.tx||[]).find(x=>x.id===id);if(!t)return;
