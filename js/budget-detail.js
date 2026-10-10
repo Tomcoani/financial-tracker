@@ -489,7 +489,8 @@ function budgetGapHtml(m,bk,diff,open){
     const v=_bNum(r.amount)-listed(sec,n);if(Math.abs(v)>=1)out.push({n,a:v,sec});}));return out;};
   const manExp=hand(['needs','wants','business','bizInvest']),manInc=hand(['income','bizIncome']);
   const cardTx=(m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).reduce((s,x)=>s+(x.dir==='in'?-x.a:x.a),0); // ("not counted" items carry their direction)
-  const cardBills=(bk.cards||[]).reduce((s,c)=>s+c.a,0);
+  // card bills after the bank file's last day are already left out of diff (renderBudgetBank)
+  const cardBills=(bk.cards||[]).reduce((s,c)=>s+c.a,0)+(m.cardSegs||[]).filter(s=>bk.to&&s.d&&s.d>bk.to).reduce((s,x)=>s+x.a,0);
   const sk=Array.isArray(bk.skipped)?bk.skipped:null;
   const skIn=sk?sk.filter(x=>x.dir==='in'):[],skOut=sk?sk.filter(x=>x.dir==='out'):[];
   const tot=l=>l.reduce((s,x)=>s+x.a,0);
@@ -573,7 +574,10 @@ function renderBudgetBank(){
   const hasBal=bk.opening!=null&&bk.closing!=null;
   const actual=hasBal?bk.closing-bk.opening:0;
   const expected=inc-exp-(bk.invest||0)-(bk.own||0);
-  const diff=actual-expected,thr=Math.max(200,(bk.out||0)*0.02);
+  // The bank file may end before the month does (exported on the 7th): card bills dated after
+  // its last day are in the budget but haven't left the account yet — they aren't a gap
+  const later=(m.cardSegs||[]).filter(s=>bk.to&&s.d&&s.d>bk.to),laterSum=later.reduce((s,x)=>s+x.a,0);
+  const diff=actual-expected-laterSum,thr=Math.max(200,(bk.out||0)*0.02);
   // Card bills ↔ uploaded card statements (same amount ±₪1, same issuer when both are known)
   const segs=(m.cardSegs||[]).map(s=>Object.assign({},s,{used:false}));
   const cards=budgetMatchCardBills(bk.cards||[],segs);
@@ -593,6 +597,7 @@ function renderBudgetBank(){
     else verdict=box('rgba(245,158,11,.08)','rgba(245,158,11,.35)',
       `⚠️ <b>נשארו בחשבון ${iln(fmt(diff))} יותר ממה שהתקציב מראה</b> — אולי <b>הוצאה נרשמה פעמיים</b>, או שחסרה הכנסה.`);
     if(Math.abs(diff)>thr)verdict=budgetGapAckHtml(bk,diff,verdict,box);
+    if(laterSum)verdict+=`<div style="font-size:11.5px;color:var(--t2);margin-top:6px">⏳ קובץ העו"ש מגיע רק עד ${_bShortDate(bk.to)}. חיובי כרטיס של ${iln(fmt(laterSum))} (${later.map(s=>_bShortDate(s.d)).filter((v,i,a)=>a.indexOf(v)===i).join(', ')}) כבר בתקציב אבל עוד לא ירדו בקובץ — לא נחשבים כפער. העלה עו"ש מעודכן אחרי התאריך הזה כדי לבדוק גם אותם.</div>`;
   }
   const cardList=!cards.length?'':`<div style="font-size:12.5px;font-weight:800;margin:12px 0 4px">💳 חיובי אשראי שירדו מהחשבון</div>`
     +cards.map(c=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">

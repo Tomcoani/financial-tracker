@@ -171,11 +171,14 @@ function autoMap(headers){
   pick('billDate',/(תאריך|מועד).*חיוב/);
   pick('billDate',/חיוב בחשבון/); // Isracard "חיוב מחוץ למועד": the day it reached the bank
   pick('date',/תאריך|^date/);
+  // one signed column for both ways ("זכות/חובה ₪": + in, − out) — an amount, not "credit"
+  pick('amount',/^(זכות.{0,3}חובה|חובה.{0,3}זכות)/);
   pick('charge',/סכום.*(חיוב|ש ?ח|בשקל)|חיוב.*ש ?ח|^חובה/);
   pick('amount',/סכום|amount/);
   pick('credit',/^זכות/);
   pick('merchant',/בית ?ה?עסק|שם.*עסק|תיאור|שם.*ספק|פרטי.*עסק|^פעולה$|merchant|description/);
   pick('srcCat',/ענף|קטגורי|category/);
+  pick('card',/^כרטיס$/); // Cal's Excel: "ויזה 1234" per row
   pick('currency',/מטבע.*חיוב/);pick('currency',/מטבע|currency/);
   pick('notes',/הערות|notes/);pick('notes',/פירוט ?נוסף|פרטים/);pick('notes',/סוג.*עסק/);
   return map;
@@ -228,7 +231,15 @@ function readSheet(file){
   const head=new TextDecoder().decode(new Uint8Array(buf.slice(0,400))).trim().toLowerCase();
   // CSV / HTML-as-xls: keep text as-is, otherwise "01/09/2026" is read US-style (Jan 9)
   const textual=/\.csv$/i.test(file.name)||head.startsWith('<');
-  const wb=XLSX.read(buf,textual?{type:'array',raw:true}:{type:'array',cellDates:true});
+  let wb;
+  if(/\.csv$/i.test(file.name)){
+    // Some banks don't escape quotes inside a quoted field ("עמלת מט"י", "מכירת ני"ע"), which
+    // shifts every column after it. A quote with text on both sides is part of the text → "".
+    let txt=new TextDecoder('utf-8').decode(new Uint8Array(buf));
+    if(txt.includes('�'))txt=new TextDecoder('windows-1255').decode(new Uint8Array(buf));
+    txt=txt.replace(/^﻿/,'').replace(/([^,\r\n"])"(?=[^,\r\n"])/g,'$1""');
+    wb=XLSX.read(txt,{type:'string',raw:true});
+  }else wb=XLSX.read(buf,textual?{type:'array',raw:true}:{type:'array',cellDates:true});
   file.sheets=[];let headText='';
   wb.SheetNames.forEach(sn=>{
     // strip invisible direction marks (One Zero wraps every description in them)
@@ -241,7 +252,9 @@ function readSheet(file){
   });
   file.tables.forEach(fixReversedColumns);
   const isBank=file.tables.some(t=>t.map.credit!==undefined||t.map.balance!==undefined);
-  file.source=isBank?'דף בנק':detectSource(headText);
+  // the issuer is sometimes named only in the footer ("...באתר ובאפליקציית כאל")
+  const tailText=file.sheets.map(s=>s.rows.slice(-8).map(r=>r.join(' ')).join(' ')).join(' ');
+  file.source=isBank?'דף בנק':(detectSource(headText)||detectSource(tailText));
   if(isBank)file.bankName=bankNameOf(file.name+' '+headText);
   file.titleText=headText;
 }
@@ -391,6 +404,8 @@ function addRow(file,t,r){t.rows.push(r);t.rowSeg.push(file._seg||0);}
 function totalLine(file,nums,cells){
   file.totals.push(nums);
   const seg=file._seg||0;
+  // "הסכום אינו כולל עסקאות שחויבו במט"ח ועסקאות בתהליך קליטה" (Cal's Excel) — a partial total
+  if(/אינו כולל|לא כולל/.test((cells||[]).join(' ')))(file.partialSeg=file.partialSeg||{})[seg]=true;
   (file.segTotals=file.segTotals||{})[seg]=nums;
   // "סה"כ חיובים בתאריך 02/08/26" / "סה"כ לתאריך 23/04/26" / "10/03/23 סך חיוב" — the
   // segment's billing date
@@ -513,7 +528,7 @@ function pdfToTables(file){
 
 // ── Transactions ──
 function extract(file){
-  const out=[];
+  const out=[];file.pending=[];
   file.tables.forEach((t,ti)=>{
     if(t.info)return;
     const g=k=>t.map[k]!==undefined?t.map[k]:-1;
@@ -536,14 +551,20 @@ function extract(file){
       // "3 מתוך 12" / "3 מ-12" / Cal's "3 מ - 12"
       const inst=rowTxt.match(/(\d+)\s*(?:מתוך|מ\s*-)\s*(\d+)/);
       const cur=String(cell('currency')??'').trim();
-      const card=t.card||((file.name||'').match(/^(\d{4})[_\- ]/)||[])[1]||'';
+      const card=(String(cell('card')??'').match(/\d{4}/)||[])[0]||t.card||((file.name||'').match(/^(\d{4})[_\- ]/)||[])[1]||'';
+      // Not charged yet ("עסקה בקליטה", no billing date): it comes again, with its date, in the
+      // next export — counting it now would count it twice
+      if(t.map.billDate!==undefined&&!parseDate(cell('billDate'))&&/בקליטה|בתהליך קליטה/.test(rowTxt)){
+        (file.pending=file.pending||[]).push(Math.abs(val));return;}
       // Bank descriptions are "bank/name/memo/account" — show the person/company + memo
       const p=bank?bankParty(merchant):{name:merchant,display:merchant,ref:''};
       const tx={key:file.id+':'+ti+':'+ri,fileId:file.id,ti,ri,seg:t.rowSeg?t.rowSeg[ri]:undefined,
         card,cardKey:bank?'bank|'+(file.bankName||file.name):card?(file.source||'כרטיס')+'|'+card:'file|'+file.name,
-        date,billDate:parseDate(cell('billDate')),merchant:p.display,mk:merchantKey(p.name),val,income,bank,
+        // "עסקה בחיוב מיידי" without a billing date: charged right away → its own date
+        date,billDate:parseDate(cell('billDate'))||(!bank&&/חיוב מיידי/.test(rowTxt)?date:null),merchant:p.display,mk:merchantKey(p.name),val,income,bank,
         balance:bank?parseAmt(cell('balance')):null,opType:String(cell('opType')??'').trim(),ref:p.ref,
         inst:inst&&+inst[2]>1&&+inst[1]<=+inst[2]?inst[1]+'/'+inst[2]:'',fx:cur&&!/₪|ש"?ח|ils|nis|שקל/i.test(cur)?cur:'',
+        instN:+((rowTxt.match(/ב-?\s*(\d+)\s*תשלומים/)||[])[1]||0),
         srcCat:String(cell('srcCat')??'').trim(),abroad:/בוצע בחו"?ל/.test(rowTxt)};
       tx.kind=bank?bankKind(tx):'expense';
       out.push(tx);
@@ -564,7 +585,7 @@ function bankParty(desc){
   return {name,display:name+(memo?' · '+memo:''),ref};
 }
 const BROKER_RE=/ני"?ע|קרן כספית|כספית|^קניה|^מכירה|אקסלנס|מיטב|פסגות|אלטשולר|\bibi\b|אינטראקטיב|interactive|בלינק|blink|פועלים טרייד|ספארק|אנליסט|ilan/i;
-const CARD_PAY_RE=/כרטיסי אשראי|ישראכרט|מקס איט|לאומי קארד|אמריקן אקספרס|דיינרס|^כאל|\bcal\b|\bmax\b/i;
+const CARD_PAY_RE=/כרטיסי אשראי|חיוב לכרטיס|ישראכרט|מקס איט|לאומי קארד|אמריקן אקספרס|דיינרס|^כאל|\bcal\b|\bmax\b/i;
 function issuerOf(text){
   const t=String(text||'');
   return /כרטיסי אשראי|כאל|\bcal\b|דיינרס/i.test(t)?'כאל':/ישראכרט|אמריקן/i.test(t)?'ישראכרט':/מקס|\bmax\b|לאומי קארד/i.test(t)?'מקס':'';
@@ -655,14 +676,18 @@ function rebuild(){
   const seen=new Set(); // fingerprints already counted in this upload
   SI.files.forEach(f=>{
     f.txns=f.error||f.needPassword?[]:extract(f);
+    // a card remembered before its issuer was recognised ("כרטיס|1234") keeps its business mark
+    f.txns.forEach(t=>{const old='כרטיס|'+t.card;if(t.card&&t.cardKey!==old&&SI.bizCards[t.cardKey]===undefined&&SI.bizCards[old]!==undefined)SI.bizCards[t.cardKey]=SI.bizCards[old];});
     f.sum=f.txns.reduce((a,t)=>a+t.val,0);
     f.spent=f.txns.filter(t=>!t.income).reduce((a,t)=>a+t.val,0); // bank: deposits aren't "spent"
     // Every segment (rows between two total lines) must add up to the total line that closed it.
     // Segments without transactions (loan tables, "expected next charge" lines) are ignored.
     const segs=Object.entries(f.segTotals||{}).map(([s,nums])=>{
       const tx=f.txns.filter(t=>t.seg===+s);
-      return tx.length?{nums,sum:tx.reduce((a,t)=>a+t.val,0)}:null;}).filter(Boolean);
-    f.check=!segs.length?'':segs.every(g=>g.nums.some(v=>Math.abs(Math.abs(v)-Math.abs(g.sum))<1.01))?'ok':'diff';
+      return tx.length?{nums,sum:tx.reduce((a,t)=>a+t.val,0),partial:!!(f.partialSeg||{})[s]}:null;}).filter(Boolean);
+    const segOk=g=>g.nums.some(v=>Math.abs(Math.abs(v)-Math.abs(g.sum))<1.01);
+    // a total that says it leaves things out can't be checked against — not a mismatch
+    f.check=!segs.length?'':segs.every(segOk)?'ok':segs.every(g=>segOk(g)||g.partial)?'partial':'diff';
     // Billing month of every transaction (the budget is cash-based: the month the money left).
     // Bank: the row's own date. Card: its "תאריך חיוב" column → the date on the total line that
     // closed its section → the statement's billing date in the title → the file name.
@@ -672,6 +697,18 @@ function rebuild(){
       const sd=f.segDates&&t.seg!==undefined?f.segDates[t.seg]:null;
       t.month=f.monthOverride||(f.source==='דף בנק'?mkKey(t.date):t.billDate?mkKey(t.billDate):sd?mkKey(sd):f.autoMonth)||'';
     });
+    // Installments listed without a billing date (Cal's Excel: one row per payment, "עסקה ב-2
+    // תשלומים"): payment i goes to the i-th billing month, starting with the purchase's own cycle
+    // (the billing date of the next purchases in the file)
+    if(!f.monthOverride){
+      const billed=f.txns.filter(t=>t.billDate),groups={};
+      f.txns.filter(t=>!t.bank&&!t.billDate&&t.instN).forEach(t=>{(groups[+t.date+'|'+t.mk]=groups[+t.date+'|'+t.mk]||[]).push(t);});
+      Object.values(groups).forEach(g=>{
+        const cyc=billed.filter(x=>+x.date>=+g[0].date).sort((a,b)=>a.billDate-b.billDate)[0];if(!cyc)return;
+        const b=cyc.billDate;
+        g.forEach((t,i)=>{t.month=mkKey(new Date(b.getFullYear(),b.getMonth()+i,1));if(!t.inst)t.inst=(i+1)+'/'+t.instN;});
+      });
+    }
     f.months=[...new Set(f.txns.map(t=>t.month).filter(Boolean))].sort();
     // Fingerprint: count + total + first/last date — order-independent, so the same statement
     // downloaded once as PDF and once as Excel is recognised as the same
@@ -895,7 +932,7 @@ function reviewView(){
     else if(f.detailOnly){st='✓ הפירוט הזה כבר נטען בעבר (בגרסה קודמת). הסכומים לא ייספרו שוב — נשלים רק את רשימת העסקאות ואת ההתאמה לעו"ש';col='var(--teal)';}
     else if(f.dup){st='✓ הפירוט הזה כבר נטען — לא ייספר שוב. אם בקטגוריות חסר פירוט עסקאות (📋), נשלים אותו מהקובץ';col='var(--teal)';}
     else{
-      st=`${f.txns.length} עסקאות · ${f.source==='דף בנק'?'יצא מהחשבון ':''}${money(f.spent)}${f.check==='ok'?' · <span style="color:var(--green)">✓ תואם לסה"כ בקובץ</span>':f.check==='diff'?' · <span style="color:var(--amber)">⚠ לא תואם לסה"כ בקובץ — כדאי להציץ</span>':''}`;
+      st=`${f.txns.length} עסקאות · ${f.source==='דף בנק'?'יצא מהחשבון ':''}${money(f.spent)}${f.check==='ok'?' · <span style="color:var(--green)">✓ תואם לסה"כ בקובץ</span>':f.check==='diff'?' · <span style="color:var(--amber)">⚠ לא תואם לסה"כ בקובץ — כדאי להציץ</span>':f.check==='partial'?' · <span style="color:var(--t3)">(הסה"כ בקובץ לא כולל עסקאות במט"ח ובקליטה, אז אין מול מה לבדוק)</span>':''}${f.pending&&f.pending.length?`<br><span style="color:var(--t3)">⏳ ${f.pending.length} עסקאות בקליטה (${money(f.pending.reduce((a,v)=>a+v,0))}) עוד לא חויבו — לא נספרו עכשיו. הן ייכנסו כשתעלה את הקובץ הבא, לחודש שבו יחויבו.</span>`:''}`;
       // Which month(s) this file goes to — detected automatically, the client can override
       const ms=f.months||[];
       const lbl=f.monthOverride?'':ms.length>1?`${ms.length} חודשים (${fmtBudgetMonth(ms[0])} – ${fmtBudgetMonth(ms[ms.length-1])}) — כל עסקה לחודש החיוב שלה`:ms.length?fmtBudgetMonth(ms[0]):'';
