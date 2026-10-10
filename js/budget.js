@@ -148,10 +148,10 @@ function setBudgetProfile(field,val){
 }
 // toCombined: every month's business income rows → the income section (added to a same-named
 // row if there is one). Otherwise: income rows about the business (name mentions עסק) → business
-// income. Every month of every account; the transactions behind the rows move with them.
-// Returns how many amounts moved.
+// income. Every month of the account being edited (each account has its own profile); the
+// transactions behind the rows move with them. Returns how many amounts moved.
 function budgetMoveBizIncome(toCombined){
-  const maps=typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];
+  const maps=[D.budgetMonths||{}];
   const num=v=>parseFloat(String(v||0).replace(/,/g,''))||0;
   let moved=0;
   maps.forEach(months=>Object.values(months).forEach(m=>{
@@ -177,11 +177,13 @@ function iln(s){return '<span style="direction:ltr;unicode-bidi:isolate;display:
 function budgetTotal(sec){
   return (curBudget()[sec]||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
 }
-function budgetSavedOf(month){
+function budgetSavedOf(month,prof){
   const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
   // Combined mode: business payments count as household expenses.
   // Separate mode: the business has its own cashflow, outside the household.
-  const biz=bizCombined()?sum(month.business):0;
+  // prof = that account's employment profile (several accounts); default the active one.
+  const p=prof||D.budgetProfile||{};
+  const biz=(p.selfEmployed&&p.bizMode!=='separate')?sum(month.business):0;
   return {inc:sum(month.income),exp:sum(month.needs)+sum(month.wants)+biz};
 }
 // Savings from the most recent month the client actually filled in
@@ -189,11 +191,11 @@ function budgetSavedOf(month){
 function budgetLastMonthSaved(){
   // months that haven't arrived yet (e.g. rent filled ahead via 🔁) don't count.
   // With several accounts (budget-accounts.js) the household's months are added together.
-  const maps=typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];
-  const keys=[...new Set(maps.flatMap(mm=>Object.keys(mm)))].sort().filter(k=>k<=currentMonthKey());
+  const ents=typeof budgetAccEntries==='function'?budgetAccEntries():[{months:D.budgetMonths||{},profile:D.budgetProfile}];
+  const keys=[...new Set(ents.flatMap(e=>Object.keys(e.months)))].sort().filter(k=>k<=currentMonthKey());
   for(let i=keys.length-1;i>=0;i--){
     let inc=0,exp=0;
-    maps.forEach(mm=>{if(mm[keys[i]]){const s=budgetSavedOf(mm[keys[i]]);inc+=s.inc;exp+=s.exp;}});
+    ents.forEach(e=>{const mm=e.months;if(mm[keys[i]]){const s=budgetSavedOf(mm[keys[i]],e.profile);inc+=s.inc;exp+=s.exp;}});
     if((inc||exp)>0)return {saved:inc-exp,monthKey:keys[i]};
   }
   return null;
@@ -221,7 +223,7 @@ function renderBudget(){
   // Business income left in its own section while not in "separate" mode (e.g. switched before
   // modes moved it) is invisible and uncounted — bring it into the income section.
   if(!bizSeparate()){
-    const maps=typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];
+    const maps=[D.budgetMonths||{}]; // the account being edited — its own profile decides
     const hidden=maps.some(ms=>Object.values(ms).some(m=>(m.bizIncome||[]).some(r=>parseFloat(String(r.amount||0).replace(/,/g,''))||0)));
     if(hidden&&budgetMoveBizIncome(true)){touchSection('budget');markDirty();showToast('הכנסות העסק הוחזרו לחלק "הכנסות" ✓');}
   }
@@ -470,6 +472,10 @@ function removeBudgetRow(sec,i){
 function renderBudgetProfile(){
   const el=document.getElementById('budget-profile');
   if(!el)return;
+  // a joint account has no employment profile — each partner sets theirs in their own account
+  const joint=typeof budgetActiveIsJoint==='function'&&budgetActiveIsJoint();
+  el.style.display=joint?'none':'';
+  if(joint){el.innerHTML='';return;}
   const p=budgetProfile();
   const chip=(on)=>`display:inline-flex;align-items:center;gap:7px;cursor:pointer;padding:7px 14px;border-radius:10px;font-size:13px;font-weight:700;border:1.5px solid ${on?'var(--teal)':'var(--border)'};background:${on?'rgba(66,235,214,.10)':'var(--s2)'};color:${on?'var(--teal)':'var(--t2)'}`;
   const radio=(name,val,cur,label,sub)=>`<label style="${chip(cur===val)};flex-direction:column;align-items:flex-start;gap:2px">
@@ -477,7 +483,7 @@ function renderBudgetProfile(){
       ${sub?`<span style="font-size:10.5px;font-weight:400;color:var(--t3)">${sub}</span>`:''}
     </label>`;
   let html=`
-    <div class="ch-title">👤 מה מצב התעסוקה שלך?</div>
+    <div class="ch-title">👤 ${typeof budgetAccs==='function'&&budgetAccs()?'מצב התעסוקה — '+esc(budgetAccName(D.budgetActiveAcc)):'מה מצב התעסוקה שלך?'}</div>
     <div class="ch-hint">אפשר לסמן את שניהם — למשל שכיר שיש לו גם עסק בצד.</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <label style="${chip(p.salaried)}"><input type="checkbox" ${p.salaried?'checked':''} onchange="setBudgetProfile('salaried',this.checked)" style="accent-color:var(--teal)"/> שכיר</label>

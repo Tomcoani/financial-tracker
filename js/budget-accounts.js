@@ -19,6 +19,20 @@ function budgetMonthsMaps(){
   const a=budgetAccs();
   return a?a.map(x=>budgetAccMonths(x.id)):[D.budgetMonths||{}];
 }
+// Each account has its own employment profile (one partner salaried, the other self-employed).
+// Like the months, the active account's profile lives in D.budgetProfile.
+const _BUDGET_EMPTY_PROFILE=()=>({salaried:false,selfEmployed:false,bizType:'',bizMode:''});
+function budgetAccProfile(id){
+  if(!budgetAccs()||id===D.budgetActiveAcc)return D.budgetProfile||{};
+  return (((D.budgetAccData||{})[id])||{}).profile||{};
+}
+// [{months, profile}] for every account
+function budgetAccEntries(){
+  const a=budgetAccs();
+  return a?a.map(x=>({months:budgetAccMonths(x.id),profile:budgetAccProfile(x.id)})):[{months:D.budgetMonths||{},profile:D.budgetProfile||{}}];
+}
+// A joint account has no employment profile of its own
+function budgetActiveIsJoint(){const a=budgetAccs();return !!a&&/משותף/.test(budgetAccName(D.budgetActiveAcc));}
 function _budgetNewAccId(){const used=new Set((budgetAccs()||[]).map(x=>x.id));for(let i=1;;i++)if(!used.has('a'+i))return 'a'+i;}
 
 // ── Switching ──
@@ -31,10 +45,14 @@ function budgetAccSwitch(id){
   if(id!==D.budgetActiveAcc){
     const keepMonth=D.budgetCurMonth;
     D.budgetAccData=D.budgetAccData||{};
-    D.budgetAccData[D.budgetActiveAcc]={months:D.budgetMonths,cur:D.budgetCurMonth};
+    const prevProfile=D.budgetProfile||_BUDGET_EMPTY_PROFILE();
+    D.budgetAccData[D.budgetActiveAcc]={months:D.budgetMonths,cur:D.budgetCurMonth,profile:prevProfile};
     const next=D.budgetAccData[id]||{months:{},cur:''};
     delete D.budgetAccData[id];
     D.budgetMonths=next.months||{};D.budgetActiveAcc=id;
+    // accounts made before profiles were per account have none yet: they keep the profile they
+    // used until now (a joint account starts without one)
+    D.budgetProfile=next.profile||(/משותף/.test(budgetAccName(id))?_BUDGET_EMPTY_PROFILE():JSON.parse(JSON.stringify(prevProfile)));
     // stay on the month being looked at; an account that doesn't have it yet gets it
     D.budgetCurMonth=keepMonth;
     if(!D.budgetMonths[keepMonth])D.budgetMonths[keepMonth]=newBudgetMonthTemplate();
@@ -59,7 +77,7 @@ function budgetAccAdd(){
   if(!name){touchSection('budget');markDirty();renderBudget();return;}
   const id=_budgetNewAccId();
   D.budgetAccounts.push({id,name});
-  D.budgetAccData[id]={months:{},cur:D.budgetCurMonth};
+  D.budgetAccData[id]={months:{},cur:D.budgetCurMonth,profile:_BUDGET_EMPTY_PROFILE()}; // its own employment profile
   budgetAccSwitch(id);
   showToast('נוסף החשבון "'+name+'" ✓ אפשר להתחיל למלא אותו');
 }
@@ -128,17 +146,17 @@ function renderBudgetCombined(){
   _budgetAllMonth=k;
   const sum=rows=>(rows||[]).reduce((s,r)=>s+(parseFloat(String(r.amount||0).replace(/,/g,''))||0),0);
   const lines=accs.map(a=>{
-    const m=budgetAccMonths(a.id)[k];
+    const m=budgetAccMonths(a.id)[k],p=budgetAccProfile(a.id),comb=!!(p.selfEmployed&&p.bizMode!=='separate');
     if(!m)return {a,has:false,inc:0,needs:0,wants:0,biz:0,exp:0,saved:0};
-    const s=budgetSavedOf(m),biz=bizCombined()?sum(m.business):0;
-    return {a,has:true,m,inc:s.inc,needs:sum(m.needs),wants:sum(m.wants),biz,exp:s.exp,saved:s.inc-s.exp};
+    const s=budgetSavedOf(m,p),biz=comb?sum(m.business):0;
+    return {a,has:true,m,comb,inc:s.inc,needs:sum(m.needs),wants:sum(m.wants),biz,exp:s.exp,saved:s.inc-s.exp};
   });
   const T=lines.reduce((t,l)=>{['inc','needs','wants','biz','exp','saved'].forEach(f=>t[f]+=l[f]);return t;},{inc:0,needs:0,wants:0,biz:0,exp:0,saved:0});
   const pos=T.saved>=0,pct=v=>T.inc>0?Math.round(v/T.inc*100):0;
   const anyBiz=lines.some(l=>l.biz);
   // categories with the same name across accounts are added together
   const cats={};
-  lines.filter(l=>l.has).forEach(l=>['needs','wants'].concat(bizCombined()?['business']:[]).forEach(sec=>(l.m[sec]||[]).forEach(r=>{
+  lines.filter(l=>l.has).forEach(l=>['needs','wants'].concat(l.comb?['business']:[]).forEach(sec=>(l.m[sec]||[]).forEach(r=>{
     const n=(r.name||'').trim(),v=parseFloat(String(r.amount||0).replace(/,/g,''))||0;if(!n||!v)return;
     const c=cats[sec+'|'+n]=cats[sec+'|'+n]||{sec,n,total:0,by:{}};c.total+=v;c.by[l.a.id]=(c.by[l.a.id]||0)+v;})));
   const catList=Object.values(cats).sort((a,b)=>b.total-a.total);
