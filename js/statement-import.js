@@ -37,10 +37,10 @@ const CATS={
   travel:   {name:'חופשות ונופש',                    sec:'wants',row:/חופש|נופש|טיס|טיול/},
   subs:     {name:'מנויים (סטרימינג, חדר כושר)',      sec:'wants',row:/מנוי|סטרימינג|כושר/},
   // Tax payments: self-employed → the business section's rows (see budget.js BIZ_DEFAULT_ROWS);
-  // anyone else → one "מסים" row under needs
-  biz_tax:  {name:'תשלום מס הכנסה',      sec:'business',row:/מס הכנסה/, alt:{name:'מסים ותשלומי חובה',sec:'needs',row:/מס/}},
-  biz_ni:   {name:'תשלום לביטוח לאומי',  sec:'business',row:/לאומי/,    alt:{name:'מסים ותשלומי חובה',sec:'needs',row:/מס/}},
-  biz_vat:  {name:'תשלום למע"מ',         sec:'business',row:/מע"?מ/,    alt:{name:'מסים ותשלומי חובה',sec:'needs',row:/מס/}},
+  // anyone else → one "מסים" row under needs (not /מס/ — that matches "מסעדות")
+  biz_tax:  {name:'תשלום מס הכנסה',      sec:'business',row:/מס הכנסה/, alt:{name:'מסים ותשלומי חובה',sec:'needs',row:/מסים|מיסים|תשלומי חובה|מס הכנסה/}},
+  biz_ni:   {name:'תשלום לביטוח לאומי',  sec:'business',row:/לאומי/,    alt:{name:'מסים ותשלומי חובה',sec:'needs',row:/מסים|מיסים|תשלומי חובה|לאומי/}},
+  biz_vat:  {name:'תשלום למע"מ',         sec:'business',row:/מע"?מ/,    alt:{name:'מסים ותשלומי חובה',sec:'needs',row:/מסים|מיסים|תשלומי חובה|מע"?מ/}},
   // Advertising is a business expense for the self-employed even on a personal card
   ads:      {name:'פרסום ושיווק',        sec:'business',row:/פרסום|שיווק/, alt:{name:'מנויים (סטרימינג, חדר כושר)',sec:'wants',row:/מנוי|סטרימינג/}},
   pro:      {name:'שירותים מקצועיים',    sec:'needs',row:/שירותים מקצועיים|יעוץ|ייעוץ/},
@@ -105,7 +105,8 @@ const SRC_CAT=[
   [/וטרינ|חיות|בעלי חיים/,'pets'],
   [/רפוא|פארם|בריאות|אופטיק/,'health'],
   [/חינוך|לימוד/,'kids'],
-  [/תוכן|מנוי|אינטרנט/,'subs']
+  [/תוכן|מנוי|אינטרנט/,'subs'],
+  [/מקצועות חו|שירותי י?יע|י?יעוץ|עורכי דין|רואי חשבון/,'pro']
 ];
 
 // ── State ──
@@ -293,15 +294,21 @@ function charRuns(items){
     if(m){const f=m[1].length/s.length;
       out.push({s:m[1],x:run.right-W*f,y:run.y,w:W*f,fs:run.fs});
       out.push({s:m[2],x:run.x,y:run.y,w:W*(1-f)-1,fs:run.fs});}
-    else out.push({s,x:run.x,y:run.y,w:W,fs:run.fs});
+    else{const o={s,x:run.x,y:run.y,w:W,fs:run.fs};
+      // keep word positions: neighbouring columns can touch (Cal's "ענף" | "פירוט") — see splitCells
+      if(run.words.length>1)o.words=run.words.map(w=>({s:w.p.join('').replace(LTR_RUN,m=>[...m].reverse().join('')),x:w.x,r:w.r}));
+      out.push(o);}
     run=null;};
   for(const it of items){ // right-to-left
     if(it.s.length!==1){flush();out.push(it);continue;}
     const gap=run?run.x-(it.x+it.w):1e9;
     if(run&&gap<it.fs*0.6){
-      run.parts.push((gap>it.fs*0.18?' ':'')+it.s);
+      const sp=gap>it.fs*0.18;
+      run.parts.push((sp?' ':'')+it.s);
       run.x=Math.min(run.x,it.x);
-    }else{flush();run={parts:[it.s],x:it.x,y:it.y,right:it.x+it.w,fs:it.fs};}
+      if(sp)run.words.push({p:[it.s],x:it.x,r:it.x+it.w});
+      else{const w=run.words[run.words.length-1];w.p.push(it.s);w.x=Math.min(w.x,it.x);}
+    }else{flush();run={parts:[it.s],x:it.x,y:it.y,right:it.x+it.w,fs:it.fs,words:[{p:[it.s],x:it.x,r:it.x+it.w}]};}
   }
   flush();
   return out;
@@ -335,11 +342,14 @@ function mergeCells(items,fix){
   const out=[];
   for(const it0 of items){ // items are sorted right-to-left
     const it={...it0,s:fix(it0.s)};
+    if(it0.words)it.words=it0.words.map(w=>({...w,s:fix(w.s)}));
     const last=out[out.length-1];
     const gap=last?last.x-(it.x+it.w):1e9;
     const solo=s=>isDateStr(s)||isAmtStr(s);
     if(last&&gap<Math.max(3,it.fs*0.7)&&gap>-it.fs&&!solo(it.s)&&!solo(last.s)){
       const right=last.x+last.w;
+      // letter-level runs keep their word positions through the merge (see splitCells)
+      if(last.words||it.words){const wl=o=>o.words||[{s:o.s,x:o.x,r:o.x+o.w}];last.words=wl(last).concat(wl(it));}
       // we walk right-to-left: Hebrew reads in that order, Latin ("PLAYSTATION LONDON") the other way
       last.s=(!HEB.test(last.s)&&!HEB.test(it.s))?it.s+' '+last.s:last.s+' '+it.s;
       last.x=Math.min(last.x,it.x);last.w=right-last.x;
@@ -414,11 +424,33 @@ function billMonthFromName(name){
   if(m)return '20'+m[2]+'-'+String(+m[1]).padStart(2,'0');
   return '';
 }
+// Columns that touch: Cal right-aligns every column under its header, and a long "ענף" runs into
+// the "פירוט" next to it ("ציוד ומשרד" + "אירלנד. מזהה כרטיס..." come out as one text run).
+// Split such a run where a word gap sits exactly on a header's right edge.
+function splitCells(cells,edges){
+  const out=[];
+  cells.forEach(c=>{
+    if(!c.words||c.words.length<2){out.push(c);return;}
+    const ws=c.words.slice().sort((a,b)=>b.r-a.r),parts=[[ws[0]]];
+    for(let k=1;k<ws.length;k++){
+      const A=ws[k-1],B=ws[k];
+      if(edges.some(e=>B.r<=e+2&&A.x>=e-2&&e<c.x+c.w-4))parts.push([]);
+      parts[parts.length-1].push(B);
+    }
+    if(parts.length===1){out.push(c);return;}
+    parts.forEach(p=>{
+      const x=Math.min(...p.map(w=>w.x)),r=Math.max(...p.map(w=>w.r));
+      const heb=p.some(w=>HEB.test(w.s));
+      out.push({s:(heb?p:p.slice().reverse()).map(w=>w.s).join(' '),x,y:c.y,w:r-x,fs:c.fs});
+    });
+  });
+  return out;
+}
 // Each header line defines column centres; following lines' cells go to the nearest column
 function pdfToTables(file){
   file.tables=[];file.totals=[];file.segTotals={};file._seg=0;file._future=false;file._card='';
   const fix=s=>file.pdfReverse?revHeb(s):s;
-  let cur=null,cols=null;
+  let cur=null,cols=null,edges=[];
   const merged=file.pdfLines.map(l=>({page:l.page,y:l.y,fs:(l.items[0]||{}).fs||8,cells:mergeCells(l.items,fix)}));
   const plain=c=>!c.some(x=>isDateStr(x.s)||isAmtStr(x.s));
   for(let li=0;li<merged.length;li++){
@@ -436,7 +468,7 @@ function pdfToTables(file){
       continue; // total line: closes a segment (see totalLine), never a transaction
     }
     if(headerScore(cells)){
-      cols=l.cells.map(c=>c.x+c.w/2);
+      cols=l.cells.map(c=>c.x+c.w/2);edges=l.cells.map(c=>c.x+c.w);
       const heads=cells.slice();
       // Two-line headers ("סכום" / "החיוב"): glue the next line's words onto the column above them
       const nx=merged[li+1];
@@ -450,7 +482,7 @@ function pdfToTables(file){
       const row=new Array(cols.length).fill('');
       // fragments far from every column are page-margin text (ads, side notes) — not table data
       const lim=Math.max(40,(l.fs||8)*4);
-      l.cells.forEach(it=>{const c=it.x+it.w/2;let best=0,bd=1e9;cols.forEach((x,k)=>{const d=Math.abs(x-c);if(d<bd){bd=d;best=k;}});if(bd>lim)return;row[best]=row[best]?row[best]+' '+it.s:it.s;});
+      splitCells(l.cells,edges).forEach(it=>{const c=it.x+it.w/2;let best=0,bd=1e9;cols.forEach((x,k)=>{const d=Math.abs(x-c);if(d<bd){bd=d;best=k;}});if(bd>lim)return;row[best]=row[best]?row[best]+' '+it.s:it.s;});
       addRow(file,cur,row);
     }
   }
@@ -463,7 +495,7 @@ function pdfToTables(file){
       const dates=[],amts=[],texts=[],notes=[];
       l.cells.forEach(it=>{const s=it.s;
         if(isDateStr(s))dates.push(s);else if(isAmtStr(s))amts.push({s,x:it.x});
-        else if(/\d+\s*(מתוך|מ-)\s*\d+/.test(s))notes.push(s);else if(/[a-z֐-׿]/i.test(s))texts.push(s);});
+        else if(/\d+\s*(מתוך|מ\s*-)\s*\d+/.test(s))notes.push(s);else if(/[a-z֐-׿]/i.test(s))texts.push(s);});
       if(!dates.length||!amts.length||!texts.length)continue;
       amts.sort((a,b)=>a.x-b.x);
       t.rows.push([dates[0],texts.slice().sort((a,b)=>b.length-a.length)[0],amts[0].s,amts.length>1?amts[amts.length-1].s:'',notes.join(' ')]);
@@ -501,7 +533,8 @@ function extract(file){
       }else if(val===null&&credit){val=-credit;income=true;}
       if(val===null||val===0)return; // 0 = a fee that was fully discounted
       const rowTxt=r.filter(c=>!(c instanceof Date)&&!isDateStr(c)).join(' ');
-      const inst=rowTxt.match(/(\d+)\s*(?:מתוך|מ-)\s*(\d+)/);
+      // "3 מתוך 12" / "3 מ-12" / Cal's "3 מ - 12"
+      const inst=rowTxt.match(/(\d+)\s*(?:מתוך|מ\s*-)\s*(\d+)/);
       const cur=String(cell('currency')??'').trim();
       const card=t.card||((file.name||'').match(/^(\d{4})[_\- ]/)||[])[1]||'';
       // Bank descriptions are "bank/name/memo/account" — show the person/company + memo
