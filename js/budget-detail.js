@@ -31,7 +31,51 @@ function _bRowOptions(sel){
   return Object.keys(_BSEC_LBL).filter(s=>(b[s]||[]).some(r=>(r.name||'').trim())).map(s=>
     `<optgroup label="${_BSEC_LBL[s]}">`+b[s].filter(r=>(r.name||'').trim()).map(r=>{
       const v=s+'|'+r.name.trim();return `<option value="${esc(v)}"${v===sel?' selected':''}>${esc(r.name.trim())}</option>`;}).join('')+'</optgroup>').join('')
-    +`<optgroup label="חדש">${add.map(([s,l])=>`<option value="__new|${s}">${l}</option>`).join('')}</optgroup>`;
+    +`<optgroup label="חדש">${add.map(([s,l])=>`<option value="__new|${s}">${l}</option>`).join('')}</optgroup>`
+    +`<optgroup label="אחר"><option value="skip|other"${String(sel).startsWith('skip|')?' selected':''}>🚫 לא לספור בתקציב</option></optgroup>`;
+}
+// ── "לא נספר בתקציב": everything that came from a file but isn't in the budget ──
+// (month.tx with k "skip|<why>": card bills, investments, own transfers, marked "לא לספור" on
+// import or moved here) — plus transactions switched off with ⊘. Click one to put it into a
+// category if it was classified wrong.
+const _SKIP_LBL={other:'🚫 סומן "לא לספור"',card:'💳 תשלומי כרטיס אשראי מהעו"ש (הפירוט מגיע מקובץ הכרטיס)',invest:'📈 השקעות בשוק ההון',own:'🔁 העברות בין החשבונות שלך'};
+let _skipOpen=false;
+function renderBudgetSkipped(){
+  const el=document.getElementById('budget-skip-card');if(!el)return;
+  const m=curBudget(),tx=m.tx||[];
+  const skipped=tx.filter(x=>String(x.k).startsWith('skip|')),offs=tx.filter(x=>x.off);
+  if(!skipped.length&&!offs.length){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='';
+  const sgn=x=>(x.dir==='in'?'+':'')+fmt(x.a);
+  const item=x=>{
+    if(_budgetEditTx===x.id)return `<div style="background:var(--s1);border:1px solid var(--teal-border);border-radius:9px;padding:8px;margin:4px 0">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px">${esc(x.n)} <span style="color:var(--t3);font-weight:400">· ${_bShortDate(x.d)}${x.s?' · '+esc(x.s):''}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="btx-k" data-prev="${esc(x.k)}" onchange="budgetTxNewRow(this)" style="flex:1;min-width:150px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);font-family:var(--font);font-size:12px;padding:5px">${_bRowOptions(x.k)}</select>
+        <input id="btx-a" type="number" step="0.01" value="${x.a}" data-no-fmt style="width:95px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--white);font-family:var(--font);font-size:12.5px;padding:5px;text-align:center">
+        <button onclick="budgetTxSave('${x.id}')" class="btnsave" style="padding:5px 12px;font-size:12px">שמור</button>
+        <button onclick="_budgetEditTx=null;renderBudgetSkipped()" style="background:none;border:none;color:var(--t3);font-family:var(--font);font-size:12px;cursor:pointer">ביטול</button>
+      </div></div>`;
+    return `<div onclick="_budgetEditTx='${x.id}';renderBudgetSkipped()" title="לחצו כדי להכניס לקטגוריה"
+      style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12.5px">
+      <span style="color:var(--t3);font-size:11.5px;white-space:nowrap;width:58px">${_bShortDate(x.d)}</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.n)}</span>
+      <span style="font-size:10.5px;color:var(--t3);white-space:nowrap">${esc(x.s||'')}</span>
+      <b style="white-space:nowrap;color:${x.dir==='in'?'var(--teal)':'var(--white)'}">${iln(sgn(x))}</b><span style="color:var(--t3);font-size:11px">✎</span></div>`;
+  };
+  const groups=['other','card','invest','own'].map(w=>{
+    const list=skipped.filter(x=>x.k==='skip|'+w).sort((a,b)=>a.d<b.d?-1:1);if(!list.length)return '';
+    return `<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 2px">${_SKIP_LBL[w]} (${list.length})</div>${list.map(item).join('')}`;
+  }).join('');
+  const offHtml=offs.length?`<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 2px">⊘ עסקאות שהוצאת מהחישוב (${offs.length})</div>`
+    +offs.map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);font-size:12.5px">
+      <span style="color:var(--t3);font-size:11.5px;width:58px">${_bShortDate(x.d)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.n)} <span style="font-size:10.5px;color:var(--t3)">· ב"${esc(String(x.k).split('|')[1])}"</span></span>
+      <b>${iln(fmt(x.a))}</b><button onclick="budgetTxToggleOff('${x.id}')" title="להחזיר לחישוב" style="background:none;border:none;color:var(--amber);cursor:pointer">↩</button></div>`).join(''):'';
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="_skipOpen=!_skipOpen;renderBudgetSkipped()">
+      <div class="ch-title" style="margin:0">🚫 לא נספר בתקציב <span style="font-size:12px;font-weight:400;color:var(--t3)">(${skipped.length+offs.length})</span></div>
+      <span style="color:var(--t3);font-size:12px">${_skipOpen?'▲ הסתר':'▼ הצג'}</span></div>
+    <div class="ch-hint" style="margin-top:4px">פעולות מהקבצים שלא נכנסו לחישוב. סווג משהו לא נכון? לחצו עליו ובחרו קטגוריה — מאותו רגע הוא נספר.</div>
+    ${_skipOpen?groups+offHtml:''}`;
 }
 // Picking "➕ ..." in the transaction editor: name the row, add it to this month, select it
 function budgetTxNewRow(sel){
@@ -82,6 +126,7 @@ function budgetTxEdit(id){_budgetEditTx=id;const sec=String(_budgetOpenRow||'').
 // Move an amount between rows (the row's other, typed-in part stays as it was)
 function _budgetMoveAmt(key,delta){
   const [sec,name]=String(key).split('|');
+  if(sec==='skip')return; // "לא נספר" has no row — nothing to add or take
   const row=(curBudget()[sec]||[]).find(r=>(r.name||'').trim()===name);
   if(row)row.amount=String(Math.max(0,Math.round(_bNum(row.amount)+delta)));
 }
@@ -95,6 +140,8 @@ function budgetTxSave(id){
   if(!t.off){_budgetMoveAmt(t.k,-t.a);_budgetMoveAmt(k,a);} // a "לא לספור" one isn't in any row
   const wasOff=!!t.off;
   const moved=k!==t.k;
+  // "לא נספר" items keep which way the money went (in / out); real rows say it themselves
+  if(k.startsWith('skip|')){if(!t.dir)t.dir=/^(income|bizIncome)\|/.test(t.k)?'in':'out';}else delete t.dir;
   t.k=k;t.a=a;t.edited=true;_budgetEditTx=null;
   touchSection('budget');markDirty();renderBudget();
   showToast(moved?'העסקה הועברה ל"'+k.split('|')[1]+'" ✓ הסכומים עודכנו':'הסכום עודכן ✓');
@@ -162,6 +209,7 @@ function budgetBulkClose(){_bulk=null;budgetBulkRender();}
 // move an amount between rows of a given month (adds the target row there if it's missing)
 function _budgetMoveAmtIn(m,key,delta){
   const [sec,name]=String(key).split('|');
+  if(sec==='skip')return; // "לא נספר" has no row
   if(!Array.isArray(m[sec]))m[sec]=[];
   let row=m[sec].find(r=>(r.name||'').trim()===name);
   if(!row){if(delta<=0)return;row={name,amount:''};m[sec].push(row);}
@@ -172,7 +220,9 @@ function budgetBulkApply(all){
   const keys=Object.keys(b.groups).filter(k=>all||b.sel.has(k));
   let n=0;
   keys.forEach(k=>{const m=D.budgetMonths[k];if(!m)return;
-    b.groups[k].forEach(x=>{if(!x.off){_budgetMoveAmtIn(m,x.k,-x.a);_budgetMoveAmtIn(m,b.newK,x.a);}x.k=b.newK;x.edited=true;n++;});});
+    b.groups[k].forEach(x=>{if(!x.off){_budgetMoveAmtIn(m,x.k,-x.a);_budgetMoveAmtIn(m,b.newK,x.a);}
+      if(b.newK.startsWith('skip|')){if(!x.dir)x.dir=/^(income|bizIncome)\|/.test(x.k)?'in':'out';}else delete x.dir;
+      x.k=b.newK;x.edited=true;n++;});});
   // remember it for future uploads too
   const [sec,name]=b.newK.split('|');
   if(window.SIX&&SIX.mk){D.importMerchants=D.importMerchants||{};D.importMerchants[b.mk]={sec,name};}
@@ -287,7 +337,7 @@ function budgetRepeatApply(){
 // last part of the transaction id). Each upload's own identical items are legit (two coffees);
 // the extras beyond the largest single upload are duplicates.
 function _bDupKey(x){const sec=String(x.k||'').split('|')[0];
-  return x.d+'|'+Math.round(Math.abs(x.a)*100)/100+'|'+(sec==='income'||sec==='bizIncome'?'in':'out')+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card');}
+  return x.d+'|'+Math.round(Math.abs(x.a)*100)/100+'|'+(x.dir||(sec==='income'||sec==='bizIncome'?'in':'out'))+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card');}
 function budgetFindDups(m){
   const groups={};
   (m.tx||[]).filter(x=>!x.off).forEach(x=>{(groups[_bDupKey(x)]=groups[_bDupKey(x)]||[]).push(x);});
@@ -419,7 +469,7 @@ function budgetGapHtml(m,bk,diff,open){
   const hand=secs=>{const out=[];secs.forEach(sec=>(m[sec]||[]).forEach(r=>{const n=(r.name||'').trim();if(!n)return;
     const v=_bNum(r.amount)-listed(sec,n);if(Math.abs(v)>=1)out.push({n,a:v,sec});}));return out;};
   const manExp=hand(['needs','wants','business','bizInvest']),manInc=hand(['income','bizIncome']);
-  const cardTx=(m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).reduce((s,x)=>s+x.a,0);
+  const cardTx=(m.tx||[]).filter(x=>!isBank(x)&&!isInc(x.k)).reduce((s,x)=>s+(x.dir==='in'?-x.a:x.a),0); // ("not counted" items carry their direction)
   const cardBills=(bk.cards||[]).reduce((s,c)=>s+c.a,0);
   const sk=Array.isArray(bk.skipped)?bk.skipped:null;
   const skIn=sk?sk.filter(x=>x.dir==='in'):[],skOut=sk?sk.filter(x=>x.dir==='out'):[];
@@ -492,6 +542,7 @@ function budgetGapAckClear(){
 // 3. Card bills the bank paid vs. the card statements uploaded.
 function renderBudgetBank(){
   renderBudgetDups();
+  renderBudgetSkipped();
   const el=document.getElementById('budget-bank-card');if(!el)return;
   const m=curBudget(),bk=m.bank;
   if(!bk){el.style.display='none';el.innerHTML='';return;}

@@ -687,7 +687,8 @@ function rebuild(){
 // matched: two identical coffees in one file stay two, and only as many as already exist are dropped.
 function txDupKey(t){return ymd(t.date)+'|'+r2(Math.abs(t.val))+'|'+(t.income?'in':'out')+'|'+(t.bank?'bank':'card');}
 function storedDupKey(x){const sec=String(x.k||'').split('|')[0];
-  return x.d+'|'+r2(Math.abs(x.a))+'|'+(sec==='income'||sec==='bizIncome'?'in':'out')+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card');}
+  const dir=x.dir||(sec==='income'||sec==='bizIncome'?'in':'out'); // "not counted" items carry their own direction
+  return x.d+'|'+r2(Math.abs(x.a))+'|'+dir+'|'+(/^עו"ש/.test(x.s||'')?'bank':'card');}
 function markDupTx(){
   const pool=new Map(),add=(k,n)=>pool.set(k,(pool.get(k)||0)+n);
   Object.values(D.budgetMonths||{}).forEach(m=>(m.tx||[]).forEach(x=>add(storedDupKey(x),1)));
@@ -1184,7 +1185,16 @@ window.SIX={
       });
       // The transactions behind every row — so the client can open a category and see / fix them
       // (files imported before this existed add their detail only — their amounts are already in)
-      SI.txns.concat(detail).forEach(t=>{if(!t.target||t.target==='skip'||txMonth(t)!==key)return;
+      SI.txns.concat(detail).forEach(t=>{if(!t.target||txMonth(t)!==key)return;
+        if(t.target==='skip'){
+          // not counted — kept in the budget's "לא נספר" list (k "skip|<why>"), so it can be moved
+          // into a category later if it was classified wrong. Duplicates aren't kept.
+          if(t.dupTx)return;
+          const why=t.kind==='card'||t.kind==='invest'||t.kind==='own'?t.kind:'other';
+          m.tx.push({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
+            a:r2(Math.abs(t.val)),k:'skip|'+why,dir:t.income?'in':'out',s:srcLabel(t)});
+          return;
+        }
         m.tx.push({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
           a:Math.round((t.income?-t.val:t.val)*100)/100,k:t.target,s:srcLabel(t)});});
       // Bank account: balances + what left it outside the budget (card bills, investments, own transfers)
@@ -1205,8 +1215,16 @@ window.SIX={
     const fallback=t=>t.income?'income|הכנסות אחרות':t.biz?'business|'+BIZ_ROWS.other.name:'needs|שונות';
     let filled=0;
     (SI.detailTx||[]).concat(SI.statTx||[]).forEach(t=>{
-      if(t.dupTx||t.target==='skip'||t.kind==='card'||t.kind==='invest'||t.kind==='own')return;
+      if(t.dupTx)return;
       const m=D.budgetMonths[txMonth(t)];if(!m)return;
+      if(t.target==='skip'||t.kind==='card'||t.kind==='invest'||t.kind==='own'){
+        // the "לא נספר" list of older imports: add what's missing (never touches amounts)
+        if(!Array.isArray(m.tx))m.tx=[];
+        const why=t.kind==='card'||t.kind==='invest'||t.kind==='own'?t.kind:'other';
+        m.tx.push({id:t.key+':f'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
+          a:r2(Math.abs(t.val)),k:'skip|'+why,dir:t.income?'in':'out',s:srcLabel(t)});
+        return;
+      }
       const k=t.target||fallback(t),[sec,name]=k.split('|');
       const row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
       const a=r2(t.income?-t.val:t.val);if(a<=0)return;
