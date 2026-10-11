@@ -53,7 +53,8 @@ function renderBudgetPeriod(elId,entries){
     });
   });
   const T=per.reduce((t,x)=>{['inc','exp','inv','bizIn','bizOut'].forEach(f=>t[f]+=x[f]);return t;},{inc:0,exp:0,inv:0,bizIn:0,bizOut:0});
-  const left=T.inc-T.exp,avg=v=>N?v/N:0;
+  // investments are savings, not spending: saved = income − expenses (investments not included)
+  const spent=T.exp-T.inv,left=T.inc-spent,avg=v=>N?v/N:0;
   const signed=v=>iln((v>=0?'':'−')+fmt(Math.abs(v)));
   const btn=(on,label,js)=>`<button onclick="${js}" style="background:${on?'var(--teal-dim,rgba(66,235,214,.15))':'var(--s2)'};border:1px solid ${on?'var(--teal-border)':'var(--border)'};color:${on?'var(--teal)':'var(--t2)'};border-radius:16px;padding:4px 10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">${label}</button>`;
   const sel=(field,val)=>`<select onchange="budgetPeriodSet('${field}',this.value)" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:var(--font);font-size:12.5px;padding:3px 6px">${all.map(k=>`<option value="${k}"${k===val?' selected':''}>${fmtBudgetMonth(k)}</option>`).join('')}</select>`;
@@ -89,10 +90,10 @@ function renderBudgetPeriod(elId,entries){
     ${!N?`<div style="color:var(--t3);font-size:12.5px;text-align:center;padding:10px">אין נתונים בתקופה הזו</div>`:`
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${tile('💰 נכנס',iln(fmt(T.inc)),'var(--teal)','ממוצע '+iln(fmt(avg(T.inc)))+' לחודש')}
-      ${tile('💸 יצא',iln(fmt(T.exp)),'var(--white)','ממוצע '+iln(fmt(avg(T.exp)))+' לחודש')}
-      ${tile(left>=0?'✅ נשאר':'⚠️ גירעון',signed(left),left>=0?'var(--teal)':'var(--red)','ממוצע '+signed(avg(left))+' לחודש')}
+      ${tile('💸 הוצאות',iln(fmt(spent)),'var(--white)','ממוצע '+iln(fmt(avg(spent)))+' לחודש')}
+      ${tile(left>=0?'✅ חסכתם':'⚠️ גירעון',signed(left),left>=0?'var(--teal)':'var(--red)','ממוצע '+signed(avg(left))+' לחודש')}
     </div>
-    ${T.inv>0?`<div style="font-size:11.5px;color:#60a5fa;margin-top:6px">📈 מתוך היציאות, ${iln(fmt(T.inv))} הועברו להשקעות (ממוצע ${iln(fmt(avg(T.inv)))} לחודש) — זה חיסכון, לא בזבוז. חיסכון נטו בתקופה (מה שנשאר + מה שהועבר להשקעות): ${signed(left+T.inv)}</div>`:''}
+    ${T.inv>0?`<div style="font-size:11.5px;color:#60a5fa;margin-top:6px">📈 ${iln(fmt(T.inv))} הועברו להשקעות (ממוצע ${iln(fmt(avg(T.inv)))} לחודש) — זה חיסכון, לא הוצאה${T.inv>left&&left>=0?`, וחלקו הגיע מכסף שכבר היה בחשבון`:''}.</div>`:''}
     ${sepBiz&&(T.bizIn||T.bizOut)?`<div style="font-size:11.5px;color:var(--t2);margin-top:6px">💼 העסק (תזרים נפרד, לא כלול למעלה): נכנסו ${iln(fmt(T.bizIn))}, יצאו ${iln(fmt(T.bizOut))} — נשאר ${signed(T.bizIn-T.bizOut)}</div>`:''}
     <details open style="margin-top:12px">
       <summary style="cursor:pointer;font-size:13px;font-weight:800">📊 ממוצע לפי קטגוריה</summary>
@@ -104,11 +105,11 @@ function renderBudgetPeriod(elId,entries){
     <details style="margin-top:8px">
       <summary style="cursor:pointer;font-size:13px;font-weight:800">🗓️ לפי חודש</summary>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px">
-        <thead><tr style="color:var(--t3);font-size:11px"><th style="text-align:right;padding:4px">חודש</th><th style="padding:4px">נכנס</th><th style="padding:4px">יצא</th><th style="padding:4px">נשאר</th></tr></thead>
+        <thead><tr style="color:var(--t3);font-size:11px"><th style="text-align:right;padding:4px">חודש</th><th style="padding:4px">נכנס</th><th style="padding:4px">הוצאות</th><th style="padding:4px">חיסכון</th></tr></thead>
         <tbody>${per.map(x=>`<tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px">${fmtBudgetMonth(x.k)}</td>
           <td style="padding:5px 4px;text-align:center;white-space:nowrap;color:var(--teal)">${iln(fmt(x.inc))}</td>
-          <td style="padding:5px 4px;text-align:center;white-space:nowrap">${iln(fmt(x.exp))}</td>
-          <td style="padding:5px 4px;text-align:center;white-space:nowrap;font-weight:700;color:${x.inc-x.exp>=0?'var(--teal)':'var(--red)'}">${signed(x.inc-x.exp)}</td></tr>`).join('')}</tbody></table></div>
+          <td style="padding:5px 4px;text-align:center;white-space:nowrap">${iln(fmt(x.exp-x.inv))}</td>
+          <td style="padding:5px 4px;text-align:center;white-space:nowrap;font-weight:700;color:${x.inc-x.exp+x.inv>=0?'var(--teal)':'var(--red)'}">${signed(x.inc-x.exp+x.inv)}${x.inv>0?` <span style="font-size:10.5px;color:#60a5fa;font-weight:400">(📈 ${fmt(x.inv)})</span>`:''}</td></tr>`).join('')}</tbody></table></div>
     </details>`}
   </details>`;
 }

@@ -250,7 +250,7 @@ function budgetLastMonthSaved(){
   const keys=[...new Set(ents.flatMap(e=>Object.keys(e.months)))].sort().filter(k=>k<=currentMonthKey());
   for(let i=keys.length-1;i>=0;i--){
     let inc=0,exp=0;
-    ents.forEach(e=>{const mm=e.months;if(mm[keys[i]]){const s=budgetSavedOf(mm[keys[i]],e.profile,mm);inc+=s.inc;exp+=s.exp;}});
+    ents.forEach(e=>{const mm=e.months;if(mm[keys[i]]){const s=budgetSavedOf(mm[keys[i]],e.profile,mm);inc+=s.inc;exp+=s.exp-(s.inv||0);}}); // investments are savings
     if((inc||exp)>0)return {saved:inc-exp,monthKey:keys[i]};
   }
   return null;
@@ -640,7 +640,7 @@ function renderBudgetTrend(){
   const keys=Object.keys(D.budgetMonths).sort().filter(k=>k<=currentMonthKey()); // no future months
   const pts=keys.map(k=>{
     const s=budgetSavedOf(D.budgetMonths[k]);
-    return {k,saved:s.inc-s.exp,has:(s.inc||s.exp)>0};
+    return {k,saved:s.inc-s.exp+(s.inv||0),has:(s.inc||s.exp)>0}; // investments are savings
   }).filter(p=>p.has);
   if(pts.length<2||typeof Chart==='undefined'){
     wrap.style.display='none';
@@ -655,7 +655,7 @@ function renderBudgetTrend(){
     type:'bar',
     data:{labels,datasets:[{data,backgroundColor:data.map(v=>v>=0?'rgba(66,235,214,.75)':'rgba(239,68,68,.75)'),borderRadius:6,maxBarThickness:46}]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw>=0?'נשאר: ':'גירעון: ')+fmt(Math.abs(c.raw))}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw>=0?'חיסכון (כולל השקעות): ':'גירעון: ')+fmt(Math.abs(c.raw))}}},
       scales:{y:{ticks:{callback:v=>fmt(v),color:'#94a3b8',font:{size:10}},grid:{color:'rgba(30,45,69,.6)'}},
         x:{ticks:{color:'#94a3b8',font:{size:11}},grid:{display:false}}}}
   });
@@ -680,30 +680,38 @@ function renderBudgetSummary(){
     return;
   }
   const savedPositive=saved>=0;
-  // less left than came in only because existing money was moved to investments — not a deficit
-  const invCovers=!savedPositive&&inv>0&&saved+inv>=0;
-  // Comparison to the previous month (if it has data)
+  // Investments are savings, not spending: the headline is what was saved this month —
+  // income − expenses — of which `inv` went to investments (maybe partly from money already in
+  // the account). Only spending above income is a deficit.
+  const net=saved+inv,netPositive=net>=0;
+  // Comparison to the previous month (if it has data) — same measure
   let cmpHtml='';
   const keys=Object.keys(D.budgetMonths).sort();
   const idx=keys.indexOf(D.budgetCurMonth);
   if(idx>0){
     const prev=budgetSavedOf(D.budgetMonths[keys[idx-1]]);
     if(prev.inc||prev.exp){
-      const prevSaved=prev.inc-prev.exp;
-      const d=saved-prevSaved;
-      if(d!==0){
+      const prevNet=prev.inc-prev.exp+(prev.inv||0);
+      const d=net-prevNet;
+      if(Math.abs(d)>=1){
         cmpHtml=`<div style="font-size:12px;color:${d>0?'var(--green)':'var(--amber)'};margin-top:3px">
-          ${d>0?'↑':'↓'} ${iln((d>0?'+':'−')+fmt(Math.abs(d)))} לעומת ${fmtBudgetMonth(keys[idx-1])} (${prevSaved>=0?'חיסכון':'גירעון'} של ${iln(fmt(Math.abs(prevSaved)))})</div>`;
+          ${d>0?'↑':'↓'} ${iln((d>0?'+':'−')+fmt(Math.abs(d)))} לעומת ${fmtBudgetMonth(keys[idx-1])} (${prevNet>=0?'חיסכון':'גירעון'} של ${iln(fmt(Math.abs(prevNet)))})</div>`;
       }
     }
   }
+  const headLbl=inv>0?(netPositive?'חסכתם החודש':'הייתם בגירעון החודש'):(savedPositive?'נשאר לכם החודש':'הייתם בגירעון החודש');
+  const headVal=inv>0?net:saved,headPos=headVal>=0;
+  const headSub=inv>0
+    ?`<div style="font-size:12px;color:#60a5fa;margin-top:2px">${!netPositive?`📈 בנוסף הועברו ${iln(fmt(inv))} להשקעות, מכסף שכבר היה בחשבון`
+      :`📈 מתוכם ${iln(fmt(inv))} הועברו להשקעות${saved>0?` ו־${iln(fmt(saved))} נשארו פנויים`:saved<0?` (${iln(fmt(-saved))} מהם מכסף שכבר היה בחשבון)`:''}`}</div>`
+    :(inc>0&&savedPositive?`<div style="font-size:12px;color:var(--t2);margin-top:2px">${savePct}% מההכנסה נשארו פנויים לחיסכון ולהשקעה</div>`:'');
   const barSeg=(w,c)=>w>0?`<div style="width:${Math.min(100,w)}%;background:${c};height:100%"></div>`:'';
   el.innerHTML=`
   <div class="card" style="background:linear-gradient(135deg,rgba(66,235,214,.09),rgba(66,235,214,.02));border:1.5px solid rgba(66,235,214,.35)">
     <div style="text-align:center;margin-bottom:14px">
-      <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${savedPositive?'נשאר לכם החודש':invCovers?'החשבון ירד החודש — כי העברתם כסף קיים להשקעות (זה לא גירעון)':'הייתם בגירעון החודש'}</div>
-      <div style="font-size:30px;font-weight:800;color:${savedPositive?'var(--teal)':invCovers?'#60a5fa':'var(--red)'}">${iln((savedPositive?'':'−')+fmt(Math.abs(saved)))}</div>
-      ${inc>0&&savedPositive?`<div style="font-size:12px;color:var(--t2);margin-top:2px">${savePct}% מההכנסה נשארו פנויים לחיסכון ולהשקעה</div>`:''}
+      <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${headLbl}</div>
+      <div style="font-size:30px;font-weight:800;color:${headPos?'var(--teal)':'var(--red)'}">${iln((headPos?'':'−')+fmt(Math.abs(headVal)))}</div>
+      ${headSub}
       ${cmpHtml}
     </div>
     <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s2);margin-bottom:6px">
@@ -737,9 +745,10 @@ function renderBudgetSummary(){
       </div>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--t3);text-align:center">
-      הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''}${inv>0?' − הועבר להשקעות '+iln(fmt(inv)):''} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}
-      ${inv>0?`<div style="margin-top:6px;font-size:12px;color:#60a5fa;font-weight:700">💪 ${saved>=0?`סה"כ חיסכון החודש: ${iln(fmt(saved+inv))} — ${iln(fmt(saved))} שנשארו פנויים + ${iln(fmt(inv))} שהועברו להשקעות`:invCovers?`חיסכון נטו החודש: ${iln(fmt(saved+inv))} — הועברו ${iln(fmt(inv))} להשקעות, מתוכם ${iln(fmt(-saved))} מכסף שכבר היה בחשבון`
-        :`הועברו ${iln(fmt(inv))} להשקעות מכסף שכבר היה בחשבון. בלי ההעברה, ההוצאות החודש היו גבוהות מההכנסות ב־${iln(fmt(-(saved+inv)))}`}</div>`:''}
+      ${inv>0
+        ?`הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''} = ${netPositive?'חיסכון של':'גירעון של'} ${iln(fmt(Math.abs(net)))}
+          <div style="margin-top:3px">ההעברה להשקעות (${iln(fmt(inv))}) היא חיסכון — לא הוצאה. ${saved<0&&!netPositive?"":saved<0?`הכסף בעו"ש ירד ב־${iln(fmt(-saved))} כי חלק מההשקעה הגיע מכסף שכבר היה בחשבון — זה לא גירעון.`:`בעו"ש נשארו פנויים ${iln(fmt(saved))}.`}</div>`
+        :`הכנסות ${iln(fmt(inc))} − הוצאות ${iln(fmt(exp))}${biz>0?' (כולל '+iln(fmt(biz))+' תשלומי עסק)':''} = ${savedPositive?'נשארו':'גירעון של'} ${iln(fmt(Math.abs(saved)))}`}
       ${bizSeparate()?'<div style="margin-top:4px">💼 העסק מנוהל בתזרים נפרד — ראו את כרטיס "עסק" למטה.</div>':''}
       ${vatAdj?'<div style="margin-top:4px">🧾 מע"מ מחולק בין חודשים: '+(vatAdj>0?'כולל הוצאה מדומה של '+iln(fmt(vatAdj))+' (חצי מתשלום החודש הבא)':'נספר רק חצי מתשלום החודש ('+iln(fmt(-vatAdj))+' עברו לחודש הקודם)')+'</div>':''}
     </div>

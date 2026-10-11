@@ -165,7 +165,7 @@ function renderBudgetCombined(){
     const m=budgetAccMonths(a.id)[k],p=budgetAccProfile(a.id),comb=!!(p.selfEmployed&&p.bizMode!=='separate');
     if(!m)return {a,has:false,inc:0,needs:0,wants:0,biz:0,inv:0,exp:0,saved:0};
     const s=budgetSavedOf(m,p,budgetAccMonths(a.id)),biz=comb?sum(m.business)+vatSplitAdj(budgetAccMonths(a.id),k,p):0;
-    return {a,has:true,m,comb,inc:s.inc,needs:sum(m.needs),wants:sum(m.wants),biz,inv:s.inv||0,exp:s.exp,saved:s.inc-s.exp};
+    return {a,has:true,m,comb,inc:s.inc,needs:sum(m.needs),wants:sum(m.wants),biz,inv:s.inv||0,exp:s.exp,saved:s.inc-s.exp+(s.inv||0)}; // saved = income − expenses: investments are savings
   });
   const T=lines.reduce((t,l)=>{['inc','needs','wants','biz','inv','exp','saved'].forEach(f=>t[f]+=l[f]);return t;},{inc:0,needs:0,wants:0,biz:0,inv:0,exp:0,saved:0});
   const pos=T.saved>=0,pct=v=>T.inc>0?Math.round(v/T.inc*100):0;
@@ -189,15 +189,15 @@ function renderBudgetCombined(){
         ${keys.map(x=>`<option value="${x}"${x===k?' selected':''}>${fmtBudgetMonth(x)}</option>`).join('')}</select>
     </div>
     <div style="text-align:center;margin-bottom:12px">
-      <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${pos?'נשאר לכם החודש — בכל החשבונות':'גירעון החודש — בכל החשבונות'}</div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${pos?(T.inv>0?'חסכתם החודש — בכל החשבונות':'נשאר לכם החודש — בכל החשבונות'):'גירעון החודש — בכל החשבונות'}</div>
       <div style="font-size:30px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${signed(T.saved)}</div>
-      ${T.inc>0&&pos?`<div style="font-size:12px;color:var(--t2)">${pct(T.saved)}% מההכנסה של כולם נשארו פנויים</div>`:''}
-      ${T.inv>0?`<div style="font-size:12px;color:#60a5fa;font-weight:700;margin-top:3px">💪 חיסכון נטו: ${iln((T.saved+T.inv>=0?"":"−")+fmt(Math.abs(T.saved+T.inv)))} (כולל ${iln(fmt(T.inv))} שהועברו להשקעות)</div>`:''}
+      ${T.inc>0&&pos?`<div style="font-size:12px;color:var(--t2)">${pct(T.saved)}% מההכנסה של כולם</div>`:''}
+      ${T.inv>0?`<div style="font-size:12px;color:#60a5fa;font-weight:700;margin-top:3px">📈 מתוכם ${iln(fmt(T.inv))} הועברו להשקעות — חיסכון, לא הוצאה</div>`:''}
     </div>
     <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:12.5px">
       <thead><tr style="color:var(--t3);font-size:11.5px">
-        <th style="text-align:right;padding:6px">חשבון</th><th>הכנסות</th><th><span style="color:var(--green)">●</span> צרכים</th><th><span style="color:var(--amber)">●</span> כיף</th>${anyBiz?'<th><span style="color:#a78bfa">●</span> עסק</th>':''}${anyInv?'<th><span style="color:#60a5fa">●</span> להשקעות</th>':''}<th>נשאר</th></tr></thead>
+        <th style="text-align:right;padding:6px">חשבון</th><th>הכנסות</th><th><span style="color:var(--green)">●</span> צרכים</th><th><span style="color:var(--amber)">●</span> כיף</th>${anyBiz?'<th><span style="color:#a78bfa">●</span> עסק</th>':''}${anyInv?'<th><span style="color:#60a5fa">●</span> להשקעות</th>':''}<th>חיסכון</th></tr></thead>
       <tbody>
       ${lines.map(l=>`<tr style="border-top:1px solid var(--border)">
         <td style="padding:7px 6px;font-weight:700"><button onclick="budgetAccSwitch('${l.a.id}')" title="למעבר לחשבון" style="background:none;border:none;color:var(--white);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline dotted">${esc(l.a.name)}</button>${l.has?'':' <span style="font-size:10.5px;color:var(--t3)">(אין נתונים לחודש)</span>'}</td>
