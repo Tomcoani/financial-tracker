@@ -97,6 +97,20 @@ function budgetAccRemove(id){
   touchSection('budget');markDirty();renderBudget();
   showToast('החשבון "'+a.name+'" הוסר');
 }
+// Reset the account being edited: every month of it is deleted (amounts, transactions, bank data,
+// which files were uploaded) so it can be filled again from scratch, e.g. by uploading the files
+// again. The account itself, its name and profile stay; so do the remembered merchants — the next
+// upload sorts them by themselves. The other accounts aren't touched.
+function budgetAccReset(){
+  const accs=budgetAccs(),name=accs?budgetAccName(D.budgetActiveAcc):'ההתנהלות החודשית';
+  const n=Object.keys(D.budgetMonths||{}).length;
+  const typed=(prompt(`איפוס "${name}": כל ${n} החודשים שלו יימחקו — סכומים, עסקאות, נתוני עו"ש וקבצים שהועלו — ואפשר יהיה להתחיל מחדש ולהעלות קבצים שוב.${accs&&accs.length>1?'\nשאר החשבונות לא ייפגעו.':''}\n\nלא ניתן לשחזר. כדי לאשר כתבו: איפוס`,'')||'').trim();
+  if(typed!=='איפוס'){if(typed)showToast('לא אופס — צריך לכתוב בדיוק: איפוס');return;}
+  D.budgetMonths={};D.budgetCurMonth=currentMonthKey();
+  migrateBudget(); // a fresh current month with the default categories
+  touchSection('budget');markDirty();renderBudget();
+  showToast(`"${name}" אופס ✓ — אפשר להעלות את הקבצים מחדש`);
+}
 
 // ── The bar at the top of the page ──
 // Returns true when the "all accounts" view was drawn (the normal page is then hidden).
@@ -116,12 +130,14 @@ function budgetAccRender(){
       if(accs.length>1)html+=chip('all','📊 סה"כ כל החשבונות',showAll);
       const cur=!showAll&&accs.find(a=>a.id===D.budgetActiveAcc);
       const tools=cur?`<button onclick="budgetAccRename('${cur.id}')" title="שינוי שם החשבון" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px">✎ שם</button>`
+        +`<button onclick="budgetAccReset()" title="למחוק את כל הנתונים של החשבון הזה ולהתחיל מחדש" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px">🧹 איפוס חשבון</button>`
         +(accs.length>1?`<button onclick="budgetAccRemove('${cur.id}')" title="הסרת החשבון" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px">🗑 הסר חשבון</button>`:''):'';
       html=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0 10px">${html}
         ${accs.length<BUDGET_MAX_ACC?`<button onclick="budgetAccAdd()" style="background:none;border:1px dashed var(--border);color:var(--teal);border-radius:20px;padding:5px 12px;font-family:var(--font);font-size:12px;cursor:pointer">+ חשבון</button>`:''}
         ${tools}</div>`;
     }else{
-      html=`<div style="margin:2px 0 8px"><button onclick="budgetAccAdd()" style="background:none;border:1px dashed var(--border);color:var(--teal);border-radius:20px;padding:5px 12px;font-family:var(--font);font-size:12px;cursor:pointer">+ חשבונות נפרדים (למשל לכל בן/בת זוג וחשבון משותף)</button></div>`;
+      html=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0 8px"><button onclick="budgetAccAdd()" style="background:none;border:1px dashed var(--border);color:var(--teal);border-radius:20px;padding:5px 12px;font-family:var(--font);font-size:12px;cursor:pointer">+ חשבונות נפרדים (למשל לכל בן/בת זוג וחשבון משותף)</button>
+        <button onclick="budgetAccReset()" title="למחוק את כל הנתונים ולהתחיל מחדש" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px">🧹 איפוס</button></div>`;
     }
     bar.innerHTML=html;
   }
