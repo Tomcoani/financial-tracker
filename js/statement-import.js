@@ -290,7 +290,9 @@ function readSheet(file){
   const isBank=file.tables.some(t=>t.map.credit!==undefined||t.map.balance!==undefined);
   // the issuer is sometimes named only in the footer ("...באתר ובאפליקציית כאל")
   const tailText=file.sheets.map(s=>s.rows.slice(-8).map(r=>r.join(' ')).join(' ')).join(' ');
-  file.source=isBank?'דף בנק':(detectSource(headText)||detectSource(tailText));
+  file.source=isBank?'דף בנק':(detectSource(headText)||detectSource(tailText)||
+    // Max's Excel export names no issuer: "transaction-details_export…", "עסקאות במועד החיוב"
+    (/transaction-details_export/i.test(file.name)||/עסקאות במועד החיוב/.test(headText+' '+wb.SheetNames.join(' '))?'מקס':''));
   if(isBank)file.bankName=bankNameOf(file.name+' '+headText);
   file.titleText=headText;
 }
@@ -788,6 +790,9 @@ function rebuild(){
     // Only a choice made right now overrides it.
     if(t.kind==='invest'&&lt!==null&&SI.session[t.mk]===undefined&&
       (/^(income|bizIncome)\|/.test(lt)||(!t.income&&lt==='skip')))lt=null;
+    // A card bill / card credit in the bank ("מקס איט פי חיוב") is never income or an expense: its
+    // purchases come from the card statement. A remembered row for it (an old assignment) is ignored.
+    if(t.kind==='card'&&lt!==null&&SI.session[t.mk]===undefined)lt=null;
     if(t.income){
       // a remembered income row is used unless the client just flipped personal/business
       if(lt!==null&&(SI.session[t.mk]!==undefined||SI.bizSession[t.mk]===undefined)){
@@ -1219,6 +1224,8 @@ window.SIX={
   mk:merchantKey,
   // a bank description that's a transfer to / from investments (broker, "ני"ע", money-market fund)
   isInvest:s=>BROKER_RE.test(String(s||'')),
+  // a card bill / card credit in a bank account ("מקס איט פי חיוב", "חיוב לכרטיס ויזה 1234")
+  isCardBill:s=>CARD_PAY_RE.test(String(s||'')),
   open(){
     if(typeof D!=='object'||!D)return;
     // Admin-only while it's being tested (the button is hidden for everyone else too)
@@ -1316,7 +1323,9 @@ window.SIX={
         const inc=sec==='income'||sec==='bizIncome';
         if(SI.mode!=='add')m.tx=m.tx.filter(x=>x.k!==k); // replacing the row → replace its detail too
         const base=SI.mode==='add'?num(row.amount):0;
-        row.amount=String(Math.max(0,Math.round(base+(inc?-sum:sum))));
+        // An expense row may end up negative: a refund bigger than that month's purchases in the
+        // category (a cancelled flight) — cutting it at 0 would lose the refund
+        row.amount=String(inc?Math.max(0,Math.round(base-sum)):Math.round(base+sum));
         rowsFilled++;
       });
       // The transactions behind every row — so the client can open a category and see / fix them

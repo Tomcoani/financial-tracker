@@ -230,6 +230,32 @@ function budgetAutoFixSigns(){
     showToast(`🧹 נמצאה העלאה ישנה של קובץ עו"ש שנקלט הפוך (כסף שיצא נרשם כהכנסה) ב־${months} חודשים — היא בוטלה (${fixed} פעולות). העלו שוב את קובץ העו"ש של החשבון הזה — הכל ייכנס נכון`);}
   return fixed;
 }
+// Automatic, once per month (m.cardMig): a card bill / card credit from the bank ("מקס איט פי
+// חיוב") sitting in an income or expense row — an old assignment the import kept repeating — goes
+// back to "לא נספר" (card bills): its purchases come from the card statement, so counting the bill
+// too counts them twice. An income row it leaves is set to its remaining transactions (the bill's
+// effect on it can't be trusted); an expense row just drops its amount.
+function budgetAutoCardBills(){
+  if(!(window.SIX&&SIX.isCardBill))return;
+  let moved=0;
+  Object.values(D.budgetMonths||{}).forEach(m=>{
+    if(!m||m.cardMig||!Array.isArray(m.tx))return;
+    m.cardMig=1;
+    const list=m.tx.filter(t=>/^עו"ש/.test(t.s||'')&&!t.off&&!String(t.k||'').startsWith('skip|')&&SIX.isCardBill(t.n));
+    if(!list.length)return;
+    const touched={};
+    list.forEach(t=>{const inc=/^(income|bizIncome)\|/.test(t.k);
+      if(!inc){touched[t.k]=(touched[t.k]||0)+t.a;}else touched[t.k]=touched[t.k]||0;
+      t.dir=/חיוב/.test(t.n)?'out':inc?'in':'out';t.a=Math.abs(t.a);t.k='skip|card';t.edited=true;moved++;});
+    Object.entries(touched).forEach(([k,s])=>{
+      const [sec,name]=k.split('|'),row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
+      if(sec==='income'||sec==='bizIncome'){const rest=m.tx.filter(x=>!x.off&&x.k===k).reduce((a,x)=>a+x.a,0);row.amount=rest>0?String(Math.round(rest)):'';}
+      else row.amount=String(Math.max(0,Math.round(_bNum(row.amount)-s)));
+    });
+  });
+  if(moved){touchSection('budget');markDirty();
+    showToast(`💳 ${moved} חיובי כרטיס אשראי מהעו"ש הוצאו מההכנסות / ההוצאות — הם מופיעים בבדיקת העו"ש, וההוצאות עצמן מגיעות מפירוט הכרטיס`);}
+}
 // Older uploads put transfers TO investments in "לא נספר" — move this month's into the section
 function budgetSkipInvestToRow(){
   const m=curBudget(),list=(m.tx||[]).filter(x=>x.k==='skip|invest'&&x.dir!=='in');if(!list.length)return;
