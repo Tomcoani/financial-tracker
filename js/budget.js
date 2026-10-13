@@ -255,6 +255,35 @@ function budgetLastMonthSaved(){
   }
   return null;
 }
+// The goals tile per account (partner 1 / partner 2 / joint): what each one saved in the household's
+// last filled month — income − expenses, investments counted as savings — and the total.
+function goalsSavingsPerAccountHtml(last,accs){
+  const k=last.monthKey;
+  const rows=accs.map(a=>{
+    const ms=budgetAccMonths(a.id),m=ms[k];
+    if(!m)return {name:a.name,has:false,saved:0,inv:0};
+    const s=budgetSavedOf(m,budgetAccProfile(a.id),ms);
+    return {name:a.name,has:!!(s.inc||s.exp),saved:s.inc-s.exp+(s.inv||0),inv:s.inv||0};
+  });
+  const total=rows.reduce((s,r)=>s+r.saved,0),pos=total>=0;
+  const amt=v=>`<span style="direction:ltr;unicode-bidi:isolate;display:inline-block">${v<0?'−':''}${fmt(Math.abs(v))}</span>`;
+  return `<div style="margin-bottom:16px;background:linear-gradient(135deg,rgba(66,235,214,.14),rgba(66,235,214,.03));border:1.5px solid var(--teal-border);border-radius:14px;padding:16px 18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="min-width:0">
+        <div style="font-size:14px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${pos?'💰 חסכתם החודש — כל החשבונות':'החודש — כל החשבונות'}</div>
+        <div style="font-size:11.5px;color:var(--t2);margin-top:3px;line-height:1.6">לפי מעקב ההתנהלות החודשית — ${fmtBudgetMonth(k)}${pos?' — כל הכבוד! 🎉':''}</div>
+      </div>
+      <div style="font-size:26px;font-weight:800;color:${pos?'var(--teal)':'var(--red)'}">${amt(total)}</div>
+    </div>
+    <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:6px">
+      ${rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:13px">
+        <span>🏦 ${esc(r.name)}${r.inv>0?` <span style="font-size:11px;color:#60a5fa">(📈 ${fmt(r.inv)} להשקעות)</span>`:''}</span>
+        ${r.has?`<b style="color:${r.saved>=0?'var(--teal)':'var(--red)'}">${amt(r.saved)}</b>`:`<span style="font-size:11.5px;color:var(--t3)">אין נתונים לחודש</span>`}
+      </div>`).join('')}
+    </div>
+    <div style="font-size:10.5px;color:var(--t3);margin-top:4px">חיסכון = הכנסות פחות הוצאות. העברה להשקעות נחשבת חיסכון.</div>
+  </div>`;
+}
 // A tile at the top of the goals page that auto-records the savings from the
 // last month the client filled in the monthly-budget page. Shown only when that
 // month ended in a positive saving, so someone who saved sees it front-and-center.
@@ -262,6 +291,10 @@ function renderGoalsSavingsTile(){
   const el=document.getElementById('goals-savings-tile');
   if(!el)return;
   const last=budgetLastMonthSaved();
+  // Admin only for now (being tried out): with several accounts, the same month split per account
+  const admin=typeof auth!=='undefined'&&auth.currentUser&&auth.currentUser.email===ADMIN_EMAIL;
+  const accs=typeof budgetAccs==='function'?budgetAccs():null;
+  if(admin&&accs&&accs.length>1&&last){el.innerHTML=goalsSavingsPerAccountHtml(last,accs);return;}
   if(!last||last.saved<=0){el.innerHTML='';return;}
   el.innerHTML=`<div style="margin-bottom:16px;background:linear-gradient(135deg,rgba(66,235,214,.14),rgba(66,235,214,.03));border:1.5px solid var(--teal-border);border-radius:14px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <div style="min-width:0">
