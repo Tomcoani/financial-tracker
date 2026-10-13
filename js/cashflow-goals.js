@@ -62,6 +62,56 @@ function calcCashFlow(){
   markDirty();
 }
 
+// ── Per account (admin only, for now) ──
+// With several budget accounts (partner 1 / partner 2 / joint), each one gets its own cash-flow
+// figures. Like the budget accounts, D.cfBalance / cfZero / cfExpenses / cfFixedExpenses /
+// cfLastUpdated / cfCurrency always hold the account being shown; the others wait in
+// D.cfAcc[id]. D.cfActive = the shown one (the figures entered before this existed belong to
+// the first account).
+const _CF_FIELDS=[['balance','cfBalance',''],['zero','cfZero',''],['expenses','cfExpenses',''],['lastUpdated','cfLastUpdated',''],['currency','cfCurrency','ILS']];
+function cfAccOn(){
+  const admin=typeof auth!=='undefined'&&auth.currentUser&&auth.currentUser.email===ADMIN_EMAIL;
+  const accs=typeof budgetAccs==='function'?budgetAccs():null;
+  return admin&&accs&&accs.length>1?accs:null;
+}
+function cfAccSwitch(id){
+  const accs=cfAccOn();if(!accs)return;
+  const cur=D.cfActive||accs[0].id;if(id===cur)return;
+  D.cfAcc=D.cfAcc||{};
+  const save={fixed:JSON.parse(JSON.stringify(D.cfFixedExpenses||[]))};
+  _CF_FIELDS.forEach(([k,f])=>save[k]=D[f]||'');
+  D.cfAcc[cur]=save;
+  const next=D.cfAcc[id]||{};
+  _CF_FIELDS.forEach(([k,f,def])=>D[f]=next[k]||def);
+  D.cfFixedExpenses=JSON.parse(JSON.stringify(next.fixed||[]));
+  D.cfActive=id;
+  markDirty();cfRefreshFields();
+}
+// put the shown account's figures into the inputs (the cash-flow part of renderAll)
+function cfRefreshFields(){
+  const setNum=(id,v)=>{const el=document.getElementById(id);if(!el)return;const n=v?parseFloat(String(v).replace(/,/g,'')):0;
+    if(n){el.value=n;el.dataset.numRaw=String(n);}else{el.value='';delete el.dataset.numRaw;}};
+  setNum('cf-balance',D.cfBalance);setNum('cf-zero',D.cfZero);
+  const ex=document.getElementById('cf-expenses');if(ex)ex.value=D.cfExpenses?parseFloat(String(D.cfExpenses).replace(/,/g,'')):'';
+  const lu=document.getElementById('cf-last-updated');if(lu)lu.value=D.cfLastUpdated||'';
+  const cu=document.getElementById('cf-currency');if(cu)cu.value=D.cfCurrency||'ILS';
+  renderCfFixed();calcCashFlow();renderCfAccBar();
+}
+// the account chips + the account's last bank balance (from its uploaded bank file), one click to use it
+function renderCfAccBar(){
+  const el=document.getElementById('cf-acc-bar');if(!el)return;
+  const accs=cfAccOn();if(!accs){el.innerHTML='';return;}
+  const cur=D.cfActive||accs[0].id;
+  let bank=null;
+  const ms=typeof budgetAccMonths==='function'?budgetAccMonths(cur):{};
+  Object.keys(ms).sort().forEach(k=>{const b=ms[k]&&ms[k].bank;if(b&&b.closing!=null)bank={v:b.closing,d:b.to||k};});
+  const chip=a=>{const on=a.id===cur;return `<button onclick="cfAccSwitch('${a.id}')" style="background:${on?'rgba(66,235,214,.14)':'var(--s2)'};border:1px solid ${on?'var(--teal-border)':'var(--border)'};color:${on?'var(--teal)':'var(--t2)'};border-radius:20px;padding:5px 12px;font-family:var(--font);font-size:12.5px;font-weight:${on?800:600};cursor:pointer">🏦 ${esc(a.name)}</button>`;};
+  el.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <span style="font-size:12px;color:var(--t3)">לאיזה חשבון?</span>${accs.map(chip).join('')}</div>
+    ${bank?`<div style="font-size:11.5px;color:var(--t3);margin:-2px 0 10px">🏦 יתרה אחרונה בקובץ העו"ש של החשבון: <b style="color:var(--t2)">${fmt(bank.v)}</b> (${String(bank.d).split('-').reverse().join('/')})
+      <button onclick="D.cfBalance=String(${bank.v});markDirty();cfRefreshFields()" style="background:none;border:none;color:var(--teal);font-family:var(--font);font-size:11.5px;cursor:pointer;text-decoration:underline dotted">להשתמש בה</button></div>`:''}`;
+}
+
 // "Where should the free money go?" — urgent goals first, otherwise the portfolio.
 // The portfolio is treated as an ongoing, no-target destination for free money.
 function cfAllocationHint(){

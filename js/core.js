@@ -404,6 +404,7 @@ function goTo(id,btn){
   // measured 0 height. Re-fit the transfer "לאן מועבר הכסף" fields now that it's visible.
   if(id==='goals'){
     if(typeof renderGoalsSavingsTile==='function')renderGoalsSavingsTile(); // accumulated savings from the budget page
+    if(typeof renderCfAccBar==='function')renderCfAccBar(); // cash-flow account picker (admin)
     setTimeout(()=>document.querySelectorAll('#locs-transfer textarea[data-f="whereTo"]').forEach(t=>{if(typeof autoResize==='function')autoResize(t);}),0);
   }
   if(id==='settings')renderSettings();
@@ -438,6 +439,7 @@ function renderAll(){
   if(typeof applyCfCollapse==='function')applyCfCollapse();
   if(typeof calcCashFlow==='function')calcCashFlow(); // recompute now that balance is restored
   renderCfFixed();
+  if(typeof renderCfAccBar==='function')renderCfAccBar(); // account picker (admin, several accounts)
   // Only render what's immediately needed
   renderSettings();
   renderDash();
