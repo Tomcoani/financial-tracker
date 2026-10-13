@@ -331,12 +331,15 @@
           </select>
         </div>
         <button class="btn btn-primary" id="genBtn" onclick="generateScript()">✍️ כתוב תסריט</button>
+        <button class="btn btn-secondary" id="improveBtn" onclick="improveScript()">✨ שכתב/שפר קיים</button>
       </div>
+      <div class="card-desc" style="margin-top:8px">"שכתב/שפר" לוקח את התסריט שכבר כתבת (ואת משוב הבדיקה אם הרצת) ומשפר אותו לפי כל החוקים וההיסטוריה — ממלא את הבלוקים במקום.</div>
       <div class="error-box" id="genError"></div>
       <div id="genResult" style="margin-top:14px"></div>
       <div style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px">
         <div class="hint" style="margin-bottom:8px">אין מפתח API בתשלום? העתק את הפרומפט, הדבק בצ'אט חינמי (Claude.ai / ChatGPT / Gemini), והחזר את התשובה לכאן:</div>
-        <button class="btn btn-ghost btn-sm" onclick="copyGenPrompt()">📋 העתק פרומפט (חינם)</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyGenPrompt()">📋 פרומפט כתיבה (חינם)</button>
+        <button class="btn btn-ghost btn-sm" style="margin-right:8px" onclick="copyImprovePrompt()">📋 פרומפט שכתוב (חינם)</button>
         <div id="genPasteWrap" style="display:none; margin-top:10px">
           <textarea id="genPaste" placeholder="הדבק כאן את תשובת ה-JSON מהצ'אט..." style="direction:ltr; min-height:110px; font-size:12px"></textarea>
           <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="applyPastedGen()">טען תסריט מההדבקה</button>
@@ -636,9 +639,14 @@ function defaultStore() {
   };
 }
 
+// safe localStorage wrappers — never let a blocked/unavailable store crash the app
+function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
+function lsRemove(k) { try { window.localStorage.removeItem(k); } catch (e) {} }
+
 function loadStore() {
   try {
-    const raw = localStorage.getItem('vs_config');
+    const raw = lsGet('vs_config');
     if (raw) {
       let c = JSON.parse(raw);
       if (c && c.types) {
@@ -652,7 +660,7 @@ function loadStore() {
           if (!c.types.carousel) c.types.carousel = d.types.carousel;
           if (!c.activeType) c.activeType = 'reel';
         }
-        localStorage.setItem('vs_config', JSON.stringify(c));
+        lsSet('vs_config', JSON.stringify(c));
         return c;
       }
       // migrate old flat config -> types.reel
@@ -661,15 +669,15 @@ function loadStore() {
         d.types.reel = { name: 'ריל', blocks: c.blocks, localRules: c.localRules || d.types.reel.localRules, aiRules: c.aiRules || d.types.reel.aiRules, checklist: c.checklist || d.types.reel.checklist };
         if (c.expertNotes) d.expertNotes = c.expertNotes;
       }
-      localStorage.setItem('vs_config', JSON.stringify(d));
+      lsSet('vs_config', JSON.stringify(d));
       return d;
     }
   } catch (e) {}
   const d = defaultStore();
-  localStorage.setItem('vs_config', JSON.stringify(d));
+  lsSet('vs_config', JSON.stringify(d));
   return d;
 }
-function persistConfig() { localStorage.setItem('vs_config', JSON.stringify(store)); }
+function persistConfig() { lsSet('vs_config', JSON.stringify(store)); }
 
 // content-type helpers — `config` always points at the active type's working set
 function typeConf(t) { return (store.types && (store.types[t] || store.types.reel)) || config; }
@@ -677,9 +685,9 @@ function typeName(t) { return (store.types[t] || {}).name || t; }
 function setActiveType(t) { if (store.types[t]) { store.activeType = t; config = store.types[t]; } }
 
 function loadVideos() {
-  try { return JSON.parse(localStorage.getItem('vs_videos') || '[]'); } catch (e) { return []; }
+  try { return JSON.parse(lsGet('vs_videos') || '[]'); } catch (e) { return []; }
 }
-function persistVideos() { localStorage.setItem('vs_videos', JSON.stringify(videos)); }
+function persistVideos() { lsSet('vs_videos', JSON.stringify(videos)); }
 
 let store = loadStore();
 let config = store.types[store.activeType] || store.types.reel;
@@ -690,12 +698,12 @@ let editingId = null; // id of video being edited, or null for new
 //  API KEY
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function getApiKey() { return localStorage.getItem('claude_api_key') || ''; }
+function getApiKey() { return lsGet('claude_api_key') || ''; }
 function openApiModal() { document.getElementById('apiKeyInput').value = getApiKey(); document.getElementById('apiModal').classList.add('show'); }
 function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
 function saveApiKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
-  if (key) { localStorage.setItem('claude_api_key', key); updateApiBtn(); }
+  if (key) { lsSet('claude_api_key', key); updateApiBtn(); }
   closeApiModal();
 }
 function updateApiBtn() {
@@ -1252,9 +1260,98 @@ async function generateScript() {
   }
 }
 
+// ── Improve / rewrite an existing script ────────────────────────────────────
+function currentAiResult() {
+  if (editingId) { const v = videos.find(x => x.id === editingId); return v?.aiResult || pendingAiResult; }
+  return pendingAiResult;
+}
+function buildImprovePrompt(fields) {
+  const scriptText = config.blocks.map(b => `### ${b.name}\n${(fields[b.id] || '(ריק)')}`).join('\n\n');
+  const expertNotes = (store.expertNotes || '').trim();
+  const notesBlock = expertNotes ? `\n\n## עקרונות אישיים (משקל גבוה):\n${expertNotes}` : '';
+  const rules = config.aiRules.map((r, i) => `${i + 1}. ${r.text}`).join('\n');
+  const scored = videos.filter(v => (v.type || 'reel') === store.activeType && v.actual?.reach).map(v => ({ v, p: computePerformance(v.actual) })).filter(x => x.p).sort((a, b) => b.p.score - a.p.score);
+  const winners = scored.filter(x => x.p.score >= 60).slice(0, 4).map(x => `  ["${x.v.title}" — ${x.p.score}] HOOK: ${firstBlockText(x.v)}`).join('\n') || '  (אין)';
+  const fb = currentAiResult();
+  let fbBlock = '';
+  if (fb) {
+    const parts = [];
+    if (fb.suggestions?.length) parts.push('הצעות: ' + fb.suggestions.join(' | '));
+    if (fb.weakMoments?.length) parts.push('רגעים לחיזוק: ' + fb.weakMoments.map(w => `"${w.text}" (${w.issue}) ← ${w.suggestion}`).join(' | '));
+    if (fb.threeQuestions?.length) { const failed = fb.threeQuestions.filter(q => !q.passed); if (failed.length) parts.push('שאלות שנכשלו: ' + failed.map(q => q.q).join(', ')); }
+    if (parts.length) fbBlock = `\n\n## משוב מהבדיקה האחרונה (תקן לפיו):\n${parts.join('\n')}`;
+  }
+  return `אתה עורך תסריטים לסרטוני רשת קצרים בעברית עבור יוצר תוכן פיננסי.
+שפר ושכתב את התסריט הקיים כך שיעמוד בכל הכללים — שמור על הנושא והכוונה, אבל תקן חולשות, חדד את ה-HOOK והפוך אותו למנצח.
+
+${EXPERT_FRAMEWORK}${notesBlock}
+
+## כללים שחובה לעמוד בהם:
+${rules}
+
+## מה עבד לי בפועל (כתוב בסגנון הזה):
+${winners}${fbBlock}
+
+## התסריט הנוכחי לשיפור:
+${scriptText}
+
+החזר JSON תקין בלבד:
+{
+  "blocks": { ${config.blocks.map(b => `"${b.name}": "<תוכן משופר>"`).join(', ')} },
+  "targetMode": "reach" | "conversion",
+  "rationale": "<שורה קצרה: מה שיפרת ולמה זה אמור לעבוד>"
+}`;
+}
+async function improveScript() {
+  const apiKey = getApiKey();
+  const fields = readEditorFields();
+  const hasContent = config.blocks.some(b => (fields[b.id] || '').trim().length > 3);
+  if (!hasContent) { showGenError('כתוב קודם תסריט (או צור אחד) כדי לשכתב אותו'); return; }
+  if (!apiKey) { showGenError('לשכתוב אוטומטי צריך מפתח API — או השתמש ב"📋 פרומפט שכתוב (חינם)"'); return; }
+  const btn = document.getElementById('improveBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> משכתב...';
+  hideGenError(); document.getElementById('genResult').innerHTML = '';
+  try {
+    const parsed = parseAiJson(await callClaude(buildImprovePrompt(fields)));
+    fillBlocksFromParsed(parsed);
+    onEditorInput();
+    const modeLbl = MODE_LABEL[parsed.targetMode] || '';
+    document.getElementById('genResult').innerHTML = `<div class="rule-result pass"><span class="rr-icon">✨</span><span><span class="rr-name">התסריט שוכתב${modeLbl ? ` · יעד: ${modeLbl}` : ''}</span>${parsed.rationale ? `<br><span class="rr-detail">${esc(parsed.rationale)}</span>` : ''}</span></div>`;
+    toast('התסריט שוכתב ✓ — ערוך לפי הצורך');
+  } catch (err) {
+    showGenError('שגיאה: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.innerHTML = '✨ שכתב/שפר קיים';
+  }
+}
+function copyImprovePrompt() {
+  const fields = readEditorFields();
+  const hasContent = config.blocks.some(b => (fields[b.id] || '').trim().length > 3);
+  if (!hasContent) { showGenError('כתוב קודם תסריט כדי לשכתב אותו'); return; }
+  hideGenError();
+  copyToClipboard(buildImprovePrompt(fields), 'פרומפט השכתוב הועתק — הדבק בצ׳אט חינמי, ואז הדבק את התשובה למטה');
+  document.getElementById('genPasteWrap').style.display = 'block';
+}
+
 // ── Free mode: copy prompt -> paste result (no paid API) ────────────────────
 function copyToClipboard(text, okMsg) {
-  navigator.clipboard.writeText(text).then(() => toast(okMsg || 'הועתק ✓')).catch(() => toast('העתקה נכשלה', true));
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast(okMsg || 'הועתק ✓')).catch(() => fallbackCopy(text, okMsg));
+      return;
+    }
+  } catch (e) {}
+  fallbackCopy(text, okMsg);
+}
+function fallbackCopy(text, okMsg) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast(ok ? (okMsg || 'הועתק ✓') : 'לא הצלחתי להעתיק — סמן והעתק ידנית', !ok);
+  } catch (e) { toast('לא הצלחתי להעתיק — סמן והעתק ידנית', true); }
 }
 function fillBlocksFromParsed(parsed) {
   if (!parsed.blocks) return;
@@ -1653,8 +1750,8 @@ const SEED_VIDEOS = [
 ];
 
 function seedIfEmpty() {
-  if (localStorage.getItem('vs_seeded')) return;
-  if (videos.length) { localStorage.setItem('vs_seeded', '1'); return; }
+  if (lsGet('vs_seeded')) return;
+  if (videos.length) { lsSet('vs_seeded', '1'); return; }
   const reelConf = typeConf('reel');
   SEED_VIDEOS.forEach(item => {
     const fields = {};
@@ -1671,7 +1768,7 @@ function seedIfEmpty() {
   });
   videos.sort((x, y) => (computePerformance(y.actual)?.score || 0) - (computePerformance(x.actual)?.score || 0));
   persistVideos();
-  localStorage.setItem('vs_seeded', '1');
+  lsSet('vs_seeded', '1');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
