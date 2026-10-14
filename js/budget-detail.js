@@ -565,13 +565,15 @@ function _bSimilar(a,b){
   const [s,l]=ka.length<=kb.length?[ka,kb]:[kb,ka];
   return s.length===1&&l.length<=2&&s[0].length>=3&&l.includes(s[0]);
 }
+// every account's months (several accounts: categories are unified for the whole household)
+function _bAllMonthMaps(){return typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];}
 function budgetMergeCandidates(){
-  const seen={}; // "sec|name" → {sec,name,months}
-  Object.values(D.budgetMonths||{}).forEach(m=>_MERGE_SECS.forEach(sec=>(m[sec]||[]).forEach(r=>{
+  const seen={}; // "sec|name" → {sec,name,months} — empty rows too (merging one just removes it)
+  _bAllMonthMaps().forEach(ms=>Object.values(ms).forEach(m=>_MERGE_SECS.forEach(sec=>(m[sec]||[]).forEach(r=>{
     const n=(r.name||'').trim();if(!n)return;
     const used=_bNum(r.amount)||(m.tx||[]).some(x=>x.k===sec+'|'+n);
-    const o=seen[sec+'|'+n]=seen[sec+'|'+n]||{sec,name:n,months:0};if(used)o.months++;})));
-  const list=Object.values(seen).filter(o=>o.months>0),ign=new Set(D.budgetMergeIgnore||[]),out=[];
+    const o=seen[sec+'|'+n]=seen[sec+'|'+n]||{sec,name:n,months:0};if(used)o.months++;}))));
+  const list=Object.values(seen),ign=new Set(D.budgetMergeIgnore||[]),out=[];
   const exp=s=>s==='needs'||s==='wants';
   for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
     const a=list[i],b=list[j];
@@ -594,12 +596,12 @@ function renderBudgetMergeHint(){
   const groups={};Object.keys(items).forEach(k=>(groups[find(k)]=groups[find(k)]||[]).push(items[k]));
   const list=Object.values(groups).map(g=>g.sort((a,b)=>b.months-a.months));
   const enc=s=>encodeURIComponent(s).replace(/'/g,'%27');
-  const mo=n=>n===1?'חודש אחד':n+' חודשים';
+  const mo=n=>!n?'ריקה':n===1?'חודש אחד':n+' חודשים';
   const lbl=o=>`"${esc(o.name)}" <span style="color:var(--t3);font-size:11.5px">(${_BSEC_LBL[o.sec]||o.sec}, ${mo(o.months)})</span>`;
   const btn=(txt,js,main)=>`<button onclick="${js}" style="background:${main?'rgba(66,235,214,.14)':'none'};border:1px solid ${main?'var(--teal-border)':'var(--border)'};color:${main?'var(--teal)':'var(--t2)'};border-radius:8px;padding:4px 10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">${txt}</button>`;
   el.innerHTML=`<div class="card" style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.05)">
     <div style="font-size:13.5px;font-weight:800;color:#60a5fa;margin-bottom:4px">🔀 נראה שיש קטגוריות כפולות</div>
-    <div style="font-size:12px;color:var(--t2);margin-bottom:6px">אותו דבר בשמות קצת שונים? כדאי לאחד לשורה אחת — בכל החודשים של החשבון הזה, כולל הסכומים והעסקאות שבתוכן.</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:6px">אותו דבר בשמות קצת שונים? כדאי לאחד לשורה אחת — בכל החודשים ובכל החשבונות, כולל הסכומים והעסקאות שבתוכן. שורה ריקה פשוט תימחק.</div>
     ${list.slice(0,4).map(g=>{const all=enc(g.map(id).join('\n'));
       return `<div style="padding:7px 0;border-top:1px solid var(--border);font-size:12.5px;line-height:1.7">${g.map(lbl).join(' · ')}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
@@ -629,7 +631,7 @@ function budgetMergeIgnore(keyEnc){
 // merchants pointed at the new row
 function _budgetMergeRows(from,to){
   const [fs,fn]=from.split('|'),[ts,tn]=to.split('|');
-  Object.values(D.budgetMonths||{}).forEach(m=>{
+  _bAllMonthMaps().forEach(ms=>Object.values(ms).forEach(m=>{
     const src=(m[fs]||[]).find(r=>(r.name||'').trim()===fn);if(!src)return;
     if(!Array.isArray(m[ts]))m[ts]=[];
     let dst=m[ts].find(r=>(r.name||'').trim()===tn);
@@ -638,7 +640,7 @@ function _budgetMergeRows(from,to){
     dst.amount=sum?String(Math.round(sum*100)/100):'';
     m[fs]=m[fs].filter(r=>r!==src);
     (m.tx||[]).forEach(x=>{if(x.k===from)x.k=to;});
-  });
+  }));
   Object.entries(D.importMerchants||{}).forEach(([k,v])=>{if(v&&v.sec===fs&&v.name===fn)D.importMerchants[k]={sec:ts,name:tn};});
 }
 function budgetMergeRows(fromEnc,toEnc){ // kept for one pair
