@@ -217,7 +217,45 @@ function renderBudgetCombined(){
       ${Object.keys(c.by).length>1?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${accs.filter(a=>c.by[a.id]).map(a=>esc(a.name)+' '+fmt(c.by[a.id])).join(' · ')}</div>`:`<div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(budgetAccName(Object.keys(c.by)[0]))}</div>`}
     </div>`).join('')}
   </div>`:''}
+  <div class="card" id="budget-allchart-card">
+    <div class="ch-title">📊 הכנסות מול הוצאות — חודש אחרי חודש</div>
+    <div class="ch-hint">כל החשבונות יחד. העברה להשקעות לא נספרת כהוצאה (היא חיסכון). מעבר עם העכבר על חודש מראה את הסכומים ואת החיסכון.</div>
+    <div style="display:flex;gap:14px;font-size:12px;color:var(--t2);margin:2px 0 6px">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#11a394;vertical-align:middle;margin-left:4px"></span>הכנסות</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#ef4444;vertical-align:middle;margin-left:4px"></span>הוצאות</span>
+    </div>
+    <div style="height:230px"><canvas id="ch-budget-all"></canvas></div>
+  </div>
   <div class="card" id="budget-period-all" style="display:none"></div>
   <div style="font-size:11.5px;color:var(--t3);text-align:center;margin:-4px 0 14px">לעריכה — בוחרים חשבון בשורה למעלה. העברות בין החשבונות שלכם כדאי לסמן "לא לספור", כדי שלא ייראו כהוצאה וגם כהכנסה.</div>`;
   if(typeof renderBudgetPeriod==='function')renderBudgetPeriod('budget-period-all',budgetAccEntries());
+  renderBudgetAllChart();
+}
+// Income vs expenses per month, all accounts together: two bars per month (validated pair —
+// income #11a394, expenses #ef4444 — on the dark surface). Months still ahead and empty ones are left out.
+let chBudgetAll=null;
+function renderBudgetAllChart(){
+  const card=document.getElementById('budget-allchart-card'),cv=document.getElementById('ch-budget-all');
+  if(chBudgetAll){chBudgetAll.destroy();chBudgetAll=null;}
+  if(!card||!cv)return;
+  const ents=budgetAccEntries(),now=currentMonthKey(),by={};
+  ents.forEach(e=>Object.entries(e.months||{}).forEach(([k,m])=>{
+    if(k>now||!m)return;const s=budgetSavedOf(m,e.profile,e.months);
+    const o=by[k]=by[k]||{inc:0,exp:0,inv:0};o.inc+=s.inc;o.exp+=s.exp-(s.inv||0);o.inv+=s.inv||0;}));
+  const keys=Object.keys(by).sort().filter(k=>by[k].inc||by[k].exp);
+  if(keys.length<1||typeof Chart==='undefined'){card.style.display='none';return;}
+  card.style.display='';
+  const labels=keys.map(k=>{const q=k.split('-');return (HEB_MONTHS[+q[1]-1]||q[1])+' '+q[0].slice(2);});
+  chBudgetAll=new Chart(cv,{type:'bar',
+    data:{labels,datasets:[
+      {label:'הכנסות',data:keys.map(k=>Math.round(by[k].inc)),backgroundColor:'#11a394',borderRadius:4,borderSkipped:'start',maxBarThickness:26},
+      {label:'הוצאות',data:keys.map(k=>Math.round(by[k].exp)),backgroundColor:'#ef4444',borderRadius:4,borderSkipped:'start',maxBarThickness:26}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      datasets:{bar:{categoryPercentage:.7,barPercentage:.9}},
+      plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{
+        label:c=>' '+c.dataset.label+': '+fmt(c.raw),
+        footer:items=>{const k=keys[items[0].dataIndex],o=by[k],net=o.inc-o.exp;
+          return [(net>=0?'חיסכון: ':'גירעון: ')+fmt(Math.abs(net)),...(o.inv?['📈 מתוכו להשקעות: '+fmt(o.inv)]:[])];}}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v),color:'#94a3b8',font:{size:10}},grid:{color:'rgba(30,45,69,.6)'},border:{display:false}},
+        x:{ticks:{color:'#94a3b8',font:{size:11}},grid:{display:false}}}}});
 }
