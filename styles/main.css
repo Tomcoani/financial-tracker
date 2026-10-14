@@ -744,3 +744,10 @@ select.htag{appearance:none;-webkit-appearance:none;padding-left:22px;background
 #tour-next-btn:hover{opacity:.85;}
 #tour-overlay{cursor:pointer;}
 #tour-step-counter{letter-spacing:.5px;text-transform:uppercase;font-weight:600;}
+/* Budget page: tables that open / close by their title (start closed) — see budget.js */
+.bcol>.ch-title{cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none}
+.bcol>.ch-title::after{content:'▲ סגירה';margin-inline-start:auto;font-size:12px;font-weight:600;color:var(--teal);white-space:nowrap}
+.bcol.bcol-closed>.ch-title::after{content:'▼ פתיחה'}
+.bcol.bcol-closed>.ch-title{margin-bottom:0}
+.bcol.bcol-closed>*:not(.ch-title){display:none!important}
+.bcol-sum{font-size:14px;font-weight:800;color:var(--t2)}

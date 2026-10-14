@@ -306,6 +306,15 @@ function renderGoalsSavingsTile(){
     </div>
   </div>`;
 }
+// Budget tables (cards marked .bcol in index.html) start closed and open / close by their title.
+// The outer cards aren't redrawn, so a table stays as the client left it until the page reloads.
+document.addEventListener('click',e=>{
+  const t=e.target.closest('.bcol>.ch-title');
+  if(!t||e.target.closest('button,a,input,select,textarea'))return;
+  t.parentElement.classList.toggle('bcol-closed');
+  if(!t.parentElement.classList.contains('bcol-closed')&&t.parentElement.id==='budget-trend-card'&&typeof chBudget!=='undefined'&&chBudget)chBudget.resize();
+});
+function budgetOpenCard(el){const c=el&&el.closest('.bcol');if(c)c.classList.remove('bcol-closed');}
 function renderBudget(){
   migrateBudget();
   // Business income left in its own section while not in "separate" mode (e.g. switched before
@@ -510,6 +519,9 @@ function renderBudgetSection(sec){
     </div>${open?budgetRowTxPanel(sec,row.name,txs):''}${budgetRepeatPanel(sec,i,row)}`;
   });
   const total=budgetTotal(sec);
+  // the total next to the (collapsible) table's title, so it's seen while the table is closed
+  const sumEl=document.querySelector('.bcol-sum[data-sec="'+sec+'"]');
+  if(sumEl)sumEl.innerHTML=total?'· '+iln(fmt(total)):'';
   const offSum=rows.filter(r=>r.skip).reduce((s,r)=>s+_bNum(r.amount),0);
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 2px;margin-top:2px;border-top:1px solid var(--border)">
     <span style="font-size:12px;color:var(--t3)">${meta.totalLbl}${offSum?` <span style="color:var(--amber)">(לא כולל ${fmt(offSum)} שסומנו "לא לספור")</span>`:''}</span>

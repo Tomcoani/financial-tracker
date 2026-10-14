@@ -724,6 +724,7 @@ function budgetGoToRow(sec,nameEnc){
   const name=decodeURIComponent(nameEnc);
   const i=(curBudget()[sec]||[]).findIndex(r=>(r.name||'').trim()===name);
   const el=document.getElementById('brow-'+sec+'-'+i);if(!el)return;
+  if(typeof budgetOpenCard==='function')budgetOpenCard(el); // its table may be closed
   el.scrollIntoView({behavior:'smooth',block:'center'});
   el.style.transition='box-shadow .3s';el.style.boxShadow='0 0 0 2px var(--teal)';el.style.borderRadius='9px';
   setTimeout(()=>{el.style.boxShadow='';},2200);

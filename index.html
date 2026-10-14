@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=124">
+<link rel="stylesheet" href="styles/main.css?v=125">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -182,41 +182,41 @@
       <div id="budget-dup-notice"></div>
       <div id="budget-merge-notice"></div>
       <div id="budget-summary"></div>
-      <div class="card" id="budget-bank-card" style="display:none;border-color:rgba(66,235,214,.25)"></div>
-      <div class="card" id="budget-trend-card" style="display:none">
+      <div class="card bcol bcol-closed" id="budget-bank-card" style="display:none;border-color:rgba(66,235,214,.25)"></div>
+      <div class="card bcol bcol-closed" id="budget-trend-card" style="display:none">
         <div class="ch-title">📈 כמה חסכתם, חודש אחרי חודש</div>
         <div class="ch-hint">ההשוואה הכי חשובה היא מול עצמכם — ככה רואים התקדמות לאורך זמן.</div>
         <div style="height:190px"><canvas id="ch-budget"></canvas></div>
       </div>
       <!-- In / out and category averages for a chosen period — see budget-period.js -->
       <div class="card" id="budget-period-card" style="display:none"></div>
-      <div class="card">
-        <div class="ch-title">💰 הכנסות</div>
+      <div class="card bcol bcol-closed">
+        <div class="ch-title">💰 הכנסות <span class="bcol-sum" data-sec="income"></span></div>
         <div class="ch-hint" id="budget-income-hint">כל הכסף שנכנס החודש (נטו, אחרי מס) — משכורות, עסק, קצבאות והכנסות חד-פעמיות.</div>
         <div id="budget-income"></div>
         <button class="btnadd" onclick="addBudgetRow('income')" style="margin-top:8px">+ הוסף הכנסה</button>
       </div>
-      <div class="card">
-        <div class="ch-title"><span style="color:var(--green)">🏠</span> צרכים — הוצאות חיוניות</div>
+      <div class="card bcol bcol-closed">
+        <div class="ch-title"><span style="color:var(--green)">🏠</span> צרכים — הוצאות חיוניות <span class="bcol-sum" data-sec="needs"></span></div>
         <div class="ch-hint">הוצאות שאי אפשר בלעדיהן: דיור, חשבונות, אוכל בסיסי, תחבורה, ביטוחים והחזרי הלוואות.</div>
         <div id="budget-needs"></div>
         <button class="btnadd" onclick="addBudgetRow('needs')" style="margin-top:8px">+ הוסף הוצאה חיונית</button>
       </div>
-      <div class="card">
-        <div class="ch-title"><span style="color:var(--amber)">🎉</span> כיף — מותרות</div>
+      <div class="card bcol bcol-closed">
+        <div class="ch-title"><span style="color:var(--amber)">🎉</span> כיף — מותרות <span class="bcol-sum" data-sec="wants"></span></div>
         <div class="ch-hint">דברים שנעים שיש אבל אפשר לוותר עליהם: בילויים, קניות, חופשות ומנויים.</div>
         <div id="budget-wants"></div>
         <button class="btnadd" onclick="addBudgetRow('wants')" style="margin-top:8px">+ הוסף הוצאת כיף</button>
       </div>
-      <div class="card" style="border-color:rgba(96,165,250,.3)">
-        <div class="ch-title"><span style="color:#60a5fa">📈</span> העברה להשקעות</div>
+      <div class="card bcol bcol-closed" style="border-color:rgba(96,165,250,.3)">
+        <div class="ch-title"><span style="color:#60a5fa">📈</span> העברה להשקעות <span class="bcol-sum" data-sec="invest"></span></div>
         <div class="ch-hint">כסף שהעברתם להשקעה או לחיסכון: שוק ההון, קרן כספית, פיקדון. זו לא הוצאה וגם לא הכנסה — הכסף נשאר שלכם, רק עבר מקום. נספר כחיסכון.</div>
         <div id="budget-invest"></div>
         <button class="btnadd" onclick="addBudgetRow('invest')" style="margin-top:8px;border-color:rgba(96,165,250,.35);color:#60a5fa">+ הוסף השקעה</button>
       </div>
-      <div class="card" id="budget-business-card" style="display:none;border-color:rgba(167,139,250,.35)"></div>
+      <div class="card bcol bcol-closed" id="budget-business-card" style="display:none;border-color:rgba(167,139,250,.35)"></div>
       <div class="card" id="budget-skip-card" style="display:none"></div>
-      <div class="card">
+      <div class="card bcol bcol-closed">
         <div class="ch-title">📝 הערות לחודש</div>
         <div class="ch-hint">מה היה מיוחד החודש? למשל: חתונה משפחתית, טסט לרכב, בונוס בעבודה — כדי שבעתיד תזכרו למה החודש הזה היה שונה.</div>
         <textarea id="budget-notes" rows="2" dir="rtl" oninput="budgetNotesChange(this)"
@@ -858,19 +858,19 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=124"></script>
-<script defer src="js/cashflow-goals.js?v=124"></script>
-<script defer src="js/pension.js?v=124"></script>
-<script defer src="js/networth.js?v=124"></script>
-<script defer src="js/portfolio.js?v=124"></script>
-<script defer src="js/dashboard.js?v=124"></script>
-<script defer src="js/settings.js?v=124"></script>
-<script defer src="js/admin.js?v=124"></script>
-<script defer src="js/misc.js?v=124"></script>
-<script defer src="js/budget.js?v=124"></script>
-<script defer src="js/budget-detail.js?v=124"></script>
-<script defer src="js/budget-accounts.js?v=124"></script>
-<script defer src="js/budget-period.js?v=124"></script>
-<script defer src="js/statement-import.js?v=124"></script>
+<script defer src="js/core.js?v=125"></script>
+<script defer src="js/cashflow-goals.js?v=125"></script>
+<script defer src="js/pension.js?v=125"></script>
+<script defer src="js/networth.js?v=125"></script>
+<script defer src="js/portfolio.js?v=125"></script>
+<script defer src="js/dashboard.js?v=125"></script>
+<script defer src="js/settings.js?v=125"></script>
+<script defer src="js/admin.js?v=125"></script>
+<script defer src="js/misc.js?v=125"></script>
+<script defer src="js/budget.js?v=125"></script>
+<script defer src="js/budget-detail.js?v=125"></script>
+<script defer src="js/budget-accounts.js?v=125"></script>
+<script defer src="js/budget-period.js?v=125"></script>
+<script defer src="js/statement-import.js?v=125"></script>
 </body>
 </html>

@@ -114,10 +114,20 @@ function renderCfAccBar(){
 
 // "Where should the free money go?" — urgent goals first, otherwise the portfolio.
 // The portfolio is treated as an ongoing, no-target destination for free money.
+// What's still missing for a goal, in ₪: target − saved, each in its own currency; saved = the
+// "כמה חסכת" amount or the money listed under "מאיפה הכסף", whichever is larger. A goal that
+// reached its target (marked done or not) has no gap — so it's not suggested as a place for money.
+function goalGapILS(gl){
+  const n=v=>parseFloat(String(v??'').replace(/,/g,''))||0;
+  const locs=Array.isArray(gl.goalLocs)?gl.goalLocs.reduce((s,l)=>s+n(l.amount),0):0;
+  const saved=toILS(Math.max(n(gl.saved),locs),gl.savedCurrency||'ILS');
+  const needed=toILS(n(gl.needed),gl.neededCurrency||gl.savedCurrency||'ILS');
+  return needed>0?Math.max(0,needed-saved):0;
+}
 function cfAllocationHint(){
   const urgent=(D.goals||[]).filter(gl=>!gl.done&&(gl.name||'').trim()&&(gl.h||0)===0)
-    .map(gl=>({name:gl.name,gap:(parseFloat(gl.needed)||0)-(parseFloat(gl.saved)||0)}))
-    .filter(x=>x.gap>0);
+    .map(gl=>({name:gl.name,gap:goalGapILS(gl)}))
+    .filter(x=>x.gap>=1);
   const portTotal=(typeof portGrandTotalILS==='function')?portGrandTotalILS():(D.portfolios||[]).flatMap(p=>p.items||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   let html='<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.2);text-align:right;font-size:12.5px;font-weight:400;line-height:1.7">';
   html+='<div style="font-weight:800;margin-bottom:4px">לאן להעביר את הכסף? 🤔</div>';
@@ -849,8 +859,8 @@ let _planPick=[];
 function buildTransferPlan(){
   // Goals that still have a gap, ordered by saved preferences (fallback: horizon)
   const candidates=(D.goals||[]).filter(gl=>!gl.done&&(gl.name||'').trim())
-    .map(gl=>({name:gl.name,h:gl.h||0,gap:toILS((parseFloat(gl.needed)||0)-(parseFloat(gl.saved)||0),gl.savedCurrency||'ILS')}))
-    .filter(t=>t.gap>0);
+    .map(gl=>({name:gl.name,h:gl.h||0,gap:goalGapILS(gl)}))
+    .filter(t=>t.gap>=1); // reached its target (even if not marked done) → nothing to transfer
   if(!candidates.length){
     // No open goal gaps — build directly (everything free goes to the portfolio)
     _planPick=[];
