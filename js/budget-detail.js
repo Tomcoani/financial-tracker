@@ -536,6 +536,117 @@ function budgetRestoreFromTx(){
   touchSection('budget');markDirty();renderBudget();
   showToast('הסכומים הוחזרו לפי העסקאות ב־'+s.length+' שורות ✓');
 }
+// ── Categories that are the same thing under slightly different names ──
+// ("בעל חיים" / "בעלי חיים", "סופר" / "סופרים", "קניות בסופר" / "סופר", a typo...). Found over every
+// month of the account being edited; the client is asked — merge into one name, or keep apart
+// (remembered in D.budgetMergeIgnore). Expense rows are compared across צרכים / כיף too.
+const _MERGE_SECS=['income','needs','wants','invest','business','bizIncome','bizInvest'];
+function _bStem(w){
+  w=w.replace(/^[והבלמש](?=[א-ת]{4,})/,'');           // ו/ה/ב/ל/מ/ש prefix ("בסופר" → "סופר"; not "בעלי")
+  w=w.replace(/(ים|ות|יות)$/,'').replace(/(?<=[א-ת]{3})[יה]$/,''); // plural / construct ("בעלי" → "בעל")
+  return w.replace(/[ךםןףץ]$/,c=>({'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ'})[c]);
+}
+function _bNameKey(n){
+  return String(n||'').toLowerCase().replace(/\(.*?\)/g,' ').replace(/["'׳״.,\-–_/\\:!?]+/g,' ')
+    .split(/\s+/).filter(w=>w&&!/^(של|את|על|עם|ו)$/.test(w)).map(_bStem).filter(Boolean);
+}
+function _bLev(a,b){ // edit distance — catches a typo ("חשמל" / "חשמלל")
+  if(Math.abs(a.length-b.length)>1)return 9;
+  const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length];
+}
+function _bSimilar(a,b){
+  const ka=_bNameKey(a),kb=_bNameKey(b);if(!ka.length||!kb.length)return false;
+  if(ka.join(' ')===kb.join(' '))return true;
+  const ja=ka.join(''),jb=kb.join('');
+  if(ja.length>=4&&jb.length>=4&&_bLev(ja,jb)<=1)return true;
+  // one word inside a short name ("סופר" / "קניות בסופר")
+  const [s,l]=ka.length<=kb.length?[ka,kb]:[kb,ka];
+  return s.length===1&&l.length<=2&&s[0].length>=3&&l.includes(s[0]);
+}
+function budgetMergeCandidates(){
+  const seen={}; // "sec|name" → {sec,name,months}
+  Object.values(D.budgetMonths||{}).forEach(m=>_MERGE_SECS.forEach(sec=>(m[sec]||[]).forEach(r=>{
+    const n=(r.name||'').trim();if(!n)return;
+    const used=_bNum(r.amount)||(m.tx||[]).some(x=>x.k===sec+'|'+n);
+    const o=seen[sec+'|'+n]=seen[sec+'|'+n]||{sec,name:n,months:0};if(used)o.months++;})));
+  const list=Object.values(seen).filter(o=>o.months>0),ign=new Set(D.budgetMergeIgnore||[]),out=[];
+  const exp=s=>s==='needs'||s==='wants';
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+    const a=list[i],b=list[j];
+    if(a.sec!==b.sec&&!(exp(a.sec)&&exp(b.sec)))continue;
+    const key=[a.sec+'|'+a.name,b.sec+'|'+b.name].sort().join('||');
+    if(ign.has(key)||!_bSimilar(a.name,b.name))continue;
+    out.push({a,b,key});
+  }
+  return out;
+}
+function renderBudgetMergeHint(){
+  const el=document.getElementById('budget-merge-notice');if(!el)return;
+  const pairs=budgetMergeCandidates();
+  if(!pairs.length){el.innerHTML='';return;}
+  // similar names chain into one group ("סופר" / "סופרים" / "קניות בסופר") — one question each
+  const id=o=>o.sec+'|'+o.name,parent={},items={};
+  const find=x=>parent[x]===x?x:(parent[x]=find(parent[x]));
+  pairs.forEach(p=>[p.a,p.b].forEach(o=>{items[id(o)]=o;if(!parent[id(o)])parent[id(o)]=id(o);}));
+  pairs.forEach(p=>{parent[find(id(p.a))]=find(id(p.b));});
+  const groups={};Object.keys(items).forEach(k=>(groups[find(k)]=groups[find(k)]||[]).push(items[k]));
+  const list=Object.values(groups).map(g=>g.sort((a,b)=>b.months-a.months));
+  const enc=s=>encodeURIComponent(s).replace(/'/g,'%27');
+  const mo=n=>n===1?'חודש אחד':n+' חודשים';
+  const lbl=o=>`"${esc(o.name)}" <span style="color:var(--t3);font-size:11.5px">(${_BSEC_LBL[o.sec]||o.sec}, ${mo(o.months)})</span>`;
+  const btn=(txt,js,main)=>`<button onclick="${js}" style="background:${main?'rgba(66,235,214,.14)':'none'};border:1px solid ${main?'var(--teal-border)':'var(--border)'};color:${main?'var(--teal)':'var(--t2)'};border-radius:8px;padding:4px 10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">${txt}</button>`;
+  el.innerHTML=`<div class="card" style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.05)">
+    <div style="font-size:13.5px;font-weight:800;color:#60a5fa;margin-bottom:4px">🔀 נראה שיש קטגוריות כפולות</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:6px">אותו דבר בשמות קצת שונים? כדאי לאחד לשורה אחת — בכל החודשים של החשבון הזה, כולל הסכומים והעסקאות שבתוכן.</div>
+    ${list.slice(0,4).map(g=>{const all=enc(g.map(id).join('\n'));
+      return `<div style="padding:7px 0;border-top:1px solid var(--border);font-size:12.5px;line-height:1.7">${g.map(lbl).join(' · ')}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          ${g.map((o,i)=>btn('לאחד ל"'+esc(o.name)+'"',`budgetMergeGroup('${enc(id(o))}','${all}')`,i===0)).join('')}
+          ${btn('לא, אלה דברים שונים',`budgetMergeIgnoreGroup('${all}')`)}
+        </div></div>`;}).join('')}
+    ${list.length>4?`<div style="font-size:11.5px;color:var(--t3);margin-top:4px">ועוד ${list.length-4} — יופיעו אחרי אלה</div>`:''}
+  </div>`;
+}
+function budgetMergeIgnoreGroup(allEnc){
+  const ids=decodeURIComponent(allEnc).split('\n');D.budgetMergeIgnore=D.budgetMergeIgnore||[];
+  for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)D.budgetMergeIgnore.push([ids[i],ids[j]].sort().join('||'));
+  touchSection('budget');markDirty();renderBudgetMergeHint();
+}
+function budgetMergeGroup(toEnc,allEnc){
+  const to=decodeURIComponent(toEnc),others=decodeURIComponent(allEnc).split('\n').filter(x=>x!==to);
+  if(!confirm(`לאחד את ${others.map(x=>'"'+x.split('|')[1]+'"').join(', ')} לתוך "${to.split('|')[1]}" בכל החודשים?`))return;
+  others.forEach(f=>_budgetMergeRows(f,to));
+  touchSection('budget');markDirty();renderBudget();
+  showToast(`אוחד לתוך "${to.split('|')[1]}" ✓`);
+}
+function budgetMergeIgnore(keyEnc){
+  D.budgetMergeIgnore=D.budgetMergeIgnore||[];D.budgetMergeIgnore.push(decodeURIComponent(keyEnc));
+  touchSection('budget');markDirty();renderBudgetMergeHint();
+}
+// Merge row "from" into row "to" in every month: amounts added, transactions moved, remembered
+// merchants pointed at the new row
+function _budgetMergeRows(from,to){
+  const [fs,fn]=from.split('|'),[ts,tn]=to.split('|');
+  Object.values(D.budgetMonths||{}).forEach(m=>{
+    const src=(m[fs]||[]).find(r=>(r.name||'').trim()===fn);if(!src)return;
+    if(!Array.isArray(m[ts]))m[ts]=[];
+    let dst=m[ts].find(r=>(r.name||'').trim()===tn);
+    if(!dst){dst={name:tn,amount:''};m[ts].splice(m[fs]===m[ts]?m[ts].indexOf(src):m[ts].length,0,dst);}
+    const sum=_bNum(dst.amount)+_bNum(src.amount);
+    dst.amount=sum?String(Math.round(sum*100)/100):'';
+    m[fs]=m[fs].filter(r=>r!==src);
+    (m.tx||[]).forEach(x=>{if(x.k===from)x.k=to;});
+  });
+  Object.entries(D.importMerchants||{}).forEach(([k,v])=>{if(v&&v.sec===fs&&v.name===fn)D.importMerchants[k]={sec:ts,name:tn};});
+}
+function budgetMergeRows(fromEnc,toEnc){ // kept for one pair
+  const from=decodeURIComponent(fromEnc),to=decodeURIComponent(toEnc);
+  if(!confirm(`לאחד את "${from.split('|')[1]}" לתוך "${to.split('|')[1]}" בכל החודשים?`))return;
+  _budgetMergeRows(from,to);touchSection('budget');markDirty();renderBudget();
+  showToast(`"${from.split('|')[1]}" אוחד לתוך "${to.split('|')[1]}" ✓`);
+}
 function renderBudgetDups(){
   const el=document.getElementById('budget-dup-notice');if(!el)return;
   const m=curBudget(),d=budgetFindDups(m),short=budgetShortRows(m);
@@ -730,6 +841,7 @@ function budgetGapAckClear(){
 // 3. Card bills the bank paid vs. the card statements uploaded.
 function renderBudgetBank(){
   renderBudgetDups();
+  renderBudgetMergeHint();
   renderBudgetSkipped();
   const el=document.getElementById('budget-bank-card');if(!el)return;
   const m=curBudget(),bk=m.bank;
