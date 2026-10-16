@@ -28,9 +28,11 @@ function showSignOutWhy(){
   const el=document.getElementById('auth-why');if(!el)return;
   let why='',at=0,had=false;
   try{[why,at]=String(localStorage.getItem('signOutWhy')||'').split('|');had=localStorage.getItem('hadSession')==='1';}catch(e){}
-  if(!why&&had){why='lost';at=Date.now();signOutWhy('lost');}
+  if(typeof _whyHere!=='undefined'&&_whyHere){why=_whyHere;at=Date.now();_whyHere='';}
+  else if(!why&&had){why='lost';at=Date.now();signOutWhy('lost');}
   const when=at?new Date(+at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
   const txt={idle:'התנתקת אוטומטית אחרי 24 שעות בלי פעילות',
+    othertab:'יצאת מהחשבון בלשונית או בחלון אחר של הדפדפן. בדפדפן אחד אפשר להיות מחובר רק לחשבון אחד בכל פעם — כדי לעבוד על חשבון של לקוח במקביל לחשבון שלך, פתחו אותו בחלון גלישה פרטית (Ctrl+Shift+N) או בדפדפן אחר.',
     lost:'החיבור נותק — לא דרך כפתור "יציאה" ולא בגלל 24 שעות בלי פעילות. סיבות נפוצות: הדפדפן מוחק נתוני אתרים (מצב גלישה פרטית, ניקוי אוטומטי, חוסם מעקב), או שנכנסת מדפדפן / מכשיר אחר עם סיסמה חדשה.'}[why];
   if(!txt){el.style.display='none';return;}
   el.innerHTML='ℹ️ '+txt+(when?` <span style="color:var(--t3)">(${when})</span>`:'');el.style.display='';
@@ -105,12 +107,26 @@ async function saveDataFS(uid,d){
 }
 
 // ══ AUTH STATE ══
+// One browser = one signed-in account, shared by all its tabs and windows: signing in to another
+// account (or out) in one tab changes every tab. When that happens under this tab, its unsaved
+// changes are dropped — they belong to the previous account and must never be saved into the new one.
+let _selfSignOut=false,_authSwitching=false,_whyHere='';
 auth.onAuthStateChanged(async user=>{
+  if(CU&&(!user||user.uid!==CU)){
+    clearTimeout(autoSaveTimer);dirty=false;_authSwitching=true;
+    if(!_selfSignOut){ // it happened in another tab / window
+      const sb=document.getElementById('save-bar');if(sb)sb.style.display='none';
+      if(user)setTimeout(()=>{try{showToast('🔁 נכנסת לחשבון '+(user.email||'אחר')+' בלשונית או בחלון אחר — בדפדפן אחד אפשר להיות מחובר רק לחשבון אחד, ולכן גם כאן החשבון התחלף');}catch(e){}},1500);
+      else _whyHere='othertab'; // this tab only (the tab that signed out shows nothing)
+    }
+  }
+  _selfSignOut=false;
   if(user){
     // Auto-logout: a restored session idle for >24h is signed out before it loads.
     // (Fresh logins set lastTouch=now, so they're never caught here.)
     if(idleExpired()){
       localStorage.removeItem('lastTouch');
+      _selfSignOut=true;
       signOutWhy('idle');localStorage.removeItem('hadSession');
       await auth.signOut();
       return; // fires again with null → shows the login screen
@@ -121,6 +137,7 @@ auth.onAuthStateChanged(async user=>{
     db.collection('users').doc(CU).set({email:user.email||'',firstSeen:user.metadata.creationTime||null},{merge:true}).catch(()=>{});
     const loaded=await loadData(CU);
     D=loaded||defData();
+    _authSwitching=false; // D now belongs to this account — saving is safe again
     if(!D.snapshots)D.snapshots=[];
     migrateBudget(); // budget months structure (converts old single-month shape)
     if(!D.portfolio)D.portfolio=defData().portfolio;
@@ -269,7 +286,7 @@ async function doReg(){
     await saveDataFS(cred.user.uid,defData());
   }catch(err){showErr(fbErr(err.code));}
 }
-async function doLogout(){localStorage.removeItem('lastTouch');signOutWhy('manual');localStorage.removeItem('hadSession');await auth.signOut();}
+async function doLogout(){_selfSignOut=true;localStorage.removeItem('lastTouch');signOutWhy('manual');localStorage.removeItem('hadSession');await auth.signOut();}
 async function doForgotPassword(){
   const email=document.getElementById('lu').value.trim();
   if(!email){
@@ -312,7 +329,7 @@ function markDirty(){
 }
 let _saving=false;
 async function manualSave(silent){
-  if(!CU||!dirty||_saving)return;
+  if(!CU||!dirty||_saving||_authSwitching)return; // (never while the account is switching)
   _saving=true;
   try{
     collectAll();
@@ -376,6 +393,7 @@ function idleCheck(){
     localStorage.removeItem('lastTouch');
     try{flushSave();}catch(e){}
     try{showToast('התנתקת אוטומטית לאחר 24 שעות ללא פעילות');}catch(e){}
+    _selfSignOut=true;
     signOutWhy('idle');localStorage.removeItem('hadSession');
     auth.signOut();
   }
