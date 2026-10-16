@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=125">
+<link rel="stylesheet" href="styles/main.css?v=126">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -35,6 +35,8 @@
         <div style="font-size:13px;color:var(--t2);margin-top:6px;line-height:1.6">עקוב אחרי המטרות, הפנסיה והשווי הנטו שלך —<br>במקום אחד, מאובטח ונגיש מכל מכשיר</div>
       </div>
     </div>
+    <!-- why the last session ended (see core.js signOutWhy) -->
+    <div id="auth-why" style="display:none;font-size:12px;color:var(--t2);background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:10px;line-height:1.6"></div>
     <div class="atabs">
       <button class="atab on" id="tl" onclick="aTab('l')">כניסה</button>
       <button class="atab" id="tr" onclick="aTab('r')">הרשמה</button>
@@ -858,19 +860,19 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=125"></script>
-<script defer src="js/cashflow-goals.js?v=125"></script>
-<script defer src="js/pension.js?v=125"></script>
-<script defer src="js/networth.js?v=125"></script>
-<script defer src="js/portfolio.js?v=125"></script>
-<script defer src="js/dashboard.js?v=125"></script>
-<script defer src="js/settings.js?v=125"></script>
-<script defer src="js/admin.js?v=125"></script>
-<script defer src="js/misc.js?v=125"></script>
-<script defer src="js/budget.js?v=125"></script>
-<script defer src="js/budget-detail.js?v=125"></script>
-<script defer src="js/budget-accounts.js?v=125"></script>
-<script defer src="js/budget-period.js?v=125"></script>
-<script defer src="js/statement-import.js?v=125"></script>
+<script defer src="js/core.js?v=126"></script>
+<script defer src="js/cashflow-goals.js?v=126"></script>
+<script defer src="js/pension.js?v=126"></script>
+<script defer src="js/networth.js?v=126"></script>
+<script defer src="js/portfolio.js?v=126"></script>
+<script defer src="js/dashboard.js?v=126"></script>
+<script defer src="js/settings.js?v=126"></script>
+<script defer src="js/admin.js?v=126"></script>
+<script defer src="js/misc.js?v=126"></script>
+<script defer src="js/budget.js?v=126"></script>
+<script defer src="js/budget-detail.js?v=126"></script>
+<script defer src="js/budget-accounts.js?v=126"></script>
+<script defer src="js/budget-period.js?v=126"></script>
+<script defer src="js/statement-import.js?v=126"></script>
 </body>
 </html>

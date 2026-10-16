@@ -18,6 +18,23 @@ firebase.initializeApp({
 });
 const auth=firebase.auth();
 const db=firebase.firestore();
+// Stay signed in on this device until "יציאה" or 24h without activity (IDLE AUTO-LOGOUT below)
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('auth persistence',e));
+// Why the last session ended — shown on the login screen, so an unexpected sign-out can be traced:
+// 'manual' (יציאה), 'idle' (24h), otherwise the sign-in was dropped by the browser / server.
+// 'hadSession' marks that this browser was signed in.
+function signOutWhy(r){try{localStorage.setItem('signOutWhy',r+'|'+Date.now());}catch(e){}}
+function showSignOutWhy(){
+  const el=document.getElementById('auth-why');if(!el)return;
+  let why='',at=0,had=false;
+  try{[why,at]=String(localStorage.getItem('signOutWhy')||'').split('|');had=localStorage.getItem('hadSession')==='1';}catch(e){}
+  if(!why&&had){why='lost';at=Date.now();signOutWhy('lost');}
+  const when=at?new Date(+at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  const txt={idle:'התנתקת אוטומטית אחרי 24 שעות בלי פעילות',
+    lost:'החיבור נותק — לא דרך כפתור "יציאה" ולא בגלל 24 שעות בלי פעילות. סיבות נפוצות: הדפדפן מוחק נתוני אתרים (מצב גלישה פרטית, ניקוי אוטומטי, חוסם מעקב), או שנכנסת מדפדפן / מכשיר אחר עם סיסמה חדשה.'}[why];
+  if(!txt){el.style.display='none';return;}
+  el.innerHTML='ℹ️ '+txt+(when?` <span style="color:var(--t3)">(${when})</span>`:'');el.style.display='';
+}
 
 // ══ CONSTANTS ══
 const ADMIN_EMAIL = 'info@tomani.co';
@@ -94,10 +111,12 @@ auth.onAuthStateChanged(async user=>{
     // (Fresh logins set lastTouch=now, so they're never caught here.)
     if(idleExpired()){
       localStorage.removeItem('lastTouch');
+      signOutWhy('idle');localStorage.removeItem('hadSession');
       await auth.signOut();
       return; // fires again with null → shows the login screen
     }
     CU=user.uid;
+    try{localStorage.setItem('hadSession','1');localStorage.removeItem('signOutWhy');}catch(e){}
     // Ensure parent /users/{uid} doc exists for admin listing
     db.collection('users').doc(CU).set({email:user.email||'',firstSeen:user.metadata.creationTime||null},{merge:true}).catch(()=>{});
     const loaded=await loadData(CU);
@@ -185,6 +204,7 @@ auth.onAuthStateChanged(async user=>{
   }else{
     CU=null;D={};
     stopIdleWatch();
+    showSignOutWhy();
     document.getElementById('init-loader').style.display='none';
     document.getElementById('app').style.display='none';
     document.getElementById('auth').style.display='flex';
@@ -249,7 +269,7 @@ async function doReg(){
     await saveDataFS(cred.user.uid,defData());
   }catch(err){showErr(fbErr(err.code));}
 }
-async function doLogout(){localStorage.removeItem('lastTouch');await auth.signOut();}
+async function doLogout(){localStorage.removeItem('lastTouch');signOutWhy('manual');localStorage.removeItem('hadSession');await auth.signOut();}
 async function doForgotPassword(){
   const email=document.getElementById('lu').value.trim();
   if(!email){
@@ -356,6 +376,7 @@ function idleCheck(){
     localStorage.removeItem('lastTouch');
     try{flushSave();}catch(e){}
     try{showToast('התנתקת אוטומטית לאחר 24 שעות ללא פעילות');}catch(e){}
+    signOutWhy('idle');localStorage.removeItem('hadSession');
     auth.signOut();
   }
 }
