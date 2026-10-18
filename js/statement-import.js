@@ -1229,7 +1229,7 @@ window.SIX={
   open(){
     if(typeof D!=='object'||!D)return;
     // Admin-only while it's being tested (the button is hidden for everyone else too)
-    if(typeof auth==='undefined'||!auth.currentUser||auth.currentUser.email!==ADMIN_EMAIL)return;
+    if(typeof canImportStatements!=='function'||!canImportStatements())return; // admin + IMPORT_USERS (core.js)
     migrateBudget();
     SI.files=[];SI.txns=[];SI.session={};SI.open={};SI.showSkip=false;SI.showTech=false;SI.mode='add';
     SI.bizSession={};SI.bizCards=Object.assign({},D.importBizCards||{}); // remembered business cards

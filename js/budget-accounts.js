@@ -147,7 +147,7 @@ function budgetAccRender(){
   ['budget-import-btn','budget-copy-prev','budget-copy-prev-hint'].forEach(i=>{const e=document.getElementById(i);if(e&&showAll)e.style.display='none';});
   // back on an account: the (admin-only) import button returns
   const ib=document.getElementById('budget-import-btn');
-  if(ib&&!showAll)ib.style.display=(typeof auth!=='undefined'&&auth.currentUser&&auth.currentUser.email===ADMIN_EMAIL)?'inline-flex':'none';
+  if(ib&&!showAll)ib.style.display=(typeof canImportStatements==='function'&&canImportStatements())?'inline-flex':'none';
   if(showAll)renderBudgetCombined();
   return showAll;
 }

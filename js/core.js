@@ -40,6 +40,12 @@ function showSignOutWhy(){
 
 // ══ CONSTANTS ══
 const ADMIN_EMAIL = 'info@tomani.co';
+// Statement import ("מילוי הוצאות מקובץ") is still being tested: the admin + these users only
+const IMPORT_USERS=['yakir717@gmail.com'];
+function canImportStatements(){
+  const e=String((typeof auth!=='undefined'&&auth.currentUser&&auth.currentUser.email)||'').toLowerCase();
+  return e===ADMIN_EMAIL||IMPORT_USERS.includes(e);
+}
 const HZ=['12 חודשים','1-5 שנים','5-10 שנים','10+ שנים'];
 const HC=['h0','h1','h2','h3'];
 const COLS=['#42ebd6','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#38bdf8','#f472b6'];
@@ -186,9 +192,9 @@ auth.onAuthStateChanged(async user=>{
     document.getElementById('uname').textContent=(D.settings&&D.settings.displayName)||user.displayName||user.email;
     // Show admin nav only for admin email
     document.getElementById('admin-nav-btn').style.display=user.email===ADMIN_EMAIL?'':'none';
-    // Statement import (fill expenses from a card file) — admin-only while it's being tested
+    // Statement import (fill expenses from a card file) — admin + IMPORT_USERS while it's being tested
     const importBtn=document.getElementById('budget-import-btn');
-    if(importBtn)importBtn.style.display=user.email===ADMIN_EMAIL?'inline-flex':'none';
+    if(importBtn)importBtn.style.display=canImportStatements()?'inline-flex':'none';
     if(!D.settings)D.settings={displayName:'',email:user.email||'',age:'',notifyEmail:user.email||'',gender:'male'};
     if(!D.settings.gender)D.settings.gender='male'; // migrate existing users
     if(!D.lastUpdated)D.lastUpdated={goals:null,pension:null,nw:null};
