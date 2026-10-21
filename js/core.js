@@ -40,10 +40,14 @@ function showSignOutWhy(){
 
 // ══ CONSTANTS ══
 const ADMIN_EMAIL = 'info@tomani.co';
-// Statement import ("מילוי הוצאות מקובץ") is still being tested: the admin + these users only
+// Statement import ("מילוי הוצאות מקובץ"): open to every signed-in user since v=130.
+// To limit it again, set IMPORT_FOR_ALL=false — then only the admin + IMPORT_USERS get it.
+const IMPORT_FOR_ALL=true;
 const IMPORT_USERS=['yakir717@gmail.com'];
 function canImportStatements(){
-  const e=String((typeof auth!=='undefined'&&auth.currentUser&&auth.currentUser.email)||'').toLowerCase();
+  const u=typeof auth!=='undefined'&&auth.currentUser;if(!u)return false;
+  if(IMPORT_FOR_ALL)return true;
+  const e=String(u.email||'').toLowerCase();
   return e===ADMIN_EMAIL||IMPORT_USERS.includes(e);
 }
 const HZ=['12 חודשים','1-5 שנים','5-10 שנים','10+ שנים'];
