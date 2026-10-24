@@ -151,7 +151,8 @@ function mcReminderDues(){
   if((D.goals||[]).some(g=>!g.done&&(num(g.needed)||num(g.saved))))out.dueGoals=_mcIso(ts(lu.goals)?ts(lu.goals)+freq*_MC_DAY:now);
   if((D.pension||[]).some(p=>p&&num(p.amount)))out.duePension=_mcIso(ts(lu.pension)?ts(lu.pension)+180*_MC_DAY:now);
   if((D.snapshots||[]).length||ts(lu.nw))out.dueNW=_mcIso(ts(lu.nw)?ts(lu.nw)+180*_MC_DAY:now);
-  const all=Object.values(out).filter(Boolean).sort();
+  // the monthly close is optional — it stays on the summary for the admin but never sets the reminder date
+  const all=[out.dueGoals,out.duePension,out.dueNW].filter(Boolean).sort();
   out.remindAt=all[0]||'';
   return out;
 }

@@ -117,7 +117,7 @@ async function renderAdmin(){
                   : u.alerts.map(a=>`<span class="admin-alert-tag ${a.cls}">⚠️ ${a.label}</span>`).join('')}
               </div>
               <span style="font-size:11px;color:var(--t3);white-space:nowrap">· ${u.lastSeen?'נכנס '+lastActiveText(u.lastSeen):'טרם נכנס'}</span>
-              <span style="font-size:11px;white-space:nowrap;color:${u.lastClosed>=u.closeDue?'var(--green)':'var(--amber)'}">· ${u.lastClosed>=u.closeDue?'✅ סגר את '+_adminMonthName(u.closeDue):'⏳ לא סגר את '+_adminMonthName(u.closeDue)}</span>
+              ${u.lastClosed?`<span style="font-size:11px;white-space:nowrap;color:var(--t3)">· ${u.lastClosed>=u.closeDue?'✅ סגר את '+_adminMonthName(u.closeDue):'סגירת חודש אחרונה: '+_adminMonthName(u.lastClosed)}</span>`:''}
               <span style="font-size:11px;white-space:nowrap;color:var(--t3)">· ${u.remindersOff?'🔕 תזכורות כבויות':!u.hasReminderData?'🔔 תזכורות — אחרי הכניסה הבאה שלו':u.remindNow.length?'🔔 תזכורת: '+u.remindNow.join(', '):'🔔 הכל מעודכן — אין תזכורת'}</span>
             </div>
           </div>
@@ -478,10 +478,11 @@ function _adminDueMonth(closeDay){
 }
 function _adminMonthName(k){const m=+String(k).split('-')[1];return (typeof HEB_MONTHS!=='undefined'&&HEB_MONTHS[m-1])||k;}
 // What an automatic reminder would mention now: every due date (written by the client's app,
-// month-close.js mcReminderDues) that has passed
+// month-close.js mcReminderDues) that has passed. The monthly close is optional for clients, so it
+// never triggers a reminder — only goals, pension and net worth do.
 function _adminRemindNow(p){
   const now=Date.now(),past=v=>{const t=v?Date.parse(v):NaN;return !isNaN(t)&&t<=now;};
-  return [[p.dueClose,'סגירת חודש'],[p.dueGoals,'מטרות'],[p.duePension,'פנסיה'],[p.dueNW,'שווי נטו']].filter(([d])=>past(d)).map(([,l])=>l);
+  return [[p.dueGoals,'מטרות'],[p.duePension,'פנסיה'],[p.dueNW,'שווי נטו']].filter(([d])=>past(d)).map(([,l])=>l);
 }
 // The admin turns a client's automatic reminders off / on (the Make scenario skips remindersOff)
 async function adminToggleReminders(uid,off){
