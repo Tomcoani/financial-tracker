@@ -74,7 +74,11 @@ async function renderAdmin(){
         if(penAge===null||penAge>180)alerts.push({label:'פנסיה',cls:'tag-urgent'});
         if(nwAge===null||nwAge>180)alerts.push({label:'שווי נטו',cls:'tag-urgent'});
         const lastSnap=(d.snapshots||[]).length>0?d.snapshots[d.snapshots.length-1]:null;
-        users.push({uid:userDoc.id,name,email,phone,alerts,goalsAge,penAge,nwAge,
+        // last login = recorded on every app open (since v=131); before that, the last save is the best clue
+        const ts=v=>{const t=v?Date.parse(v):NaN;return isNaN(t)?0:t;};
+        const lastLogin=parentData.lastLogin||null,lastSeenTs=Math.max(ts(lastLogin),ts(d.lastSaved));
+        users.push({uid:userDoc.id,name,email,phone,alerts,goalsAge,penAge,nwAge,lastLogin,lastSeenTs,
+          lastSeen:lastSeenTs?new Date(lastSeenTs).toISOString():null,
           nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,pageStats:d.pageStats||{},
           snapshots:(d.snapshots||[]).map(s=>({label:s.label,date:s.date,netWorth:s.netWorth||0,penTotal:s.penTotal||0,goalsSaved:s.goalsSaved||0}))});
       }catch(e){}
@@ -86,7 +90,7 @@ async function renderAdmin(){
       <div class="stat"><label>סה"כ לקוחות</label><div class="val vt">${totalUsers}</div></div>
       <div class="stat"><label>צריכים עדכון</label><div class="val vr">${needUpdate}</div></div>
       <div class="stat"><label>מעודכנים</label><div class="val vg">${totalUsers-needUpdate}</div></div>`;
-    users.sort((a,b)=>b.alerts.length-a.alerts.length);
+    users.sort((a,b)=>b.lastSeenTs-a.lastSeenTs); // most recently logged in first
     if(listEl){
       if(!users.length){listEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">אין לקוחות רשומים עדיין</p>';return;}
       listEl.innerHTML=users.map(u=>`
@@ -100,7 +104,7 @@ async function renderAdmin(){
                   ? '<span class="admin-alert-tag tag-ok"><i data-lucide="check-circle" style="width:12px;height:12px;vertical-align:middle"></i> מעודכן</span>'
                   : u.alerts.map(a=>`<span class="admin-alert-tag ${a.cls}">⚠️ ${a.label}</span>`).join('')}
               </div>
-              <span style="font-size:11px;color:var(--t3);white-space:nowrap">· פעיל ${lastActiveText(u.lastSaved)}</span>
+              <span style="font-size:11px;color:var(--t3);white-space:nowrap">· ${u.lastSeen?'נכנס '+lastActiveText(u.lastSeen):'טרם נכנס'}</span>
             </div>
           </div>
           <div style="font-size:13px;color:var(--t3);transition:transform .2s" id="acarrow-${u.uid}">▼</div>
@@ -109,6 +113,7 @@ async function renderAdmin(){
           <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:flex-start">
             <div>
               <div class="admin-user-email">${esc(u.email)}</div>
+              ${u.lastLogin?`<div style="font-size:11px;color:var(--t3);margin-top:4px">כניסה אחרונה: ${fmtDate(u.lastLogin)}</div>`:''}
               ${u.lastSaved?`<div style="font-size:11px;color:var(--t3);margin-top:4px">עדכון אחרון: ${fmtDate(u.lastSaved)}</div>`:'<div style="font-size:11px;color:var(--red);margin-top:4px">טרם עדכן</div>'}
             </div>
             <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">

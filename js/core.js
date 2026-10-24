@@ -144,7 +144,8 @@ auth.onAuthStateChanged(async user=>{
     CU=user.uid;
     try{localStorage.setItem('hadSession','1');localStorage.removeItem('signOutWhy');}catch(e){}
     // Ensure parent /users/{uid} doc exists for admin listing
-    db.collection('users').doc(CU).set({email:user.email||'',firstSeen:user.metadata.creationTime||null},{merge:true}).catch(()=>{});
+    // lastLogin = every time the app is opened signed in (the admin list is sorted by it)
+    db.collection('users').doc(CU).set({email:user.email||'',firstSeen:user.metadata.creationTime||null,lastLogin:new Date().toISOString()},{merge:true}).catch(()=>{});
     const loaded=await loadData(CU);
     D=loaded||defData();
     _authSwitching=false; // D now belongs to this account — saving is safe again
