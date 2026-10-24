@@ -262,6 +262,7 @@ function goToTab(id){
 // ══ SETTINGS ══
 function renderSettings(){
   if(!D.settings)D.settings={displayName:'',email:'',age:'',freq:'30',gender:'male'};
+  if(typeof loadRemindersSwitch==='function')loadRemindersSwitch(); // automatic reminders on / off (month-close.js)
   const s=D.settings;
   ['set-name','set-age','set-email','set-freq','set-phone'].forEach(id=>{
     const el=document.getElementById(id);

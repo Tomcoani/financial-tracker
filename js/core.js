@@ -350,6 +350,7 @@ async function manualSave(silent){
     if(typeof recordUpdateMonth==='function')recordUpdateMonth();
     await saveDataFS(CU,D);
     dirty=false;_firstDirtyAt=0;
+    if(typeof mcSyncSummary==='function')mcSyncSummary(); // reminder due dates (writes only when they change)
     document.getElementById('save-bar').style.display='none';
     updateLastUpdatedBars();
     if(!silent)showToast('נשמר בענן ☁️');

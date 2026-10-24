@@ -122,14 +122,62 @@ function mcCloseMonth(k){
   const s=mcStreak();
   showToast(`✅ ${_mcName(k)} נסגר${s>1?` — ${s} חודשים ברצף 🔥`:''}. כל הכבוד!`);
 }
-// The small record the monthly Make scenario reads (users/{uid}) — no money figures
+// ── The record the Make reminder scenario reads (users/{uid}) — no money figures ──
+// A reminder goes out only when something is out of date, so for every part the client actually
+// uses we store the DATE it becomes out of date (it keeps aging while the client is away, so Make
+// compares those dates with "now"):
+//   dueClose   — the next month to close becomes due (only if the monthly budget is used)
+//   dueGoals   — goals not updated for the client's frequency (default 30 days)
+//   duePension / dueNW — not updated for 180 days (same as the admin alerts)
+//   remindAt   — the earliest of them: Make sends when remindAt ≤ now (and remindersOff isn't true)
+// remindersOff is set by the admin only (admin.js) — never written from here.
+const _MC_DAY=86400000;
+function _mcIso(t){return t?new Date(t).toISOString():'';}
+function mcReminderDues(){
+  const s=D.settings||{},lu=D.lastUpdated||{},ts=v=>{const t=v?Date.parse(v):NaN;return isNaN(t)?0:t;};
+  const now=Date.now(),out={};
+  // monthly close: the first month after the last closed one is due on its next month's close day
+  const usesBudget=Object.values(D.budgetMonths||{}).some(m=>['income','needs','wants'].some(sec=>(m[sec]||[]).some(r=>budgetRowAmt(r))));
+  if(usesBudget){
+    const keys=Object.keys(D.monthClose||{}).sort();
+    let next;
+    if(keys.length){const [y,m]=keys[keys.length-1].split('-').map(Number);next=new Date(y,m,1);} // month after the last closed
+    else{const [y,m]=mcDueMonth().split('-').map(Number);next=new Date(y,m-1,1);}
+    out.dueClose=_mcIso(new Date(next.getFullYear(),next.getMonth()+1,mcCloseDay(),9).getTime());
+  }
+  const freq=parseInt(s.freq,10)||30;
+  // a part counts as used only with real figures in it (new accounts start with named, empty rows)
+  const num=v=>parseFloat(String(v??'').replace(/,/g,''))||0;
+  if((D.goals||[]).some(g=>!g.done&&(num(g.needed)||num(g.saved))))out.dueGoals=_mcIso(ts(lu.goals)?ts(lu.goals)+freq*_MC_DAY:now);
+  if((D.pension||[]).some(p=>p&&num(p.amount)))out.duePension=_mcIso(ts(lu.pension)?ts(lu.pension)+180*_MC_DAY:now);
+  if((D.snapshots||[]).length||ts(lu.nw))out.dueNW=_mcIso(ts(lu.nw)?ts(lu.nw)+180*_MC_DAY:now);
+  const all=Object.values(out).filter(Boolean).sort();
+  out.remindAt=all[0]||'';
+  return out;
+}
+// The client's own on/off switch for the automatic reminders (settings page). Same field the admin
+// sets (users/{uid}.remindersOff) — whoever changed it last decides.
+async function loadRemindersSwitch(){
+  const el=document.getElementById('set-reminders');if(!el||typeof CU==='undefined'||!CU)return;
+  try{const snap=await db.collection('users').doc(CU).get();el.checked=!((snap.data()||{}).remindersOff);}catch(e){el.checked=true;}
+}
+async function setRemindersOn(on){
+  if(typeof CU==='undefined'||!CU)return;
+  try{
+    await db.collection('users').doc(CU).set({remindersOff:!on},{merge:true});
+    showToast(on?'🔔 התזכורות האוטומטיות הופעלו':'🔕 התזכורות האוטומטיות בוטלו — לא יישלחו אליך יותר');
+  }catch(e){showToast('לא נשמר — נסו שוב');const el=document.getElementById('set-reminders');if(el)el.checked=!on;}
+}
+let _mcLastSync='';
 function mcSyncSummary(){
   if(typeof CU==='undefined'||!CU||typeof db==='undefined')return;
   const keys=Object.keys(D.monthClose||{}).sort(),s=D.settings||{};
   const u=auth.currentUser||{};
-  db.collection('users').doc(CU).set({
+  const rec=Object.assign({dueClose:'',dueGoals:'',duePension:'',dueNW:''},{
     name:s.displayName||'',email:s.email||u.email||'',phone:s.phone||'',
-    lastClosedMonth:keys.length?keys[keys.length-1]:'',closeDay:mcCloseDay(),
-    remindersOff:!!s.monthCloseRemindersOff
-  },{merge:true}).catch(()=>{});
+    lastClosedMonth:keys.length?keys[keys.length-1]:'',closeDay:mcCloseDay()
+  },mcReminderDues());
+  const j=JSON.stringify(rec);if(j===_mcLastSync)return; // nothing changed — no write
+  _mcLastSync=j;
+  db.collection('users').doc(CU).set(rec,{merge:true}).catch(()=>{_mcLastSync='';});
 }

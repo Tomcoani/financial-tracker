@@ -81,6 +81,8 @@ async function renderAdmin(){
           lastSeen:lastSeenTs?new Date(lastSeenTs).toISOString():null,
           // monthly close: has the client closed the month due now (by their own close day)?
           closeDue:_adminDueMonth(parseInt(parentData.closeDay,10)||11),lastClosed:parentData.lastClosedMonth||'',
+          // automatic reminders (Make): what's out of date now, and whether the admin turned them off
+          remindersOff:!!parentData.remindersOff,remindNow:_adminRemindNow(parentData),hasReminderData:!!parentData.closeDay,
           nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,pageStats:d.pageStats||{},
           snapshots:(d.snapshots||[]).map(s=>({label:s.label,date:s.date,netWorth:s.netWorth||0,penTotal:s.penTotal||0,goalsSaved:s.goalsSaved||0}))});
       }catch(e){}
@@ -108,6 +110,7 @@ async function renderAdmin(){
               </div>
               <span style="font-size:11px;color:var(--t3);white-space:nowrap">· ${u.lastSeen?'נכנס '+lastActiveText(u.lastSeen):'טרם נכנס'}</span>
               <span style="font-size:11px;white-space:nowrap;color:${u.lastClosed>=u.closeDue?'var(--green)':'var(--amber)'}">· ${u.lastClosed>=u.closeDue?'✅ סגר את '+_adminMonthName(u.closeDue):'⏳ לא סגר את '+_adminMonthName(u.closeDue)}</span>
+              <span style="font-size:11px;white-space:nowrap;color:var(--t3)">· ${u.remindersOff?'🔕 תזכורות כבויות':!u.hasReminderData?'🔔 תזכורות — אחרי הכניסה הבאה שלו':u.remindNow.length?'🔔 תזכורת: '+u.remindNow.join(', '):'🔔 הכל מעודכן — אין תזכורת'}</span>
             </div>
           </div>
           <div style="font-size:13px;color:var(--t3);transition:transform .2s" id="acarrow-${u.uid}">▼</div>
@@ -141,6 +144,11 @@ async function renderAdmin(){
                   <i data-lucide="send" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת במייל
                 </button>`:''}
               </div>`:''}
+              <button onclick="event.stopPropagation();adminToggleReminders('${u.uid}',${u.remindersOff?'false':'true'})"
+                style="margin-top:4px;background:var(--s2);border:1px solid var(--border);color:var(--t2);
+                border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                ${u.remindersOff?'🔔 להפעיל תזכורות אוטומטיות':'🔕 לבטל תזכורות אוטומטיות'}
+              </button>
               <button onclick="event.stopPropagation();openCertModal('${esc(u.name)}')"
                 style="margin-top:4px;background:rgba(66,235,214,.12);border:1px solid rgba(66,235,214,.3);color:#5eead4;
                 border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
@@ -470,6 +478,20 @@ function _adminDueMonth(closeDay){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 function _adminMonthName(k){const m=+String(k).split('-')[1];return (typeof HEB_MONTHS!=='undefined'&&HEB_MONTHS[m-1])||k;}
+// What an automatic reminder would mention now: every due date (written by the client's app,
+// month-close.js mcReminderDues) that has passed
+function _adminRemindNow(p){
+  const now=Date.now(),past=v=>{const t=v?Date.parse(v):NaN;return !isNaN(t)&&t<=now;};
+  return [[p.dueClose,'סגירת חודש'],[p.dueGoals,'מטרות'],[p.duePension,'פנסיה'],[p.dueNW,'שווי נטו']].filter(([d])=>past(d)).map(([,l])=>l);
+}
+// The admin turns a client's automatic reminders off / on (the Make scenario skips remindersOff)
+async function adminToggleReminders(uid,off){
+  try{
+    await db.collection('users').doc(uid).set({remindersOff:!!off},{merge:true});
+    showToast(off?'🔕 התזכורות האוטומטיות ללקוח בוטלו':'🔔 התזכורות האוטומטיות ללקוח הופעלו');
+    renderAdmin();
+  }catch(e){showToast('לא נשמר: '+(e.message||e));}
+}
 // the same text the monthly Make scenario sends
 function adminCloseReminderText(name,k){
   const firstName=(name||'').split(' ')[0]||'';
