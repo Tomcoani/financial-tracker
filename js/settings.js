@@ -289,6 +289,7 @@ async function saveSettings(){
   D.settings.gender=document.getElementById('set-gender')?.value||'male';
   if(!D.settings.notifyEmail)D.settings.notifyEmail=D.settings.email;
   D.lastSaved=new Date().toISOString();
+  if(typeof mcSyncSummary==='function')mcSyncSummary(); // name / phone for the monthly-close reminder
   // Update header name immediately
   const unameEl=document.getElementById('uname');
   if(unameEl&&D.settings.displayName)unameEl.textContent=D.settings.displayName;

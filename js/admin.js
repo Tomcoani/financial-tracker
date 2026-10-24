@@ -79,6 +79,8 @@ async function renderAdmin(){
         const lastLogin=parentData.lastLogin||null,lastSeenTs=Math.max(ts(lastLogin),ts(d.lastSaved));
         users.push({uid:userDoc.id,name,email,phone,alerts,goalsAge,penAge,nwAge,lastLogin,lastSeenTs,
           lastSeen:lastSeenTs?new Date(lastSeenTs).toISOString():null,
+          // monthly close: has the client closed the month due now (by their own close day)?
+          closeDue:_adminDueMonth(parseInt(parentData.closeDay,10)||11),lastClosed:parentData.lastClosedMonth||'',
           nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,pageStats:d.pageStats||{},
           snapshots:(d.snapshots||[]).map(s=>({label:s.label,date:s.date,netWorth:s.netWorth||0,penTotal:s.penTotal||0,goalsSaved:s.goalsSaved||0}))});
       }catch(e){}
@@ -105,6 +107,7 @@ async function renderAdmin(){
                   : u.alerts.map(a=>`<span class="admin-alert-tag ${a.cls}">⚠️ ${a.label}</span>`).join('')}
               </div>
               <span style="font-size:11px;color:var(--t3);white-space:nowrap">· ${u.lastSeen?'נכנס '+lastActiveText(u.lastSeen):'טרם נכנס'}</span>
+              <span style="font-size:11px;white-space:nowrap;color:${u.lastClosed>=u.closeDue?'var(--green)':'var(--amber)'}">· ${u.lastClosed>=u.closeDue?'✅ סגר את '+_adminMonthName(u.closeDue):'⏳ לא סגר את '+_adminMonthName(u.closeDue)}</span>
             </div>
           </div>
           <div style="font-size:13px;color:var(--t3);transition:transform .2s" id="acarrow-${u.uid}">▼</div>
@@ -120,6 +123,12 @@ async function renderAdmin(){
               <div style="font-size:10px;color:var(--t3)">מטרות: ${u.goalsAge!==null?u.goalsAge+' ימים':'טרם'}</div>
               <div style="font-size:10px;color:var(--t3)">פנסיה: ${u.penAge!==null?u.penAge+' ימים':'טרם'}</div>
               <div style="font-size:10px;color:var(--t3)">שווי נטו: ${u.nwAge!==null?u.nwAge+' ימים':'טרם'}</div>
+              ${u.lastClosed<u.closeDue?`<div style="display:flex;gap:6px;margin-top:4px">
+                <button onclick="event.stopPropagation();adminSendCloseReminder('${esc(u.email)}','${esc(u.name)}','wa','${esc(u.phone)}','${u.closeDue}')"
+                  style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗓️ סגירת חודש בוואטסאפ</button>
+                ${u.email?`<button onclick="event.stopPropagation();adminSendCloseReminder('${esc(u.email)}','${esc(u.name)}','mail','','${u.closeDue}')"
+                  style="background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:#5eead4;border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗓️ סגירת חודש במייל</button>`:''}
+              </div>`:''}
               ${u.alerts.length>0?`<div style="display:flex;gap:6px;margin-top:4px">
                 <button onclick="event.stopPropagation();adminSendReminder('${esc(u.email)}','${esc(u.name)}','wa','${esc(u.phone)}')"
                   style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;
@@ -455,6 +464,24 @@ function closeCertModal(){document.getElementById('cert-modal').style.display='n
 
 // Open WhatsApp / email with a ready-made update reminder for the client.
 // If the client saved a phone number in settings, WhatsApp opens their chat directly.
+// ── Monthly close (month-close.js) ──
+function _adminDueMonth(closeDay){
+  const t=new Date(),d=new Date(t.getFullYear(),t.getMonth()-(t.getDate()>=closeDay?1:2),1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function _adminMonthName(k){const m=+String(k).split('-')[1];return (typeof HEB_MONTHS!=='undefined'&&HEB_MONTHS[m-1])||k;}
+// the same text the monthly Make scenario sends
+function adminCloseReminderText(name,k){
+  const firstName=(name||'').split(' ')[0]||'';
+  return `היי ${firstName}, ${_adminMonthName(k)} נגמר 🙂\nזה הזמן לסגור אותו במערכת — מעלים את קובץ העו"ש ואת פירוטי האשראי, ותוך 5 דקות רואים כמה חסכתם החודש.\nhttps://tomcoani.github.io/financial-tracker/\nאם משהו לא מסתדר — אני כאן.`;
+}
+function adminSendCloseReminder(email,name,via,phone,k){
+  const msg=adminCloseReminderText(name,k);
+  if(via==='wa'){
+    let digits=(phone||'').replace(/\D/g,'');if(digits.startsWith('0'))digits='972'+digits.slice(1);
+    window.open((digits?'https://wa.me/'+digits+'?text=':'https://wa.me/?text=')+encodeURIComponent(msg),'_blank');
+  }else window.open('mailto:'+email+'?subject='+encodeURIComponent('סגירת '+_adminMonthName(k)+' — 5 דקות במערכת')+'&body='+encodeURIComponent(msg),'_blank');
+}
 function adminSendReminder(email,name,via,phone){
   const firstName=(name||'').split(' ')[0]||'';
   const msg=`היי ${firstName}, מקווה שהכל טוב! 🙂\nעבר קצת זמן מאז העדכון האחרון במערכת המעקב הפיננסי, ושווה להיכנס לעדכן את הנתונים כדי שנשמור על תמונה מדויקת.\nזה לוקח כמה דקות: https://tomcoani.github.io/financial-tracker/\nאם משהו לא ברור או שצריך עזרה — אני כאן.`;

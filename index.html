@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=131">
+<link rel="stylesheet" href="styles/main.css?v=132">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -88,6 +88,7 @@
 
     <!-- DASHBOARD -->
     <div class="panel on" id="p-dash">
+      <div id="mc-banner-dash"></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <span style="font-size:12px;color:var(--t3)">💱 מטבע תצוגה:</span>
         <select id="dash-currency" onchange="setDisplayCurrency(this)"
@@ -180,6 +181,7 @@
       <!-- "All accounts" view: one combined summary + per account (read-only) -->
       <div id="budget-combined" style="display:none"></div>
       <div id="budget-edit-area">
+      <div id="mc-banner-budget"></div>
       <div class="card" id="budget-profile"></div>
       <div id="budget-dup-notice"></div>
       <div id="budget-merge-notice"></div>
@@ -860,19 +862,20 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=131"></script>
-<script defer src="js/cashflow-goals.js?v=131"></script>
-<script defer src="js/pension.js?v=131"></script>
-<script defer src="js/networth.js?v=131"></script>
-<script defer src="js/portfolio.js?v=131"></script>
-<script defer src="js/dashboard.js?v=131"></script>
-<script defer src="js/settings.js?v=131"></script>
-<script defer src="js/admin.js?v=131"></script>
-<script defer src="js/misc.js?v=131"></script>
-<script defer src="js/budget.js?v=131"></script>
-<script defer src="js/budget-detail.js?v=131"></script>
-<script defer src="js/budget-accounts.js?v=131"></script>
-<script defer src="js/budget-period.js?v=131"></script>
-<script defer src="js/statement-import.js?v=131"></script>
+<script defer src="js/core.js?v=132"></script>
+<script defer src="js/cashflow-goals.js?v=132"></script>
+<script defer src="js/pension.js?v=132"></script>
+<script defer src="js/networth.js?v=132"></script>
+<script defer src="js/portfolio.js?v=132"></script>
+<script defer src="js/dashboard.js?v=132"></script>
+<script defer src="js/settings.js?v=132"></script>
+<script defer src="js/admin.js?v=132"></script>
+<script defer src="js/misc.js?v=132"></script>
+<script defer src="js/budget.js?v=132"></script>
+<script defer src="js/budget-detail.js?v=132"></script>
+<script defer src="js/budget-accounts.js?v=132"></script>
+<script defer src="js/budget-period.js?v=132"></script>
+<script defer src="js/month-close.js?v=132"></script>
+<script defer src="js/statement-import.js?v=132"></script>
 </body>
 </html>

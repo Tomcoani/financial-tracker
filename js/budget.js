@@ -337,6 +337,7 @@ function renderBudget(){
   ['income','needs','wants','invest'].forEach(renderBudgetSection);
   renderBudgetBusiness();
   renderBudgetSummary();
+  if(typeof renderMonthCloseBanners==='function')renderMonthCloseBanners(); // (month-close.js)
   const notesEl=document.getElementById('budget-notes');
   if(notesEl)notesEl.value=curBudget().notes||'';
   // "Copy amounts" button only makes sense when a previous month has data

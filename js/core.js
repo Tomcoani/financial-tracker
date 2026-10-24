@@ -216,6 +216,7 @@ auth.onAuthStateChanged(async user=>{
     }
     renderAll();
     goTo('dash',document.querySelector('.nbtn'));
+    if(typeof mcSyncSummary==='function')mcSyncSummary(); // the record the monthly Make reminder reads
     startIdleWatch(); // begin 24h idle-logout tracking
     if(typeof refreshRatesOnLoad==='function')refreshRatesOnLoad(); // live FX rates in background
     // Prompt for name on first login if not set
@@ -490,6 +491,7 @@ function renderAll(){
   if(typeof calcCashFlow==='function')calcCashFlow(); // recompute now that balance is restored
   renderCfFixed();
   if(typeof renderCfAccBar==='function')renderCfAccBar(); // account picker (admin, several accounts)
+  if(typeof renderMonthCloseBanners==='function')renderMonthCloseBanners(); // 'סגירת חודש' card (month-close.js)
   // Only render what's immediately needed
   renderSettings();
   renderDash();
