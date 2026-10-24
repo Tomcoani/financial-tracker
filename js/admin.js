@@ -95,6 +95,14 @@ async function renderAdmin(){
       <div class="stat"><label>צריכים עדכון</label><div class="val vr">${needUpdate}</div></div>
       <div class="stat"><label>מעודכנים</label><div class="val vg">${totalUsers-needUpdate}</div></div>`;
     users.sort((a,b)=>b.lastSeenTs-a.lastSeenTs); // most recently logged in first
+    // Everything out of date for a client → ONE reminder listing it all (monthly + half-yearly together).
+    // From the due dates the client's app keeps; before that exists, from the old update alerts.
+    users.forEach(u=>{
+      const keys=u.hasReminderData?u.remindNow.map(l=>({'סגירת חודש':'close','מטרות':'goals','פנסיה':'pension','שווי נטו':'nw'})[l])
+        :u.alerts.map(a=>({'מטרות':'goals','פנסיה':'pension','שווי נטו':'nw'})[a.label]).filter(Boolean);
+      u.todo=keys.map(k=>({key:k,label:k==='close'?'סגירת '+_adminMonthName(u.closeDue):({goals:'מטרות',pension:'פנסיה',nw:'שווי נטו'})[k]}));
+    });
+    _adminUsers=users;
     if(listEl){
       if(!users.length){listEl.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">אין לקוחות רשומים עדיין</p>';return;}
       listEl.innerHTML=users.map(u=>`
@@ -126,23 +134,14 @@ async function renderAdmin(){
               <div style="font-size:10px;color:var(--t3)">מטרות: ${u.goalsAge!==null?u.goalsAge+' ימים':'טרם'}</div>
               <div style="font-size:10px;color:var(--t3)">פנסיה: ${u.penAge!==null?u.penAge+' ימים':'טרם'}</div>
               <div style="font-size:10px;color:var(--t3)">שווי נטו: ${u.nwAge!==null?u.nwAge+' ימים':'טרם'}</div>
-              ${u.lastClosed<u.closeDue?`<div style="display:flex;gap:6px;margin-top:4px">
-                <button onclick="event.stopPropagation();adminSendCloseReminder('${esc(u.email)}','${esc(u.name)}','wa','${esc(u.phone)}','${u.closeDue}')"
-                  style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗓️ סגירת חודש בוואטסאפ</button>
-                ${u.email?`<button onclick="event.stopPropagation();adminSendCloseReminder('${esc(u.email)}','${esc(u.name)}','mail','','${u.closeDue}')"
-                  style="background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:#5eead4;border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗓️ סגירת חודש במייל</button>`:''}
-              </div>`:''}
-              ${u.alerts.length>0?`<div style="display:flex;gap:6px;margin-top:4px">
-                <button onclick="event.stopPropagation();adminSendReminder('${esc(u.email)}','${esc(u.name)}','wa','${esc(u.phone)}')"
-                  style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;
-                  border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-                  <i data-lucide="message-circle" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת בוואטסאפ
-                </button>
-                ${u.email?`<button onclick="event.stopPropagation();adminSendReminder('${esc(u.email)}','${esc(u.name)}','mail')"
-                  style="background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:#5eead4;
-                  border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-                  <i data-lucide="send" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת במייל
-                </button>`:''}
+              ${u.todo.length?`<div style="font-size:10.5px;color:var(--t3);margin-top:4px;text-align:left">תזכורת אחת על הכל: ${u.todo.map(t=>t.label).join(' + ')}</div>
+              <div style="display:flex;gap:6px;margin-top:2px">
+                <button onclick="event.stopPropagation();adminSendTodoReminder('${u.uid}','wa')"
+                  style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                  <i data-lucide="message-circle" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת בוואטסאפ</button>
+                ${u.email?`<button onclick="event.stopPropagation();adminSendTodoReminder('${u.uid}','mail')"
+                  style="background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:#5eead4;border-radius:7px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                  <i data-lucide="send" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"></i> תזכורת במייל</button>`:''}
               </div>`:''}
               <button onclick="event.stopPropagation();adminToggleReminders('${u.uid}',${u.remindersOff?'false':'true'})"
                 style="margin-top:4px;background:var(--s2);border:1px solid var(--border);color:var(--t2);
@@ -491,6 +490,26 @@ async function adminToggleReminders(uid,off){
     showToast(off?'🔕 התזכורות האוטומטיות ללקוח בוטלו':'🔔 התזכורות האוטומטיות ללקוח הופעלו');
     renderAdmin();
   }catch(e){showToast('לא נשמר: '+(e.message||e));}
+}
+let _adminUsers=[];
+// One message with everything the client hasn't updated — the same structure the Make scenario
+// sends (see the Make guide): a line per item, monthly and half-yearly items together.
+const _TODO_LINE={close:k=>`• לסגור את ${_adminMonthName(k)} — להעלות את קובץ העו"ש ואת פירוטי האשראי (עדכון חודשי)`,
+  goals:()=>'• לעדכן את המטרות — כמה נחסך לכל מטרה',
+  pension:()=>'• לעדכן את הפנסיה וקרן ההשתלמות (עדכון חצי שנתי)',
+  nw:()=>'• לעדכן את השווי הנטו (עדכון חצי שנתי)'};
+function adminTodoReminderText(name,todo,closeK){
+  const firstName=(name||'').split(' ')[0]||'';
+  const lines=todo.map(t=>_TODO_LINE[t.key](closeK)).join('\n');
+  return `היי ${firstName} 🙂\n${todo.length>1?'יש כמה דברים במערכת שמחכים לעדכון — אפשר לעשות את כולם באותה כניסה:':'יש דבר אחד במערכת שמחכה לעדכון:'}\n${lines}\nזה לוקח כמה דקות: https://tomcoani.github.io/financial-tracker/\nאם משהו לא מסתדר — אני כאן.`;
+}
+function adminSendTodoReminder(uid,via){
+  const u=_adminUsers.find(x=>x.uid===uid);if(!u||!u.todo.length)return;
+  const msg=adminTodoReminderText(u.name,u.todo,u.closeDue);
+  if(via==='wa'){
+    let digits=(u.phone||'').replace(/\D/g,'');if(digits.startsWith('0'))digits='972'+digits.slice(1);
+    window.open((digits?'https://wa.me/'+digits+'?text=':'https://wa.me/?text=')+encodeURIComponent(msg),'_blank');
+  }else window.open('mailto:'+u.email+'?subject='+encodeURIComponent(u.todo.length>1?'כמה עדכונים קטנים במערכת':'עדכון קטן במערכת')+'&body='+encodeURIComponent(msg),'_blank');
 }
 // the same text the monthly Make scenario sends
 function adminCloseReminderText(name,k){
