@@ -252,7 +252,9 @@ function renderUpdateAlerts(){
       <button class="btn-update-now" onclick="goToTab('${s.tab}')">עדכן עכשיו →</button>
     </div>`;
   });
+  if(typeof hyLinkHtml==='function')html+=hyLinkHtml(); // the half-yearly update track (half-year.js)
   el.innerHTML=html;
+  if(typeof renderHalfYearBanner==='function')renderHalfYearBanner();
 }
 function goToTab(id){
   const btn=document.querySelector(`.nbtn[onclick*="'${id}'"]`);
