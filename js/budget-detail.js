@@ -853,7 +853,12 @@ function renderBudgetBank(){
   const sum=rows=>(rows||[]).reduce((s,r)=>s+_bNum(r.amount),0);
   // transactions marked "לא לספור" are out of the rows but the money did move — add them back here
   const offOf=inc=>(m.tx||[]).filter(x=>x.off&&/^(income|bizIncome)\|/.test(x.k)===inc).reduce((s,x)=>s+x.a,0);
-  const inc=sum(m.income)+sum(m.bizIncome)+offOf(true),exp=sum(m.needs)+sum(m.wants)+sum(m.invest)+sum(m.business)+sum(m.bizInvest)+offOf(false);
+  // Card expenses filed by purchase month (card-month.js, tx.bm = billing month): the account saw
+  // them in their billing month — take out the ones billed in another month, add the ones billed in this one
+  const ck=D.budgetCurMonth,cardOut=x=>!x.off&&!/^(skip|income|bizIncome)\|/.test(x.k||'');
+  const shiftOut=(m.tx||[]).filter(x=>x.bm&&x.bm!==ck&&cardOut(x)).reduce((s,x)=>s+x.a,0);
+  const shiftIn=Object.entries(D.budgetMonths||{}).filter(([k])=>k!==ck).reduce((s,[,mm])=>s+(mm.tx||[]).filter(x=>x.bm===ck&&cardOut(x)).reduce((a,x)=>a+x.a,0),0);
+  const inc=sum(m.income)+sum(m.bizIncome)+offOf(true),exp=sum(m.needs)+sum(m.wants)+sum(m.invest)+sum(m.business)+sum(m.bizInvest)+offOf(false)-shiftOut+shiftIn;
   const hasBal=bk.opening!=null&&bk.closing!=null;
   const actual=hasBal?bk.closing-bk.opening:0;
   // bk.invest = everything the bank file saw going to / coming back from investments; the part
@@ -883,6 +888,7 @@ function renderBudgetBank(){
     else verdict=box('rgba(245,158,11,.08)','rgba(245,158,11,.35)',
       `⚠️ <b>נשארו בחשבון ${iln(fmt(diff))} יותר ממה שהתקציב מראה</b> — אולי <b>הוצאה נרשמה פעמיים</b>, או שחסרה הכנסה.`);
     if(Math.abs(diff)>thr)verdict=budgetGapAckHtml(bk,diff,verdict,box);
+    if(shiftOut||shiftIn)verdict+=`<div style="font-size:11.5px;color:var(--t2);margin-top:6px">💳 הוצאות האשראי רשומות לפי חודש העסקה, אבל הבדיקה מול העו"ש היא לפי מתי שהן ירדו מהחשבון: ${shiftOut?`${iln(fmt(shiftOut))} שרשומים כאן חויבו בחודש אחר`:''}${shiftOut&&shiftIn?', ו־':''}${shiftIn?`${iln(fmt(shiftIn))} שחויבו החודש רשומים בחודש אחר`:''}.</div>`;
     if(laterSum)verdict+=`<div style="font-size:11.5px;color:var(--t2);margin-top:6px">⏳ קובץ העו"ש מגיע רק עד ${_bShortDate(bk.to)}. חיובי כרטיס של ${iln(fmt(laterSum))} (${later.map(s=>_bShortDate(s.d)).filter((v,i,a)=>a.indexOf(v)===i).join(', ')}) כבר בתקציב אבל עוד לא ירדו בקובץ — לא נחשבים כפער. העלה עו"ש מעודכן אחרי התאריך הזה כדי לבדוק גם אותם.</div>`;
   }
   const cardList=!cards.length?'':`<div style="font-size:12.5px;font-weight:800;margin:12px 0 4px">💳 חיובי אשראי שירדו מהחשבון</div>`

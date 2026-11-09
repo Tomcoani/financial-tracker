@@ -740,6 +740,7 @@ function rebuild(){
     f.txns.forEach(t=>{
       const sd=f.segDates&&t.seg!==undefined?f.segDates[t.seg]:null;
       t.month=f.monthOverride||(f.source==='דף בנק'?mkKey(t.date):t.billDate?mkKey(t.billDate):sd?mkKey(sd):f.autoMonth)||'';
+      delete t.bm;
     });
     // Installments listed without a billing date (Cal's Excel: one row per payment, "עסקה ב-2
     // תשלומים"): payment i goes to the i-th billing month, starting with the purchase's own cycle
@@ -753,6 +754,10 @@ function rebuild(){
         g.forEach((t,i)=>{t.month=mkKey(new Date(b.getFullYear(),b.getMonth()+i,1));if(!t.inst)t.inst=(i+1)+'/'+t.instN;});
       });
     }
+    // The client files card expenses by the month they were bought (card-month.js): the billing
+    // month stays on the transaction (t.bm) — the card-bill matching against the bank runs on it
+    if(!f.monthOverride&&f.source!=='דף בנק'&&_siByBuy())
+      f.txns.forEach(t=>{if(!t.month||t.bank)return;const b=cardBuyMonth(t.date,t.month);if(b!==t.month){t.bm=t.month;t.month=b;}});
     f.months=[...new Set(f.txns.map(t=>t.month).filter(Boolean))].sort();
     // Fingerprint: count + total + first/last date — order-independent, so the same statement
     // downloaded once as PDF and once as Excel is recognised as the same
@@ -982,6 +987,7 @@ function monthOptions(sel,extra){
   return monthKeys([sel,...(extra||[])]).map(k=>`<option value="${k}"${k===sel?' selected':''}>${fmtBudgetMonth(k)}${D.budgetMonths[k]?'':' (חדש)'}</option>`).join('');
 }
 const txMonth=t=>t.month||SI.month; // undetected → the fallback month the client picks
+const _siByBuy=()=>typeof cardMonthMode==='function'&&cardMonthMode()==='buy';
 function mkKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 function reviewView(){
   const rows=monthRows();
@@ -1002,8 +1008,9 @@ function reviewView(){
       st=`${f.txns.length} עסקאות · ${f.source==='דף בנק'?'יצא מהחשבון ':''}${money(f.spent)}${f.check==='ok'?' · <span style="color:var(--green)">✓ תואם לסה"כ בקובץ</span>':f.check==='diff'?' · <span style="color:var(--amber)">⚠ לא תואם לסה"כ בקובץ — כדאי להציץ</span>':f.check==='partial'?' · <span style="color:var(--t3)">(הסה"כ בקובץ לא כולל עסקאות במט"ח ובקליטה, אז אין מול מה לבדוק)</span>':''}${f.pending&&f.pending.length?`<br><span style="color:var(--t3)">⏳ ${f.pending.length} עסקאות בקליטה (${money(f.pending.reduce((a,v)=>a+v,0))}) עוד לא חויבו — לא נספרו עכשיו. הן ייכנסו כשתעלה את הקובץ הבא, לחודש שבו יחויבו.</span>`:''}`;
       // Which month(s) this file goes to — detected automatically, the client can override
       const ms=f.months||[];
-      const lbl=f.monthOverride?'':ms.length>1?`${ms.length} חודשים (${fmtBudgetMonth(ms[0])} – ${fmtBudgetMonth(ms[ms.length-1])}) — כל עסקה לחודש החיוב שלה`:ms.length?fmtBudgetMonth(ms[0]):'';
-      st+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px">📅 <span>${ms.length&&!f.monthOverride?'חודש חיוב: ':'לחודש: '}</span>
+      const buy=_siByBuy()&&f.source!=='דף בנק';
+      const lbl=f.monthOverride?'':ms.length>1?`${ms.length} חודשים (${fmtBudgetMonth(ms[0])} – ${fmtBudgetMonth(ms[ms.length-1])}) — כל עסקה ${buy?'לחודש שבו נקנתה':'לחודש החיוב שלה'}`:ms.length?fmtBudgetMonth(ms[0]):'';
+      st+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px">📅 <span>${ms.length&&!f.monthOverride?(buy?'לפי חודש העסקה: ':'חודש חיוב: '):'לחודש: '}</span>
         <select onchange="SIX.fileMonth(${f.id},this.value)" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:11.5px;font-weight:700;padding:2px 4px">
           ${ms.length||f.monthOverride?`<option value="">${lbl?'אוטומטי: '+h(lbl):'אוטומטי'}</option>`:'<option value="">לא זוהה — לפי החודש למטה</option>'}
           ${monthKeys().map(k=>`<option value="${k}"${k===f.monthOverride?' selected':''}>${fmtBudgetMonth(k)}</option>`).join('')}
@@ -1039,7 +1046,7 @@ function reviewView(){
   const m=oneMonth?D.budgetMonths[oneMonth]:null; // "existing amount" hints only make sense for one month
   const undetected=SI.txns.filter(t=>!t.month&&t.target!=='skip').length;
   const monthsBox=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0 10px">
-      <div style="font-size:12.5px;font-weight:800;margin-bottom:4px">📅 ${mKeys.length>1?`ההוצאות יתחלקו ל־${mKeys.length} חודשים`:'החודש שיתמלא'} <span style="font-weight:400;color:var(--t3);font-size:11px">· לפי מועד החיוב (מתי שהכסף ירד מהחשבון)</span></div>
+      <div style="font-size:12.5px;font-weight:800;margin-bottom:4px">📅 ${mKeys.length>1?`ההוצאות יתחלקו ל־${mKeys.length} חודשים`:'החודש שיתמלא'} <span style="font-weight:400;color:var(--t3);font-size:11px">· ${_siByBuy()?'אשראי לפי חודש העסקה, עו"ש לפי מועד הפעולה':'לפי מועד החיוב (מתי שהכסף ירד מהחשבון)'}</span></div>
       ${mKeys.map(k=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:2px 0"><span>${fmtBudgetMonth(k)}${D.budgetMonths[k]?'':' <span style="font-size:10.5px;color:var(--teal)">(חודש חדש)</span>'}</span><span>${byMonth[k].n} עסקאות · <b>${money(byMonth[k].sum)}</b>${byMonth[k].inc?` · <span style="color:var(--teal)">+${money(byMonth[k].inc)}</span>`:''}</span></div>`).join('')}
       ${undetected?`<div style="font-size:11.5px;color:var(--amber);margin-top:4px">לא זיהינו את חודש החיוב של ${undetected} עסקאות — הן ייכנסו ל:
         <select onchange="SIX.setMonth(this.value)" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;color:var(--teal);font-family:var(--font);font-size:11.5px;font-weight:700;padding:2px 4px">${monthOptions(SI.month)}</select></div>`:''}
@@ -1209,9 +1216,9 @@ function cardSegs(){
     // one charge per section (rows between total lines) and per bank date — e.g. Isracard's
     // "חיוב מחוץ למועד" refunds each reach the bank on their own day, apart from the monthly charge
     const g={};
-    f.txns.forEach(t=>{const bd=t.billDate?ymd(t.billDate):'';
-      const k=t.month+'|'+(t.seg!==undefined?t.seg:'all')+'|'+bd+'|'+(t.card||'');
-      (g[k]=g[k]||{month:t.month,seg:t.seg,bd,sum:0,card:t.card}).sum+=t.val;});
+    f.txns.forEach(t=>{const bd=t.billDate?ymd(t.billDate):'',bm=t.bm||t.month; // charges by billing month
+      const k=bm+'|'+(t.seg!==undefined?t.seg:'all')+'|'+bd+'|'+(t.card||'');
+      (g[k]=g[k]||{month:bm,seg:t.seg,bd,sum:0,card:t.card}).sum+=t.val;});
     Object.values(g).forEach(s=>{if(!s.month)return;
       const d=s.bd||(s.seg!==undefined&&f.segDates&&f.segDates[s.seg]?ymd(f.segDates[s.seg]):'');
       (out[s.month]=out[s.month]||[]).push({d,a:r2(s.sum),iss:f.source||'',card:s.card||'',fp:f.fp});});
@@ -1336,12 +1343,13 @@ window.SIX={
           // into a category later if it was classified wrong. Duplicates aren't kept.
           if(t.dupTx)return;
           const why=t.kind==='card'||t.kind==='invest'||t.kind==='own'?t.kind:'other';
-          m.tx.push({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
-            a:r2(Math.abs(t.val)),k:'skip|'+why,dir:t.income?'in':'out',s:srcLabel(t)});
+          m.tx.push(Object.assign({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
+            a:r2(Math.abs(t.val)),k:'skip|'+why,dir:t.income?'in':'out',s:srcLabel(t)},t.bm?{bm:t.bm}:{}));
           return;
         }
-        m.tx.push({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
-          a:Math.round((t.income?-t.val:t.val)*100)/100,k:t.target,s:srcLabel(t)});});
+        // bm = billing month, when filed by purchase month (card-month.js)
+        m.tx.push(Object.assign({id:t.key+':'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
+          a:Math.round((t.income?-t.val:t.val)*100)/100,k:t.target,s:srcLabel(t)},t.bm?{bm:t.bm}:{}));});
       // Bank account: balances + what left it outside the budget (card bills, investments, own transfers)
       if(bankMonths[key])m.bank=Object.assign({},m.bank||{},bankMonths[key]);
       // card charges — skip ones already stored (same date, amount, issuer)
@@ -1381,7 +1389,7 @@ window.SIX={
         if(!Array.isArray(m.tx))m.tx=[];
         const why=t.kind==='card'||t.kind==='invest'||t.kind==='own'?t.kind:'other';
         m.tx.push({id:t.key+':f'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),
-          a:r2(Math.abs(t.val)),k:'skip|'+why,dir:t.income?'in':'out',s:srcLabel(t)});
+          a:r2(Math.abs(t.val)),k:'skip|'+why,dir:t.income?'in':'out',s:srcLabel(t),...(t.bm?{bm:t.bm}:{})});
         return;
       }
       const k=t.target||fallback(t),[sec,name]=k.split('|');
@@ -1394,13 +1402,13 @@ window.SIX={
         let r=m[sec].find(x=>(x.name||'').trim()===name);
         if(!r){r={name,amount:''};m[sec].push(r);}
         r.amount=String(Math.round(num(r.amount)+a));
-        m.tx.push({id:t.key+':i'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),a,k,s:srcLabel(t)});
+        m.tx.push({id:t.key+':i'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),a,k,s:srcLabel(t),...(t.bm?{bm:t.bm}:{})});
         recovered++;return;
       }
       const row=(m[sec]||[]).find(r=>(r.name||'').trim()===name);if(!row)return;
       const listed=m.tx.filter(x=>!x.off&&x.k===k).reduce((s,x)=>s+x.a,0);
       if(num(row.amount)-listed<a-1)return; // the row doesn't hold this amount unlisted
-      m.tx.push({id:t.key+':f'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),a,k,s:srcLabel(t)});
+      m.tx.push({id:t.key+':f'+Date.now().toString(36),d:ymd(t.date),n:String(t.merchant).slice(0,60),a,k,s:srcLabel(t),...(t.bm?{bm:t.bm}:{})});
       filled++;
     });
     const key=keys[keys.length-1]||SI.month;

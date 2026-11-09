@@ -50,6 +50,16 @@ function canImportStatements(){
   const e=String(u.email||'').toLowerCase();
   return e===ADMIN_EMAIL||IMPORT_USERS.includes(e);
 }
+// Features being tried out before release (the "מה באת לעשות היום?" board with its monthly track,
+// card expenses by purchase month): the admin + BETA_USERS. Release to everyone: BETA_FOR_ALL=true.
+const BETA_FOR_ALL=false;
+const BETA_USERS=[];
+function isBeta(){
+  const u=typeof auth!=='undefined'&&auth.currentUser;if(!u)return false;
+  if(BETA_FOR_ALL)return true;
+  const e=String(u.email||'').toLowerCase();
+  return e===ADMIN_EMAIL||BETA_USERS.includes(e);
+}
 const HZ=['12 חודשים','1-5 שנים','5-10 שנים','10+ שנים'];
 const HC=['h0','h1','h2','h3'];
 const COLS=['#42ebd6','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#38bdf8','#f472b6'];

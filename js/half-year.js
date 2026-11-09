@@ -55,8 +55,9 @@ function hyIsDue(){
   return past(d.duePension)||past(d.dueNW);
 }
 function renderHalfYearBanner(){
+  if(typeof renderTodayBoard==='function')renderTodayBoard(); // beta: the "מה באת לעשות היום?" board (today.js) takes this card's place
   const el=document.getElementById('hy-banner-dash');if(!el)return;
-  el.innerHTML=hyIsDue()?`<div onclick="openHalfYear()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(66,235,214,.16),rgba(66,235,214,.03));border:1.5px solid var(--teal-border);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+  el.innerHTML=hyIsDue()&&!(typeof isBeta==='function'&&isBeta())?`<div onclick="openHalfYear()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(66,235,214,.16),rgba(66,235,214,.03));border:1.5px solid var(--teal-border);border-radius:14px;padding:14px 16px;margin-bottom:14px">
       <div style="min-width:0"><div style="font-size:15px;font-weight:800;color:var(--teal)">🧭 הגיע הזמן לעדכון החצי־שנתי</div>
         <div style="font-size:12px;color:var(--t2);margin-top:3px">מסלול קצר, שלב אחר שלב: מה ממלאים ומה נכנס לבד, כדי ששום דבר לא יתפספס.</div></div>
       <span style="background:var(--teal);color:#06121a;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:800;white-space:nowrap">להתחיל ←</span></div>`:'';
@@ -73,12 +74,14 @@ function _hyModal(){
     o.addEventListener('click',e=>{if(e.target===o)closeHalfYear();});document.body.appendChild(o);}
   return o;
 }
-function _hyPill(show){
+// (shared with the monthly track, today.js — `resume` reopens whichever track left it)
+function _hyPill(show,resume){
   let p=document.getElementById('hy-pill');
-  if(!p){p=document.createElement('button');p.id='hy-pill';p.onclick=hyResume;
+  if(!p){p=document.createElement('button');p.id='hy-pill';
     p.style.cssText='position:fixed;left:16px;bottom:84px;z-index:8999;background:var(--teal);color:#06121a;border:none;border-radius:24px;padding:10px 16px;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.45)';
     document.body.appendChild(p);}
   p.textContent='🧭 חזרה למסלול ←';
+  if(show)p.onclick=resume||hyResume;
   p.style.display=show?'block':'none';
 }
 function openHalfYear(){_hyStep=0;_hyActive=true;_hyPill(false);_hyModal().style.display='flex';renderHalfYear();}

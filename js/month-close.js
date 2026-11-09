@@ -36,7 +36,9 @@ function renderMonthCloseBanners(){
         <div style="min-width:0"><div style="font-size:15px;font-weight:800;color:var(--teal)">🗓️ סגירת ${_mcName(k)} — 5 דקות</div>
           <div style="font-size:12px;color:var(--t2);margin-top:3px">מעלים את הקבצים, בודקים שהכל במקום, ורואים כמה חסכתם.${streak?` כרגע ${streak} חודשים ברצף 🔥 — אל תשברו אותו!`:''}</div></div>
         <span style="background:var(--teal);color:#06121a;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:800;white-space:nowrap">להתחיל ←</span></div>`;
-  ['mc-banner-dash','mc-banner-budget'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
+  // beta: on the home page the "מה באת לעשות היום?" board (today.js) takes this card's place
+  const beta=typeof isBeta==='function'&&isBeta();
+  ['mc-banner-dash','mc-banner-budget'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=beta&&id==='mc-banner-dash'?'':html;});
 }
 
 // ── The flow ──

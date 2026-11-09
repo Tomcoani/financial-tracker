@@ -346,6 +346,7 @@ function renderBudget(){
   if(copyBtn)copyBtn.style.display=hasPrev?'inline-flex':'none';
   const copyHint=document.getElementById('budget-copy-prev-hint');
   if(copyHint)copyHint.style.display=hasPrev?'block':'none';
+  if(typeof renderCardMonthPick==='function')renderCardMonthPick(); // card expenses: billing / purchase month (card-month.js)
   setTimeout(attachAllNumFormats,0);
 }
 // Closest earlier month that actually has data
