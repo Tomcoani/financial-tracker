@@ -503,6 +503,7 @@ function renderAll(){
   renderCfFixed();
   if(typeof renderCfAccBar==='function')renderCfAccBar(); // account picker (admin, several accounts)
   if(typeof renderMonthCloseBanners==='function')renderMonthCloseBanners(); // 'סגירת חודש' card (month-close.js)
+  if(typeof renderHelpBotButton==='function')renderHelpBotButton(); // beta: "💬 שאלה על המערכת" (help-bot.js)
   // Only render what's immediately needed
   renderSettings();
   renderDash();

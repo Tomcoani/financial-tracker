@@ -84,7 +84,18 @@ function renderPortfolio(){
     html+=`<div id="port-sum-wrap-${pi}" style="margin-top:4px;padding-top:9px;border-top:1px solid var(--teal-border)">${portSumHtml(port.items)}</div>`;
     html+=`<button class="btnadd" onclick="addPortItem(${pi})" style="margin-top:6px">+ הוספת נייר ערך</button>`;
     // "How much to invest" allocator — splits an amount across the securities by % יעד
-    html+=`<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+    // (beta: one combined "how much and where" with the rebalancing — portInvestPlanHtml below)
+    if(typeof isBeta==='function'&&isBeta())html+=`<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+      <div style="font-size:14px;font-weight:800;color:var(--white);margin-bottom:4px">💵 כמה להשקיע ואיפה</div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:8px">כותבים כמה כסף פנוי יש להשקעה, ונחלק אותו בין הניירות כך שהתיק יתקרב הכי הרבה לאחוזי היעד, רק בהפקדות. <span style="color:var(--t3)">⚠️ לא מוכרים מנייר אחד כדי לקנות אחר: מכירה יוצרת אירוע מס.</span></div>
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+        <span style="font-size:12.5px;color:var(--t2);font-weight:700">סכום להשקעה (₪)</span>
+        <input type="number" inputmode="decimal" data-no-fmt id="invest-amt-${pi}" value="${port.investAmt||''}" placeholder="0" oninput="updateInvestPlan(${pi},this.value)" aria-label="סכום להשקעה"
+          style="width:140px;background:var(--s2);border:1px solid var(--teal-border);border-radius:8px;color:var(--teal);font-family:var(--font);font-size:14px;font-weight:800;padding:7px 10px;text-align:right"/>
+      </div>
+      <div id="invest-breakdown-${pi}" style="margin-top:10px"></div>
+    </div>`;
+    else html+=`<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
         <span style="font-size:12.5px;color:var(--t2);font-weight:700">💵 יש לך סכום פנוי להשקיע החודש? כמה (₪)?</span>
         <input type="number" data-no-fmt value="${port.investAmt||''}" placeholder="0" data-pi="${pi}" oninput="updateInvestPlan(${pi},this.value)"
@@ -124,6 +135,7 @@ function portItemUpdate(el){
   updatePortStats();syncNWFromPension();
   if(document.getElementById('nw-investments'))renderNWSection('nw-investments','investments');
   maybeClearPendingTransfer(); // deposit reflected → drop the reminder
+  if(typeof isBeta==='function'&&isBeta())renderInvestBreakdown(pi); // the plan follows the values / targets
   touchSection('portfolio');markDirty();
 }
 
@@ -139,6 +151,7 @@ function renderInvestBreakdown(pi){
   const el=document.getElementById('invest-breakdown-'+pi);
   if(!el)return;
   const port=D.portfolios[pi]; if(!port){el.innerHTML='';return;}
+  if(typeof isBeta==='function'&&isBeta()){el.innerHTML=portInvestPlanHtml(pi);return;}
   const amt=parseFloat(String(port.investAmt||'').replace(/,/g,''))||0;
   if(amt<=0){el.innerHTML='';return;}
   const items=(port.items||[]).filter(it=>(it.name||'').trim()&&(parseFloat(it.targetPct)||0)>0);
@@ -155,6 +168,51 @@ function renderInvestBreakdown(pi){
     ? `<div style="font-size:11px;color:var(--amber);margin-top:5px">סך אחוזי היעד הוא ${+totalPct.toFixed(1)}% (לא 100%) — ההפקדות מחושבות לפי האחוז של כל נייר.</div>`
     : '';
   el.innerHTML=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 13px">${rows}${note}</div>`;
+}
+
+// ── Beta: one "how much to invest and where" that is also the rebalancing ──
+// The amount goes where the portfolio is furthest below its targets, deposits only (no selling):
+// find the level λ where filling every security up to (target share × λ) costs exactly the amount.
+// When the amount is enough for a full balance, the rest follows the targets. With no amount typed,
+// it shows what a full balance takes, with a button that types that amount in.
+function portAllocate(items,amt){
+  const T=items.reduce((s,p)=>s+p.cur,0),cost=l=>items.reduce((s,p)=>s+Math.max(0,p.t*l-p.cur),0);
+  let lo=0,hi=T+amt;
+  for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(cost(mid)<amt)lo=mid;else hi=mid;}
+  return items.map(p=>Math.max(0,p.t*hi-p.cur));
+}
+function portUseFullBalance(pi,x){
+  const el=document.getElementById('invest-amt-'+pi);if(el)el.value=Math.ceil(x);
+  updateInvestPlan(pi,String(Math.ceil(x)));
+}
+function portInvestPlanHtml(pi){
+  const port=D.portfolios[pi]||{};
+  const raw=(port.items||[]).filter(it=>(it.name||'').trim()&&(parseFloat(it.targetPct)||0)>0);
+  if(!raw.length)return '<div style="font-size:12px;color:var(--t3)">מלאו "% יעד" לניירות, ונראה כמה להפקיד בכל אחד.</div>';
+  const totalPct=raw.reduce((s,it)=>s+(parseFloat(it.targetPct)||0),0);
+  const items=raw.map(it=>({name:it.name,pct:parseFloat(it.targetPct)||0,t:(parseFloat(it.targetPct)||0)/totalPct,cur:portItemILS(it)}));
+  const T=items.reduce((s,p)=>s+p.cur,0);
+  // what a full balance takes: the total at which no security is above its target share
+  const full=Math.max(0,Math.max(...items.map(p=>p.t?p.cur/p.t:0))-T);
+  const amt=parseFloat(String(port.investAmt||'').replace(/,/g,''))||0;
+  const pctWarn=Math.abs(totalPct-100)>1?`<div style="font-size:11.5px;color:var(--amber);margin-top:6px">⚠️ סך אחוזי היעד הוא ${+totalPct.toFixed(1)}% ולא 100%, אז חישבנו לפי היחס ביניהם.</div>`:'';
+  const box=html=>`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 13px">${html}${pctWarn}</div>`;
+  const pctOf=(v,tot)=>tot>0?(v/tot*100).toFixed(1)+'%':'—';
+  if(amt<=0){
+    if(full<1)return box(`<div style="font-size:13px;color:var(--green);font-weight:700">✅ התיק מאוזן לפי היעדים.</div><div style="font-size:12px;color:var(--t3);margin-top:3px">כתבו סכום למעלה, ונחלק אותו לפי אחוזי היעד.</div>`);
+    const d=portAllocate(items,full);
+    return box(`<div style="font-size:12.5px;color:var(--t2)">כדי שהתיק יחזור בדיוק לאחוזי היעד צריך להפקיד <b style="color:var(--teal)">${fmt(full)}</b>:</div>
+      ${items.map((p,i)=>({p,d:d[i]})).filter(x=>x.d>=1).sort((a,b)=>b.d-a.d).map(({p,d})=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0"><span style="color:var(--t2);min-width:0">${esc(p.name)} <span style="color:var(--t3);font-size:11px">(${pctOf(p.cur,T)} → ${p.pct}%)</span></span><span style="color:var(--teal);font-weight:800;white-space:nowrap">${fmt(d)}</span></div>`).join('')}
+      <button onclick="portUseFullBalance(${pi},${full})" style="margin-top:7px;background:none;border:1px solid var(--teal-border);color:var(--teal);border-radius:8px;padding:5px 12px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">להשתמש בסכום הזה</button>`);
+  }
+  const d=portAllocate(items,amt),T1=T+amt;
+  const rows=items.map((p,i)=>({p,d:d[i]})).sort((a,b)=>b.d-a.d).map(({p,d})=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="min-width:0"><span style="color:var(--white);font-weight:700">${esc(p.name)}</span><br><span style="color:var(--t3);font-size:11px">${pctOf(p.cur,T)} עכשיו → ${pctOf(p.cur+d,T1)} אחרי · יעד ${p.pct}%</span></span>
+      <span style="white-space:nowrap;font-weight:800;color:${d>=1?'var(--teal)':'var(--t3)'}">${d>=1?'הפקד '+fmt(d):'לא צריך'}</span></div>`).join('');
+  const foot=amt+0.5>=full
+    ?`<div style="font-size:12px;color:var(--green);margin-top:7px">✅ אחרי ההפקדה התיק באיזון${amt-full>=1?`. מה שנשאר מעבר לאיזון (${fmt(amt-full)}) מתחלק לפי אחוזי היעד`:''}.</div>`
+    :`<div style="font-size:12px;color:var(--t2);margin-top:7px">הסכום מקרב את התיק לאיזון. לאיזון מלא צריך בסך הכל ${fmt(full)}.</div>`;
+  return box(rows+foot);
 }
 
 // A portfolio item's value converted to ₪ (used only for allocation %/charts).
@@ -385,6 +443,10 @@ function rebalanceHtml(srcItems){
 function renderRebalance(total,viewItems){
   const el=document.getElementById('rebalance-box');
   if(!el)return;
+  // beta: the rebalancing lives inside each portfolio's "כמה להשקיע ואיפה" — no separate card
+  const card=document.getElementById('rebalance-card'),beta=typeof isBeta==='function'&&isBeta();
+  if(card){card.style.display=beta?'none':'';const chart=card.previousElementSibling;if(chart)chart.style.gridColumn=beta?'1/-1':'';}
+  if(beta)return;
   const ports=D.portfolios||[];
   // "כל התיקים" with more than one portfolio → a separate recommendation per
   // portfolio (each balanced on its own), not one pooled across all.

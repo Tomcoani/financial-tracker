@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=137">
+<link rel="stylesheet" href="styles/main.css?v=138">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -423,7 +423,7 @@
           <div class="ch"><span class="dot dt"></span>התפלגות נוכחית</div>
           <div class="chwrap"><canvas id="ch-port"></canvas></div>
         </div>
-        <div class="card">
+        <div class="card" id="rebalance-card">
           <div class="ch"><span class="dot da"></span>המלצת איזון</div>
           <div style="margin-bottom:14px;padding:12px 14px;background:rgba(255,255,255,.04);border-radius:10px;border-right:3px solid var(--teal);direction:rtl">
             <div style="font-size:13px;color:var(--t2);line-height:1.7">
@@ -869,23 +869,24 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=137"></script>
-<script defer src="js/cashflow-goals.js?v=137"></script>
-<script defer src="js/pension.js?v=137"></script>
-<script defer src="js/networth.js?v=137"></script>
-<script defer src="js/portfolio.js?v=137"></script>
-<script defer src="js/dashboard.js?v=137"></script>
-<script defer src="js/settings.js?v=137"></script>
-<script defer src="js/admin.js?v=137"></script>
-<script defer src="js/misc.js?v=137"></script>
-<script defer src="js/budget.js?v=137"></script>
-<script defer src="js/budget-detail.js?v=137"></script>
-<script defer src="js/budget-accounts.js?v=137"></script>
-<script defer src="js/budget-period.js?v=137"></script>
-<script defer src="js/month-close.js?v=137"></script>
-<script defer src="js/half-year.js?v=137"></script>
-<script defer src="js/today.js?v=137"></script>
-<script defer src="js/card-month.js?v=137"></script>
-<script defer src="js/statement-import.js?v=137"></script>
+<script defer src="js/core.js?v=138"></script>
+<script defer src="js/cashflow-goals.js?v=138"></script>
+<script defer src="js/pension.js?v=138"></script>
+<script defer src="js/networth.js?v=138"></script>
+<script defer src="js/portfolio.js?v=138"></script>
+<script defer src="js/dashboard.js?v=138"></script>
+<script defer src="js/settings.js?v=138"></script>
+<script defer src="js/admin.js?v=138"></script>
+<script defer src="js/misc.js?v=138"></script>
+<script defer src="js/budget.js?v=138"></script>
+<script defer src="js/budget-detail.js?v=138"></script>
+<script defer src="js/budget-accounts.js?v=138"></script>
+<script defer src="js/budget-period.js?v=138"></script>
+<script defer src="js/month-close.js?v=138"></script>
+<script defer src="js/half-year.js?v=138"></script>
+<script defer src="js/today.js?v=138"></script>
+<script defer src="js/card-month.js?v=138"></script>
+<script defer src="js/help-bot.js?v=138"></script>
+<script defer src="js/statement-import.js?v=138"></script>
 </body>
 </html>
