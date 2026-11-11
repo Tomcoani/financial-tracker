@@ -14,27 +14,49 @@ const LESSONS=[
   {n:5,title:'תיק השקעות עצמאי מא׳ עד ת׳',ds:'מדדים, בית השקעות, קרן מחקה, מט״ח ואזרחות אמריקאית'},
   {n:6,title:'פנסיה וקרן השתלמות',ds:'כלל ה־4%, סוגי פנסיה, מסלולים, דמי ניהול וקרן השתלמות'}
 ];
-let _lsnMax=null,_lsnCache={},_lsnOpen=0,_lsnPreview=null,_lsnObs=null;
+let _lsnEnt=null,_lsnCache={},_lsnOpen=0,_lsnPreview=null,_lsnObs=null,_lsnOnly=false;
 
 function lessonsEnabled(){return typeof isBeta==='function'&&isBeta();}
 function lsnIsAdmin(){return !!(auth.currentUser&&String(auth.currentUser.email||'').toLowerCase()===ADMIN_EMAIL);}
 
 // Called on every sign-in (core.js): show/hide the tab and forget the previous account's state.
 function syncLessonsNav(){
-  _lsnMax=null;_lsnCache={};_lsnOpen=0;_lsnPreview=null;
+  _lsnEnt=null;_lsnCache={};_lsnOpen=0;_lsnPreview=null;lsnSetOnly(false);
   const on=lessonsEnabled();
   ['nav-lessons','mm-lessons'].forEach(id=>{const b=document.getElementById(id);if(b)b.style.display=on?'':'none';});
 }
 
-async function lsnLoadMax(){
-  if(_lsnMax!==null)return _lsnMax;
-  const u=auth.currentUser;if(!u){_lsnMax=0;return 0;}
-  if(lsnIsAdmin()){_lsnMax=6;return 6;}
+// The signed-in user's entitlement: {maxLesson 0..6, graduate true/false/null (null = no doc)}.
+async function lsnLoadEnt(){
+  if(_lsnEnt)return _lsnEnt;
+  const u=auth.currentUser;
+  if(!u)return _lsnEnt={maxLesson:0,graduate:null};
+  if(lsnIsAdmin())return _lsnEnt={maxLesson:6,graduate:true};
   try{
     const s=await db.collection('entitlements').doc(String(u.email||'').toLowerCase()).get();
-    _lsnMax=s.exists?Math.max(0,Math.min(6,parseInt(s.data().maxLesson,10)||0)):0;
-  }catch(e){_lsnMax=0;} // no doc / rules not published yet → nothing unlocked
-  return _lsnMax;
+    const d=s.exists?s.data():null;
+    _lsnEnt=d?{maxLesson:Math.max(0,Math.min(6,parseInt(d.maxLesson,10)||0)),graduate:d.graduate!==false}
+             :{maxLesson:0,graduate:null};
+  }catch(e){_lsnEnt={maxLesson:0,graduate:null};} // no doc → nothing unlocked, full app as before
+  return _lsnEnt;
+}
+async function lsnLoadMax(){return (await lsnLoadEnt()).maxLesson;}
+
+// ── "Summaries only" mode ──
+// A client still in the course (Notion status "Active customer" → entitlements.graduate=false) sees ONLY
+// this tab: no budget, goals, pension etc. until they graduate. Users without an entitlements doc
+// (private clients, older users) and graduates get the full app as before.
+// Called from core.js on sign-in; true = open the app straight into the summaries.
+async function lsnApplyMode(){
+  lsnSetOnly(false);
+  if(!lessonsEnabled()||lsnIsAdmin())return false; // until release only beta users; never the admin
+  const e=await lsnLoadEnt();
+  if(e.graduate===false){lsnSetOnly(true);return true;}
+  return false;
+}
+function lsnSetOnly(on){
+  _lsnOnly=!!on;
+  document.body.classList.toggle('lsn-only',_lsnOnly);
 }
 // What the list shows as unlocked. The admin can preview the list as a graduate with N lessons.
 function lsnVisibleMax(max){return lsnIsAdmin()&&_lsnPreview!==null?_lsnPreview:max;}
@@ -57,7 +79,14 @@ async function renderLessons(){
       <div class="tt">${l.title}</div>
       <div class="ds">${l.ds}</div>
     </div>`;}).join('');
-  el.innerHTML=`<div class="card">
+  const onlyNote=_lsnOnly?`<div class="card card-teal" style="padding:16px 20px">
+      ${lsnIsAdmin()?`<div style="font-size:12.5px;color:var(--purple);margin-bottom:6px">👁 תצוגה כמשתמש בתהליך — כך הוא רואה את המערכת.
+        <a href="#" onclick="lsnPreviewOnly(false);return false" style="color:var(--teal)">יציאה מהתצוגה</a></div>`:''}
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">ברוכים הבאים לתוכנית ״הדרך לעושר״ 👋</div>
+      <div style="font-size:13.5px;color:var(--t2);line-height:1.7">כאן מחכים לכם הסיכומים של המפגשים — כל סיכום נפתח אחרי שהמפגש שלו מתקיים.
+        בסיום התוכנית תיפתח לכם כל המערכת הפיננסית: תקציב, מטרות, פנסיה, תיק השקעות ושווי נטו.</div>
+    </div>`:'';
+  el.innerHTML=`${onlyNote}<div class="card">
       <div class="ch-title">סיכומי מפגשים — הדרך לעושר</div>
       <div class="ch-hint">${hint}</div>
       <div class="lsn-list">${cards}</div>
@@ -117,6 +146,52 @@ function lsnWire(el){
   items.forEach(s=>{s.classList.add('rv');_lsnObs.observe(s);});
 }
 
+// ── Admin page: who has access to the summaries (in-process clients vs graduates) ──
+function lsnEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function lsnDate(iso){const t=iso?Date.parse(iso):NaN;return isNaN(t)?'—':new Date(t).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit'});}
+async function renderAdminLessons(){
+  const el=document.getElementById('admin-lessons');if(!el)return;
+  if(!lsnIsAdmin()){el.innerHTML='';return;}
+  el.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:right">טוען…</p>';
+  try{
+    const [entSnap,usersSnap]=await Promise.all([db.collection('entitlements').get(),db.collection('users').get()]);
+    const acc={};
+    usersSnap.forEach(d=>{const x=d.data()||{};const em=String(x.email||'').toLowerCase().trim();
+      if(em)acc[em]={name:x.displayName||'',lastLogin:x.lastLogin||null};});
+    const rows=[];
+    entSnap.forEach(d=>{const x=d.data()||{};
+      rows.push({email:d.id,max:Math.max(0,Math.min(6,parseInt(x.maxLesson,10)||0)),grad:x.graduate!==false,upd:x.updatedAt||'',a:acc[d.id]||null});});
+    const inProc=rows.filter(r=>!r.grad).sort((a,b)=>b.max-a.max||a.email.localeCompare(b.email));
+    const grads=rows.filter(r=>r.grad).sort((a,b)=>a.email.localeCompare(b.email));
+    const dots=n=>[1,2,3,4,5,6].map(k=>`<span style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-left:2px;background:${k<=n?'var(--teal)':'var(--s3)'}"></span>`).join('');
+    const row=r=>`<tr>
+        <td style="padding:7px 8px">${lsnEsc(r.a&&r.a.name||'')}<div style="font-size:11.5px;color:var(--t3);direction:ltr;text-align:right">${lsnEsc(r.email)}</div></td>
+        <td style="padding:7px 8px;white-space:nowrap">${dots(r.max)} <b style="margin-right:4px">${r.max}/6</b></td>
+        <td style="padding:7px 8px;font-size:12.5px">${r.a?`<span style="color:var(--teal)">✓ יש חשבון</span><div style="color:var(--t3);font-size:11.5px">כניסה אחרונה ${lsnDate(r.a.lastLogin)}</div>`
+          :`<span style="color:var(--amber)">✗ עוד לא נרשם</span><div style="color:var(--t3);font-size:11.5px">ההרשאה מחכה לו</div>`}</td>
+        <td style="padding:7px 8px;font-size:12px;color:var(--t3)">${lsnDate(r.upd)}</td></tr>`;
+    const table=list=>list.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px;text-align:right">
+        <thead><tr style="color:var(--t3);font-size:12px;border-bottom:1px solid var(--border)">
+          <th style="padding:6px 8px;font-weight:600">לקוח</th><th style="padding:6px 8px;font-weight:600">סיכומים פתוחים</th>
+          <th style="padding:6px 8px;font-weight:600">חשבון במערכת</th><th style="padding:6px 8px;font-weight:600">עודכן</th></tr></thead>
+        <tbody>${list.map(row).join('')}</tbody></table></div>`
+      :'<p style="color:var(--t3);font-size:13px;margin:6px 0">אין כרגע.</p>';
+    const noAcc=inProc.filter(r=>!r.a).length;
+    el.innerHTML=`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="stat"><label>בתהליך</label><div class="val vt">${inProc.length}</div></div>
+        <div class="stat"><label>בתהליך בלי חשבון</label><div class="val vr">${noAcc}</div></div>
+        <div class="stat"><label>בוגרים עם גישה מלאה</label><div class="val vg">${grads.length}</div></div>
+      </div>
+      <div style="font-weight:700;margin:4px 0 6px">לקוחות בתהליך — רואים במערכת רק את הסיכומים שנפתחו להם</div>
+      ${table(inProc)}
+      <details style="margin-top:14px"><summary style="cursor:pointer;color:var(--t2);font-size:13.5px">בוגרים — כל 6 הסיכומים + כל המערכת (${grads.length})</summary>
+        <div style="margin-top:8px">${table(grads)}</div></details>`;
+  }catch(e){
+    el.innerHTML=`<p style="color:var(--red);font-size:13px">לא הצלחתי לקרוא את ההרשאות (${lsnEsc(e.code||e.message)}).</p>`;
+  }
+}
+
 // ── Admin: upload lesson files + preview as a graduate ──
 function lsnAdminCard(){
   const opts=['<option value="">כמנהל (הכול פתוח)</option>'].concat([0,1,2,3,4,5,6].map(k=>
@@ -129,12 +204,21 @@ function lsnAdminCard(){
       <button class="btnsave" onclick="lsnUpload()">העלאה ↑</button>
       <label style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px">תצוגה:
         <select onchange="lsnSetPreview(this.value)" style="background:var(--s2);color:var(--white);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-family:inherit">${opts}</select></label>
+      <label style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" ${_lsnOnly?'checked':''} onchange="lsnPreviewOnly(this.checked)"> כמשתמש בתהליך (רק סיכומים)</label>
     </div>
     <div id="lsn-up-log" style="font-size:13px;margin-top:10px;line-height:1.7"></div>
     <div id="lsn-up-status" style="font-size:12.5px;color:var(--t3);margin-top:8px"></div>
   </div>`;
 }
 function lsnSetPreview(v){_lsnPreview=v===''?null:parseInt(v,10);renderLessons();}
+// Admin only: see the app the way a client in the course sees it (only this tab), and back.
+function lsnPreviewOnly(on){
+  if(!lsnIsAdmin())return;
+  if(on&&_lsnPreview===null)_lsnPreview=2; // a typical mid-course client
+  lsnSetOnly(on);
+  _lsnOpen=0;renderLessons();
+}
 async function lsnAdminStatus(){
   const el=document.getElementById('lsn-up-status');if(!el)return;
   try{

@@ -205,6 +205,17 @@
   .lsn .hb .lbl{white-space:normal; font-size:13px}
 }
 
+/* ══ "summaries only" mode — a client still in the course sees only the lessons tab (js/lessons.js) ══ */
+body.lsn-only .nbtn:not(#nav-lessons),
+body.lsn-only #admin-nav-btn,
+body.lsn-only .btn-pdf,
+body.lsn-only .topbar [onclick="confirmReset()"],
+body.lsn-only #mobile-bottom-nav,
+body.lsn-only #mobile-more-menu,
+body.lsn-only #save-bar,
+body.lsn-only .page-help-btn{display:none !important}
+body.lsn-only .content{padding-bottom:24px}
+
 /* ══ the tab around the lessons ══ */
 .lsn-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px}
 .lsn-card{background:var(--s1); border:1px solid var(--border); border-radius:var(--r); padding:16px 18px; cursor:pointer; transition:.15s; position:relative}

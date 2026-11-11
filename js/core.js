@@ -226,6 +226,12 @@ auth.onAuthStateChanged(async user=>{
       D.cfCredit='';
     }
     renderAll();
+    // Clients still in the course open straight into their summaries — no dashboard, tour or reminders.
+    if(typeof lsnApplyMode==='function'&&await lsnApplyMode()){
+      goTo('lessons',document.getElementById('nav-lessons'));
+      startIdleWatch();
+      return;
+    }
     goTo('dash',document.querySelector('.nbtn'));
     if(typeof mcSyncSummary==='function')mcSyncSummary(); // the record the monthly Make reminder reads
     startIdleWatch(); // begin 24h idle-logout tracking
@@ -448,6 +454,8 @@ function collectAll(){
 // ══ NAV ══
 let _lastTab='';
 function goTo(id,btn){
+  // A client still in the course sees only the lesson summaries (js/lessons.js) — every other tab leads there.
+  if(typeof _lsnOnly!=='undefined'&&_lsnOnly&&id!=='lessons'){id='lessons';btn=document.getElementById('nav-lessons')||btn;}
   const _leaving=_lastTab;
   if(_lastTab&&_lastTab!==id)flushSave(); // persist edits from the tab we're leaving
   if(_leaving==='nw'&&id!=='nw'&&typeof maybeShowNWComplete==='function')maybeShowNWComplete(); // nudge if NW rows left empty
@@ -471,7 +479,7 @@ function goTo(id,btn){
     setTimeout(()=>document.querySelectorAll('#locs-transfer textarea[data-f="whereTo"]').forEach(t=>{if(typeof autoResize==='function')autoResize(t);}),0);
   }
   if(id==='settings')renderSettings();
-  if(id==='admin')renderAdmin();
+  if(id==='admin'){renderAdmin();if(typeof renderAdminLessons==='function')renderAdminLessons();}
   if(id==='lessons'&&typeof renderLessons==='function')renderLessons();
   if(typeof maybeShowPageUpdate==='function')maybeShowPageUpdate(id); // one-time "what changed on this page"
   if(typeof trackPageView==='function')trackPageView(id); // usage analytics
