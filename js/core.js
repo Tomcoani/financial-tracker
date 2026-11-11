@@ -207,6 +207,7 @@ auth.onAuthStateChanged(async user=>{
     document.getElementById('uname').textContent=(D.settings&&D.settings.displayName)||user.displayName||user.email;
     // Show admin nav only for admin email
     document.getElementById('admin-nav-btn').style.display=user.email===ADMIN_EMAIL?'':'none';
+    if(typeof syncLessonsNav==='function')syncLessonsNav(); // lesson summaries tab (beta)
     // Statement import (fill expenses from a card file) — admin + IMPORT_USERS while it's being tested
     const importBtn=document.getElementById('budget-import-btn');
     if(importBtn)importBtn.style.display=canImportStatements()?'inline-flex':'none';
@@ -471,6 +472,7 @@ function goTo(id,btn){
   }
   if(id==='settings')renderSettings();
   if(id==='admin')renderAdmin();
+  if(id==='lessons'&&typeof renderLessons==='function')renderLessons();
   if(typeof maybeShowPageUpdate==='function')maybeShowPageUpdate(id); // one-time "what changed on this page"
   if(typeof trackPageView==='function')trackPageView(id); // usage analytics
 }
