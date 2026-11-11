@@ -51,9 +51,12 @@ async function lsnApplyMode(){
   lsnSetOnly(false);
   if(!lessonsEnabled()||lsnIsAdmin())return false; // until release only beta users; never the admin
   const e=await lsnLoadEnt();
-  if(e.graduate===false){lsnSetOnly(true);return true;}
+  if(lsnIsLimited(e)){lsnSetOnly(true);return true;}
   return false;
 }
+// "Before lesson 6": still in the course AND fewer than 6 summaries open. Reaching meeting 6 (or being marked
+// Done in Notion) opens the whole app — so a client never stays stuck after finishing.
+function lsnIsLimited(e){return !!e&&e.graduate===false&&e.maxLesson<6;}
 function lsnSetOnly(on){
   _lsnOnly=!!on;
   document.body.classList.toggle('lsn-only',_lsnOnly);
@@ -161,8 +164,9 @@ async function renderAdminLessons(){
     const rows=[];
     entSnap.forEach(d=>{const x=d.data()||{};
       rows.push({email:d.id,max:Math.max(0,Math.min(6,parseInt(x.maxLesson,10)||0)),grad:x.graduate!==false,upd:x.updatedAt||'',a:acc[d.id]||null});});
-    const inProc=rows.filter(r=>!r.grad).sort((a,b)=>b.max-a.max||a.email.localeCompare(b.email));
-    const grads=rows.filter(r=>r.grad).sort((a,b)=>a.email.localeCompare(b.email));
+    const limited=r=>lsnIsLimited({graduate:r.grad,maxLesson:r.max});
+    const inProc=rows.filter(limited).sort((a,b)=>b.max-a.max||a.email.localeCompare(b.email));
+    const grads=rows.filter(r=>!limited(r)).sort((a,b)=>a.email.localeCompare(b.email));
     const dots=n=>[1,2,3,4,5,6].map(k=>`<span style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-left:2px;background:${k<=n?'var(--teal)':'var(--s3)'}"></span>`).join('');
     const row=r=>`<tr>
         <td style="padding:7px 8px">${lsnEsc(r.a&&r.a.name||'')}<div style="font-size:11.5px;color:var(--t3);direction:ltr;text-align:right">${lsnEsc(r.email)}</div></td>
@@ -181,11 +185,11 @@ async function renderAdminLessons(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div class="stat"><label>בתהליך</label><div class="val vt">${inProc.length}</div></div>
         <div class="stat"><label>בתהליך בלי חשבון</label><div class="val vr">${noAcc}</div></div>
-        <div class="stat"><label>בוגרים עם גישה מלאה</label><div class="val vg">${grads.length}</div></div>
+        <div class="stat"><label>גישה מלאה (6/6)</label><div class="val vg">${grads.length}</div></div>
       </div>
-      <div style="font-weight:700;margin:4px 0 6px">לקוחות בתהליך — רואים במערכת רק את הסיכומים שנפתחו להם</div>
+      <div style="font-weight:700;margin:4px 0 6px">לקוחות בתהליך (לפני מפגש 6) — רואים במערכת רק את הסיכומים שנפתחו להם</div>
       ${table(inProc)}
-      <details style="margin-top:14px"><summary style="cursor:pointer;color:var(--t2);font-size:13.5px">בוגרים — כל 6 הסיכומים + כל המערכת (${grads.length})</summary>
+      <details style="margin-top:14px"><summary style="cursor:pointer;color:var(--t2);font-size:13.5px">בוגרים ומי שעבר מפגש 6 — כל 6 הסיכומים + כל המערכת (${grads.length})</summary>
         <div style="margin-top:8px">${table(grads)}</div></details>`;
   }catch(e){
     el.innerHTML=`<p style="color:var(--red);font-size:13px">לא הצלחתי לקרוא את ההרשאות (${lsnEsc(e.code||e.message)}).</p>`;
