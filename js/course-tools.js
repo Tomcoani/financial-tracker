@@ -3,8 +3,9 @@
 //   odysseus — "מסמך אודיסאוס": personal emergency plan (meeting 4). Saved per user in D.odysseus.
 //   invest   — opening an independent investment account (meeting 5): first steps, broker benefits,
 //              Excellence + Psagot sign-up form guides.
-// Beta (isBeta in core.js) until Tom releases it: then set CT_FOR_ALL=true.
-const CT_FOR_ALL=false;
+// Released to every client on 2026-11-12 (Tom). false = back to beta-only (isBeta in core.js).
+// Direct links for WhatsApp: https://tomcoani.github.io/financial-tracker/?tool=odysseus  /  ?tool=invest
+const CT_FOR_ALL=true;
 const CT_TOOLS=[
   {id:'odysseus',n:4,icon:'🛟',title:'תוכנית החירום שלי — מסמך אודיסאוס',ds:'תמונת מצב, קיצוצים, קרן חירום ומה עושים (ומה לא) כשמגיע משבר'},
   {id:'invest',n:5,icon:'📈',title:'פותחים תיק השקעות עצמאי',ds:'הצעדים הראשונים, הטבות בבתי ההשקעות ומדריך מילוי טופס ההצטרפות'}

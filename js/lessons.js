@@ -25,6 +25,10 @@ const _lsnDeep=(()=>{
   try{const v=parseInt(new URLSearchParams(location.search).get('lesson'),10);return v>=1&&v<=6?v:0;}catch(e){return 0;}
 })();
 function lsnLink(n){return 'https://tomcoani.github.io/financial-tracker/?lesson='+n;}
+// Same for a course tool (course-tools.js): ?tool=odysseus (meeting 4) / ?tool=invest (meeting 5).
+const _ctDeep=(()=>{
+  try{const v=new URLSearchParams(location.search).get('tool');return v==='odysseus'||v==='invest'?v:'';}catch(e){return '';}
+})();
 
 function lessonsEnabled(){
   if(LESSONS_FOR_ALL&&typeof auth!=='undefined'&&auth.currentUser)return true;
@@ -88,11 +92,11 @@ function lsnOpen(n){
 }
 // Called by core.js right after sign-in: the ?lesson=N link from WhatsApp.
 async function lsnDeepOpen(){
-  if(!_lsnDeep||!lessonsEnabled())return;
-  const n=_lsnDeep;
+  if((!_lsnDeep&&!_ctDeep)||!lessonsEnabled())return;
   try{history.replaceState(null,'',location.pathname);}catch(e){} // a refresh shouldn't reopen it
   await lsnLoadEnt();
-  lsnOpen(n);
+  if(_ctDeep&&typeof ctOpen==='function'){ctOpen(_ctDeep);return;}
+  if(_lsnDeep)lsnOpen(_lsnDeep);
 }
 
 // ── The summaries card at the top of "כלים" (everyone in the course, graduates, the admin) ──
