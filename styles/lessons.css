@@ -31,7 +31,9 @@
 .lsn .hero .sub{color:var(--l-mut); font-size:16.5px; margin:0; max-width:56ch}
 
 /* table of contents */
-.lsn .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 0}
+.lsn .toc{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 0}
+.lsn .toc::before{content:"על מה דיברנו בשיעור"; flex-basis:100%; font-size:15px; font-weight:800; color:var(--l-ink);
+  margin-bottom:2px; padding-right:12px; border-right:3px solid var(--l-teal); line-height:1.3}
 .lsn .toc a{font-size:13.5px; color:var(--l-mut); text-decoration:none; background:var(--l-p1); border:1px solid var(--l-line);
   padding:6px 13px; border-radius:999px; cursor:pointer; transition:.15s}
 .lsn .toc a:hover{color:var(--l-ink); border-color:var(--l-teal-b); background:var(--l-p2)}

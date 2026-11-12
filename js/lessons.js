@@ -14,15 +14,28 @@ const LESSONS=[
   {n:5,title:'תיק השקעות עצמאי מא׳ עד ת׳',ds:'מדדים, בית השקעות, קרן מחקה, מט״ח ואזרחות אמריקאית'},
   {n:6,title:'פנסיה וקרן השתלמות',ds:'כלל ה־4%, סוגי פנסיה, מסלולים, דמי ניהול וקרן השתלמות'}
 ];
-let _lsnEnt=null,_lsnCache={},_lsnOpen=0,_lsnPreview=null,_lsnObs=null,_lsnOnly=false;
+let _lsnEnt=null,_lsnCache={},_lsnOpen=0,_lsnPreview=null,_lsnObs=null,_lsnOnly=false,_lsnFrom='';
+
+// Direct link to one summary, for the WhatsApp message after each meeting:
+//   https://tomcoani.github.io/financial-tracker/?lesson=3
+// Read once on page load; the client signs in (if needed) and lands straight on that summary.
+const _lsnDeep=(()=>{
+  try{const v=parseInt(new URLSearchParams(location.search).get('lesson'),10);return v>=1&&v<=6?v:0;}catch(e){return 0;}
+})();
+function lsnLink(n){return 'https://tomcoani.github.io/financial-tracker/?lesson='+n;}
 
 function lessonsEnabled(){return typeof isBeta==='function'&&isBeta();}
 function lsnIsAdmin(){return !!(auth.currentUser&&String(auth.currentUser.email||'').toLowerCase()===ADMIN_EMAIL);}
 
 // Called on every sign-in (core.js): show/hide the tab and forget the previous account's state.
 function syncLessonsNav(){
-  _lsnEnt=null;_lsnCache={};_lsnOpen=0;_lsnPreview=null;lsnSetOnly(false);
-  const on=lessonsEnabled();
+  _lsnEnt=null;_lsnCache={};_lsnOpen=0;_lsnPreview=null;_lsnFrom='';lsnSetOnly(false);
+  lsnSetNav(lessonsEnabled());
+  const mm=document.getElementById('mm-links');if(mm)mm.style.display=lessonsEnabled()?'':'none';
+}
+// The separate "סיכומי מפגשים" tab: for clients in the course (and the admin). Graduates find
+// the summaries inside "כלים" instead (renderToolsLessons).
+function lsnSetNav(on){
   ['nav-lessons','mm-lessons'].forEach(id=>{const b=document.getElementById(id);if(b)b.style.display=on?'':'none';});
 }
 
@@ -51,8 +64,45 @@ async function lsnApplyMode(){
   lsnSetOnly(false);
   if(!lessonsEnabled()||lsnIsAdmin())return false; // until release only beta users; never the admin
   const e=await lsnLoadEnt();
+  lsnSetNav(lsnIsLimited(e)); // graduates: no separate tab — their summaries are in "כלים"
   if(lsnIsLimited(e)){lsnSetOnly(true);return true;}
   return false;
+}
+
+// Open one summary from anywhere (tools card, direct link). Graduates see it under the "כלים" tab.
+function lsnOpen(n,from){
+  _lsnFrom=from||'';
+  _lsnOpen=n;
+  const viaTools=_lsnFrom==='links';
+  goTo('lessons',document.getElementById(viaTools?'nav-links':'nav-lessons'));
+}
+// Called by core.js right after sign-in: the ?lesson=N link from WhatsApp.
+async function lsnDeepOpen(){
+  if(!_lsnDeep||!lessonsEnabled())return;
+  const n=_lsnDeep;
+  try{history.replaceState(null,'',location.pathname);}catch(e){} // a refresh shouldn't reopen it
+  const e=await lsnLoadEnt();
+  lsnOpen(n,(!lsnIsAdmin()&&!lsnIsLimited(e))?'links':'');
+}
+
+// ── Graduates: the summaries as a card at the top of "כלים" ──
+async function renderToolsLessons(){
+  const el=document.getElementById('links-lessons');if(!el)return;
+  if(!lessonsEnabled()){el.innerHTML='';return;}
+  const e=await lsnLoadEnt();
+  const admin=lsnIsAdmin();
+  if(!admin&&(lsnIsLimited(e)||e.maxLesson<1)){el.innerHTML='';return;}
+  const max=admin?6:e.maxLesson;
+  const cards=LESSONS.filter(l=>l.n<=max).map(l=>`<div class="lsn-card" onclick="lsnOpen(${l.n},'links')">
+      <div class="no">מפגש ${String(l.n).padStart(2,'0')}</div>
+      <div class="tt">${l.title}</div>
+      <div class="ds">${l.ds}</div>
+    </div>`).join('');
+  el.innerHTML=`<div class="card card-teal">
+      <div class="ch-title">סיכומי המפגשים — הדרך לעושר</div>
+      <div class="ch-hint">כל החומר מהתוכנית במקום אחד. אפשר לחזור לכל סיכום בכל זמן.</div>
+      <div class="lsn-list">${cards}</div>
+    </div>`;
 }
 // "Before lesson 6": still in the course AND fewer than 6 summaries open. Reaching meeting 6 (or being marked
 // Done in Notion) opens the whole app — so a client never stays stuck after finishing.
@@ -115,7 +165,7 @@ async function lsnShow(n){
   const prev=n>1?`<button class="btnout" onclick="lsnShow(${n-1})">→ מפגש ${n-1}</button>`:'<span></span>';
   const next=n<6&&n+1<=max?`<button class="btnsave" onclick="lsnShow(${n+1})">מפגש ${n+1} ←</button>`:'<span></span>';
   el.innerHTML=`<div class="lsn-bar">
-      <button class="btnout" onclick="lsnBack()">→ כל המפגשים</button>
+      <button class="btnout" onclick="lsnBack()">${_lsnFrom==='links'?'→ חזרה לכלים':'→ כל המפגשים'}</button>
       <span style="font-size:13px;color:var(--t3)">מפגש ${n} מתוך 6 · ${d.title||meta.title}</span>
     </div>
     <article class="lsn">${d.html||''}</article>
@@ -129,7 +179,11 @@ function lsnMsg(n,txt){
   el.innerHTML=`<div class="lsn-bar"><button class="btnout" onclick="lsnBack()">→ כל המפגשים</button></div>
     <div class="card"><div class="ch-title">מפגש ${n}</div><div class="ch-hint" style="margin:0">${txt}</div></div>`;
 }
-function lsnBack(){_lsnOpen=0;renderLessons();}
+function lsnBack(){
+  _lsnOpen=0;
+  if(_lsnFrom==='links'){_lsnFrom='';goTo('links',document.getElementById('nav-links'));return;}
+  renderLessons();
+}
 
 // Tom's logo at the top of every summary (the same embedded logo as the app's top bar — LOGO_B64 in core.js),
 // added here so the lesson content in Firestore doesn't have to carry it.
@@ -224,7 +278,21 @@ function lsnAdminCard(){
     </div>
     <div id="lsn-up-log" style="font-size:13px;margin-top:10px;line-height:1.7"></div>
     <div id="lsn-up-status" style="font-size:12.5px;color:var(--t3);margin-top:8px"></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px">🔗 קישורים לוואטסאפ</div>
+      <div style="font-size:12.5px;color:var(--t3);margin-bottom:8px">כל קישור פותח את הסיכום של המפגש (אחרי כניסה למערכת). מי שהסיכום עוד לא נפתח לו יראה הודעה שהוא ייפתח אחרי המפגש.</div>
+      ${LESSONS.map(l=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;flex-wrap:wrap">
+        <span style="min-width:62px;font-size:13px;color:var(--teal);font-weight:700">מפגש ${l.n}</span>
+        <span style="font-size:12.5px;color:var(--t2);direction:ltr;unicode-bidi:isolate">${lsnLink(l.n)}</span>
+        <button class="btnout" style="padding:3px 10px;font-size:12px" onclick="lsnCopyLink(${l.n},this)">העתקה</button>
+      </div>`).join('')}
+    </div>
   </div>`;
+}
+function lsnCopyLink(n,btn){
+  const done=()=>{if(btn){btn.textContent='הועתק ✓';setTimeout(()=>{btn.textContent='העתקה';},1500);}};
+  try{navigator.clipboard.writeText(lsnLink(n)).then(done,()=>prompt('העתיקו את הקישור:',lsnLink(n)));}
+  catch(e){prompt('העתיקו את הקישור:',lsnLink(n));}
 }
 function lsnSetPreview(v){_lsnPreview=v===''?null:parseInt(v,10);renderLessons();}
 // Admin only: see the app the way a client in the course sees it (only this tab), and back.

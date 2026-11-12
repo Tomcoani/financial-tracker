@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=145">
-<link rel="stylesheet" href="styles/lessons.css?v=145">
+<link rel="stylesheet" href="styles/main.css?v=146">
+<link rel="stylesheet" href="styles/lessons.css?v=146">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -472,6 +472,7 @@
 
     <!-- LINKS / TOOLS -->
     <div class="panel" id="p-links">
+      <div id="links-lessons"></div>
       <div class="card">
         <div class="ch-title">כלים ומחשבונים</div>
         <div class="ch-hint">מחשבונים שיעזרו לך לקבל החלטות פיננסיות — לחץ על כפתור הפתיחה לכניסה ישירה</div>
@@ -700,6 +701,7 @@
     <button onclick="goTo('budget',document.getElementById('nav-budget'));syncMobileNav('budget');closeMobileMore()"><i data-lucide="wallet"></i> התנהלות חודשית</button>
     <button onclick="goTo('nw',document.getElementById('nav-nw'));syncMobileNav('nw');closeMobileMore()"><i data-lucide="trending-up"></i> שווי נטו</button>
     <button style="display:none" onclick="goTo('history',document.getElementById('nav-history'));syncMobileNav('history');closeMobileMore()"><i data-lucide="clock"></i> היסטוריה</button>
+    <button id="mm-links" style="display:none" onclick="goTo('links',document.getElementById('nav-links'));syncMobileNav('links');closeMobileMore()"><i data-lucide="link"></i> כלים</button>
     <button id="mm-lessons" style="display:none" onclick="goTo('lessons',document.getElementById('nav-lessons'));syncMobileNav('lessons');closeMobileMore()"><i data-lucide="book-open"></i> סיכומי מפגשים</button>
     <button onclick="goTo('notes',document.getElementById('nav-notes'));syncMobileNav('notes');closeMobileMore()"><i data-lucide="notebook-pen"></i> הערות</button>
     <button onclick="goTo('settings',document.getElementById('nav-settings'));syncMobileNav('settings');closeMobileMore()"><i data-lucide="settings"></i> הגדרות</button>
@@ -869,25 +871,25 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=145"></script>
-<script defer src="js/cashflow-goals.js?v=145"></script>
-<script defer src="js/pension.js?v=145"></script>
-<script defer src="js/networth.js?v=145"></script>
-<script defer src="js/portfolio.js?v=145"></script>
-<script defer src="js/dashboard.js?v=145"></script>
-<script defer src="js/settings.js?v=145"></script>
-<script defer src="js/admin.js?v=145"></script>
-<script defer src="js/misc.js?v=145"></script>
-<script defer src="js/budget.js?v=145"></script>
-<script defer src="js/budget-detail.js?v=145"></script>
-<script defer src="js/budget-accounts.js?v=145"></script>
-<script defer src="js/budget-period.js?v=145"></script>
-<script defer src="js/month-close.js?v=145"></script>
-<script defer src="js/half-year.js?v=145"></script>
-<script defer src="js/today.js?v=145"></script>
-<script defer src="js/card-month.js?v=145"></script>
-<script defer src="js/help-bot.js?v=145"></script>
-<script defer src="js/statement-import.js?v=145"></script>
-<script defer src="js/lessons.js?v=145"></script>
+<script defer src="js/core.js?v=146"></script>
+<script defer src="js/cashflow-goals.js?v=146"></script>
+<script defer src="js/pension.js?v=146"></script>
+<script defer src="js/networth.js?v=146"></script>
+<script defer src="js/portfolio.js?v=146"></script>
+<script defer src="js/dashboard.js?v=146"></script>
+<script defer src="js/settings.js?v=146"></script>
+<script defer src="js/admin.js?v=146"></script>
+<script defer src="js/misc.js?v=146"></script>
+<script defer src="js/budget.js?v=146"></script>
+<script defer src="js/budget-detail.js?v=146"></script>
+<script defer src="js/budget-accounts.js?v=146"></script>
+<script defer src="js/budget-period.js?v=146"></script>
+<script defer src="js/month-close.js?v=146"></script>
+<script defer src="js/half-year.js?v=146"></script>
+<script defer src="js/today.js?v=146"></script>
+<script defer src="js/card-month.js?v=146"></script>
+<script defer src="js/help-bot.js?v=146"></script>
+<script defer src="js/statement-import.js?v=146"></script>
+<script defer src="js/lessons.js?v=146"></script>
 </body>
 </html>

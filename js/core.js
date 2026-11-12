@@ -230,9 +230,11 @@ auth.onAuthStateChanged(async user=>{
     if(typeof lsnApplyMode==='function'&&await lsnApplyMode()){
       goTo('lessons',document.getElementById('nav-lessons'));
       startIdleWatch();
+      if(typeof lsnDeepOpen==='function')lsnDeepOpen(); // ?lesson=N link from WhatsApp
       return;
     }
     goTo('dash',document.querySelector('.nbtn'));
+    if(typeof lsnDeepOpen==='function')lsnDeepOpen(); // ?lesson=N link from WhatsApp
     if(typeof mcSyncSummary==='function')mcSyncSummary(); // the record the monthly Make reminder reads
     startIdleWatch(); // begin 24h idle-logout tracking
     if(typeof refreshRatesOnLoad==='function')refreshRatesOnLoad(); // live FX rates in background
@@ -481,6 +483,7 @@ function goTo(id,btn){
   if(id==='settings')renderSettings();
   if(id==='admin'){renderAdmin();if(typeof renderAdminLessons==='function')renderAdminLessons();}
   if(id==='lessons'&&typeof renderLessons==='function')renderLessons();
+  if(id==='links'&&typeof renderToolsLessons==='function')renderToolsLessons(); // graduates' summaries
   if(typeof maybeShowPageUpdate==='function')maybeShowPageUpdate(id); // one-time "what changed on this page"
   if(typeof trackPageView==='function')trackPageView(id); // usage analytics
 }
