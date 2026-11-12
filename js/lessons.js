@@ -126,7 +126,7 @@ async function renderToolsLessons(){
       <div class="ch-title">סיכומי המפגשים — הדרך לעושר</div>
       <div class="ch-hint">${hint}</div>
       <div class="lsn-list">${cards}</div>
-    </div>${admin?lsnAdminCard():''}`;
+    </div>${typeof ctToolsCard==='function'?ctToolsCard(vis):''}${admin?lsnAdminCard():''}`;
   if(admin)lsnAdminStatus();
 }
 
@@ -134,6 +134,7 @@ async function renderToolsLessons(){
 async function renderLessons(){
   const el=document.getElementById('lsn-root');if(!el)return;
   if(!lessonsEnabled()){el.innerHTML='';return;}
+  if(typeof _lsnOpen==='string'&&typeof ctRender==='function')return ctRender(_lsnOpen); // a course tool (course-tools.js)
   if(_lsnOpen)return lsnShow(_lsnOpen);
   goTo('links',document.getElementById('nav-links'));
 }
@@ -160,6 +161,7 @@ async function lsnShow(n){
       <span style="font-size:13px;color:var(--t3)">מפגש ${n} מתוך 6 · ${d.title||meta.title}</span>
     </div>
     <article class="lsn">${d.html||''}</article>
+    ${typeof ctLessonCta==='function'?ctLessonCta(n):''}
     <div class="lsn-nav">${prev}${next}</div>`;
   lsnLogo(el);
   lsnWire(el);

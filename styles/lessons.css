@@ -283,3 +283,59 @@ body.lsn-only.lsn-goals #nav-goals{display:flex !important}
 .lsn-card .lock{position:absolute; top:14px; left:14px; font-size:12px; color:var(--t3)}
 .lsn-bar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; flex-wrap:wrap}
 .lsn-nav{display:flex; justify-content:space-between; gap:10px; margin:30px auto 0; max-width:860px; flex-wrap:wrap}
+
+/* ══ course tools (js/course-tools.js): emergency-plan form + investment-account guide ══ */
+.lsn.ct .hero .ct-saved{font-size:12.5px; color:var(--l-faint); margin-top:12px}
+.lsn.ct .ct-sec{margin-top:30px}
+.ct-box{background:var(--l-p1); border:1px solid var(--l-line); border-radius:16px; padding:16px 18px; margin:12px 0}
+.ct-box.ct-gold{border-color:var(--l-gold-b); background:var(--l-gold-s)}
+.ct-box.ct-sum{border-color:var(--l-teal-b)}
+.ct-h{font-weight:800; font-size:15.5px; margin-bottom:10px}
+.ct-in{width:100%; background:var(--l-p2); border:1px solid var(--l-line); color:var(--l-ink); border-radius:10px; padding:9px 12px;
+  font:inherit; font-size:15px; direction:rtl; text-align:right; outline:none; transition:border-color .15s}
+.ct-in:focus{border-color:var(--l-teal)}
+.ct-in.num{unicode-bidi:plaintext}
+.ct-ta{min-height:76px; resize:vertical; line-height:1.6}
+.ct-row{display:grid; grid-template-columns:1fr 150px; gap:8px; margin-bottom:8px}
+.ct-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px 14px}
+.ct-f{display:flex; flex-direction:column; gap:5px; font-size:13.5px; color:var(--l-mut)}
+.ct-total{display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--l-line); margin-top:12px; padding-top:10px; font-size:14.5px; color:var(--l-mut)}
+.ct-total b{color:var(--l-teal); font-size:18px; unicode-bidi:plaintext}
+.ct-add{background:none; border:1px dashed var(--l-line); color:var(--l-teal); border-radius:10px; padding:6px 14px; font:inherit; font-size:13.5px; cursor:pointer; margin-top:2px}
+.ct-add:hover{border-color:var(--l-teal-b)}
+.ct-q{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; font-size:15px}
+.ct-yn{display:inline-flex; gap:6px}
+.ct-yn label{border:1px solid var(--l-line); border-radius:999px; padding:5px 16px; cursor:pointer; font-size:14px; color:var(--l-mut); transition:.15s}
+.ct-yn label.on{border-color:var(--l-teal); background:var(--l-teal-s); color:var(--l-ink); font-weight:700}
+.ct-yn input{display:none}
+.ct-kpis{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 10px}
+.ct-kpis div{background:var(--l-p2); border:1px solid var(--l-line); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column}
+.ct-kpis span{font-size:12.5px; color:var(--l-mut)} .ct-kpis b{font-size:19px; color:var(--l-ink); unicode-bidi:plaintext}
+.ct-prog{height:8px; background:var(--l-p2); border-radius:8px; overflow:hidden}
+.ct-prog i{display:block; height:100%; width:0; background:linear-gradient(90deg,var(--l-teal),#2dd4bf); border-radius:8px; transition:width .4s; margin-right:0; margin-left:auto}
+.ct-note{font-size:13px; color:var(--l-mut); margin:6px 0 10px; min-height:1px}
+.ct-task{display:grid; grid-template-columns:24px 1fr 160px; gap:8px; align-items:center; margin-bottom:8px}
+.ct-task input[type=checkbox],.ct-chk input{width:18px; height:18px; accent-color:var(--l-teal)}
+.ct-bad{margin-bottom:12px} .ct-bad .s{font-weight:700; margin-bottom:6px}
+.ct-chk{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:15px; cursor:pointer}
+.ct-cta{display:flex; align-items:center; gap:14px; max-width:860px; margin:22px auto 0; padding:16px 20px; cursor:pointer;
+  border:1px solid var(--teal-border,rgba(66,235,214,.28)); background:rgba(66,235,214,.07); border-radius:16px; transition:.15s}
+.ct-cta:hover{background:rgba(66,235,214,.12)}
+.ct-cta .ic{font-size:28px} .ct-cta .go{margin-right:auto; color:var(--teal); font-weight:700; white-space:nowrap}
+.ct-step{display:flex; gap:14px; align-items:flex-start; background:var(--l-p1); border:1px solid var(--l-line); border-radius:16px; padding:14px 18px; margin:10px 0}
+.ct-step h3{margin:6px 0 4px; font-size:17px; font-weight:800} .ct-step p{margin:0; color:var(--l-mut)}
+.ct-brokers{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px}
+.ct-broker{background:var(--l-p1); border:1px solid var(--l-line); border-radius:16px; padding:16px 18px; display:flex; flex-direction:column; gap:8px}
+.ct-broker .bn{font-size:19px; font-weight:800}
+.ct-broker .perk{color:var(--l-gold); font-weight:700; font-size:14.5px; background:var(--l-gold-s); border:1px solid var(--l-gold-b); border-radius:10px; padding:6px 10px}
+.ct-broker dl{margin:4px 0 6px; font-size:13.5px} .ct-broker dt{color:var(--l-faint); font-size:12px; margin-top:6px} .ct-broker dd{margin:0}
+.ct-broker .btnsave{margin-top:auto; text-align:center; text-decoration:none; display:block}
+.ct-tabs{display:flex; gap:8px; margin:12px 0}
+.ct-tabs button{background:var(--l-p1); border:1px solid var(--l-line); color:var(--l-mut); border-radius:999px; padding:7px 20px; font:inherit; font-size:14.5px; cursor:pointer}
+.ct-tabs button.on{border-color:var(--l-teal); color:var(--l-ink); background:var(--l-teal-s); font-weight:700}
+.ct-steps{list-style:none; counter-reset:s; padding:0; margin:0}
+.ct-steps li{counter-increment:s; position:relative; background:var(--l-p1); border:1px solid var(--l-line); border-radius:14px; padding:12px 54px 12px 16px; margin-bottom:8px; display:flex; flex-direction:column; gap:3px}
+.ct-steps li::before{content:counter(s); position:absolute; right:14px; top:12px; width:28px; height:28px; border-radius:9px; display:grid; place-items:center;
+  font-weight:800; font-size:14px; color:#062a26; background:var(--l-teal)}
+.ct-steps li span{color:var(--l-mut); font-size:15px}
+@media(max-width:640px){.ct-row{grid-template-columns:1fr 110px} .ct-task{grid-template-columns:24px 1fr} .ct-task .ct-in:last-child{grid-column:2}}
