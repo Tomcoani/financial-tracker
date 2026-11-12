@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=152">
-<link rel="stylesheet" href="styles/lessons.css?v=152">
+<link rel="stylesheet" href="styles/main.css?v=153">
+<link rel="stylesheet" href="styles/lessons.css?v=153">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -304,6 +304,22 @@
         </div>
         <input id="monthly" type="number" style="display:none" oninput="markDirty()"/>
       </div>
+
+      <!-- Clients still in "הדרך לעושר" (body.lsn-only): a step-by-step guide instead of "כמה חסכתי החודש" (styles/lessons.css) -->
+      <details class="lsn-goals-guide" open>
+        <summary>📝 איך ממלאים את המטרות — מדריך קצר</summary>
+        <p class="lgg-intro">המשימה מהמפגש הראשון: לרשום את המטרות הפיננסיות שלכם — מה, כמה ומתי. זה לוקח כמה דקות, הכל נשמר אוטומטית ואפשר לעדכן בכל זמן.</p>
+        <ol class="lgg-steps">
+          <li><b>מתחילים מקרן חירום.</b> המטרה הראשונה כבר מחכה לכם ברשימה. סכום היעד: 3–6 חודשים של הוצאות הבית.</li>
+          <li><b>מוסיפים מטרה לכל חלום.</b> לוחצים ״+ הוספת מטרה חדשה״ — רכב, דירה, חתונה, טיול, לימודים, פרישה מוקדמת…</li>
+          <li><b>נותנים לה שם.</b> לוחצים על ״שם המטרה״ בראש הכרטיס וכותבים.</li>
+          <li><b>בוחרים טווח זמן.</b> בתג ״בחר טווח״: 12 חודשים, 1–5 שנים, 5–10 שנים או 10+ שנים. הטווח קובע איפה נכון להחזיק את הכסף — כסף שתצטרכו בקרוב לא נכנס לשוק ההון.</li>
+          <li><b>רושמים סכום יעד.</b> לוחצים על הכרטיס כדי לפתוח אותו, וממלאים ב״סכום יעד״ כמה כסף צריך בסך הכול.</li>
+          <li><b>כבר חסכתם משהו?</b> ב״מאיזו השקעה הכסף נלקח?״ לוחצים ״+ הוסף מיקום״ ורושמים איפה הכסף נמצא (עו״ש, קרן כספית, פיקדון…) וכמה יש שם. עוד אין? משאירים ריק.</li>
+          <li><b>הגעתם ליעד?</b> לוחצים ״✓ הושלם״ — והמטרה עוברת ללשונית ״הושלמו״ 🎉</li>
+        </ol>
+        <p class="lgg-tip">💡 לא בטוחים בסכום? רשמו הערכה — נדייק את זה יחד במפגשים.</p>
+      </details>
 
       <!-- SECTION 2: המטרות -->
       <div class="g-section g-section--goals">
@@ -869,26 +885,26 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=152"></script>
-<script defer src="js/cashflow-goals.js?v=152"></script>
-<script defer src="js/pension.js?v=152"></script>
-<script defer src="js/networth.js?v=152"></script>
-<script defer src="js/portfolio.js?v=152"></script>
-<script defer src="js/dashboard.js?v=152"></script>
-<script defer src="js/settings.js?v=152"></script>
-<script defer src="js/admin.js?v=152"></script>
-<script defer src="js/misc.js?v=152"></script>
-<script defer src="js/budget.js?v=152"></script>
-<script defer src="js/budget-detail.js?v=152"></script>
-<script defer src="js/budget-accounts.js?v=152"></script>
-<script defer src="js/budget-period.js?v=152"></script>
-<script defer src="js/month-close.js?v=152"></script>
-<script defer src="js/half-year.js?v=152"></script>
-<script defer src="js/today.js?v=152"></script>
-<script defer src="js/card-month.js?v=152"></script>
-<script defer src="js/help-bot.js?v=152"></script>
-<script defer src="js/statement-import.js?v=152"></script>
-<script defer src="js/lessons.js?v=152"></script>
-<script defer src="js/course-tools.js?v=152"></script>
+<script defer src="js/core.js?v=153"></script>
+<script defer src="js/cashflow-goals.js?v=153"></script>
+<script defer src="js/pension.js?v=153"></script>
+<script defer src="js/networth.js?v=153"></script>
+<script defer src="js/portfolio.js?v=153"></script>
+<script defer src="js/dashboard.js?v=153"></script>
+<script defer src="js/settings.js?v=153"></script>
+<script defer src="js/admin.js?v=153"></script>
+<script defer src="js/misc.js?v=153"></script>
+<script defer src="js/budget.js?v=153"></script>
+<script defer src="js/budget-detail.js?v=153"></script>
+<script defer src="js/budget-accounts.js?v=153"></script>
+<script defer src="js/budget-period.js?v=153"></script>
+<script defer src="js/month-close.js?v=153"></script>
+<script defer src="js/half-year.js?v=153"></script>
+<script defer src="js/today.js?v=153"></script>
+<script defer src="js/card-month.js?v=153"></script>
+<script defer src="js/help-bot.js?v=153"></script>
+<script defer src="js/statement-import.js?v=153"></script>
+<script defer src="js/lessons.js?v=153"></script>
+<script defer src="js/course-tools.js?v=153"></script>
 </body>
 </html>

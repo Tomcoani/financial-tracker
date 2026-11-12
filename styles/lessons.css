@@ -345,3 +345,18 @@ body.lsn-only.lsn-goals #nav-goals{display:flex !important}
 .ct-zoom{position:fixed; inset:0; z-index:9999; background:rgba(3,6,12,.88); display:flex; align-items:flex-start; justify-content:center; overflow:auto; padding:24px 12px; cursor:zoom-out}
 .ct-zoom img{max-width:min(680px,100%); height:auto; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.5)}
 .ct-zoom span{position:fixed; top:14px; left:18px; color:#fff; font-size:26px; line-height:1}
+
+/* ══ "מטרות" for clients still in the course (body.lsn-only): no "כמה חסכתי החודש", a filling guide instead ══ */
+.lsn-goals-guide{display:none}
+body.lsn-only .g-section--cf, body.lsn-only #goals-savings-tile{display:none !important}
+body.lsn-only .lsn-goals-guide{display:block; background:linear-gradient(135deg,rgba(66,235,214,.12),rgba(66,235,214,.03)); border:1.5px solid var(--teal-border);
+  border-radius:14px; padding:14px 18px; margin-bottom:16px; direction:rtl; text-align:right}
+.lsn-goals-guide summary{cursor:pointer; font-size:16px; font-weight:800; color:var(--white); list-style-position:inside}
+.lsn-goals-guide .lgg-intro{font-size:14px; color:var(--t2); line-height:1.7; margin:10px 0 8px}
+.lsn-goals-guide .lgg-steps{list-style:none; counter-reset:g; padding:0; margin:0}
+.lsn-goals-guide .lgg-steps li{counter-increment:g; position:relative; padding:8px 40px 8px 0; font-size:14px; color:var(--t2); line-height:1.65; border-top:1px solid var(--border)}
+.lsn-goals-guide .lgg-steps li:first-child{border-top:none}
+.lsn-goals-guide .lgg-steps li::before{content:counter(g); position:absolute; right:0; top:8px; width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+  font-weight:800; font-size:13px; color:#062a26; background:var(--teal)}
+.lsn-goals-guide .lgg-steps b{color:var(--white)}
+.lsn-goals-guide .lgg-tip{font-size:13px; color:var(--t3); margin:8px 0 0}
