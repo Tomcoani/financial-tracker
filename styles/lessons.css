@@ -256,8 +256,8 @@
   .lsn .hb .lbl{white-space:normal; font-size:13px}
 }
 
-/* ══ "summaries only" mode — a client still in the course sees only the lessons tab (js/lessons.js) ══ */
-body.lsn-only .nbtn:not(#nav-lessons),
+/* ══ A client still in the course sees only "כלים" (summaries + calculators), and "מטרות" after meeting 1 ══ */
+body.lsn-only .nbtn:not(#nav-links),
 body.lsn-only #admin-nav-btn,
 body.lsn-only .btn-pdf,
 body.lsn-only .topbar [onclick="confirmReset()"],

@@ -32,16 +32,11 @@ function lessonsEnabled(){
 }
 function lsnIsAdmin(){return !!(auth.currentUser&&String(auth.currentUser.email||'').toLowerCase()===ADMIN_EMAIL);}
 
-// Called on every sign-in (core.js): show/hide the tab and forget the previous account's state.
+// Called on every sign-in (core.js): forget the previous account's state.
+// There is no separate summaries tab (Tom, 2026-11-12): everything lives inside "כלים".
 function syncLessonsNav(){
   _lsnEnt=null;_lsnCache={};_lsnOpen=0;_lsnPreview=null;_lsnFrom='';lsnSetOnly(false);
-  lsnSetNav(lessonsEnabled());
   const mm=document.getElementById('mm-links');if(mm)mm.style.display=lessonsEnabled()?'':'none';
-}
-// The separate "סיכומי מפגשים" tab: for clients in the course (and the admin). Graduates find
-// the summaries inside "כלים" instead (renderToolsLessons).
-function lsnSetNav(on){
-  ['nav-lessons','mm-lessons'].forEach(id=>{const b=document.getElementById(id);if(b)b.style.display=on?'':'none';});
 }
 
 // The signed-in user's entitlement: {maxLesson 0..6, graduate true/false/null (null = no doc)}.
@@ -60,54 +55,16 @@ async function lsnLoadEnt(){
 }
 async function lsnLoadMax(){return (await lsnLoadEnt()).maxLesson;}
 
-// ── "Summaries only" mode ──
-// A client still in the course (Notion status "Active customer" → entitlements.graduate=false) sees ONLY
-// this tab: no budget, goals, pension etc. until they graduate. Users without an entitlements doc
-// (private clients, older users) and graduates get the full app as before.
-// Called from core.js on sign-in; true = open the app straight into the summaries.
+// ── Clients still in the course ──
+// (Notion "Active customer" → entitlements.graduate=false, before meeting 6) see only "כלים" (summaries +
+// calculators) and, after meeting 1, "מטרות". Users without an entitlements doc and graduates get the full app.
+// Called from core.js on sign-in; true = open the app straight into "כלים".
 async function lsnApplyMode(){
   lsnSetOnly(false);
-  if(!lessonsEnabled()||lsnIsAdmin())return false; // until release only beta users; never the admin
+  if(!lessonsEnabled()||lsnIsAdmin())return false; // never the admin
   const e=await lsnLoadEnt();
-  lsnSetNav(lsnIsLimited(e)); // graduates: no separate tab — their summaries are in "כלים"
   if(lsnIsLimited(e)){lsnSetOnly(true);return true;}
   return false;
-}
-
-// Open one summary from anywhere (tools card, direct link). Graduates see it under the "כלים" tab.
-function lsnOpen(n,from){
-  _lsnFrom=from||'';
-  _lsnOpen=n;
-  const viaTools=_lsnFrom==='links';
-  goTo('lessons',document.getElementById(viaTools?'nav-links':'nav-lessons'));
-}
-// Called by core.js right after sign-in: the ?lesson=N link from WhatsApp.
-async function lsnDeepOpen(){
-  if(!_lsnDeep||!lessonsEnabled())return;
-  const n=_lsnDeep;
-  try{history.replaceState(null,'',location.pathname);}catch(e){} // a refresh shouldn't reopen it
-  const e=await lsnLoadEnt();
-  lsnOpen(n,(!lsnIsAdmin()&&!lsnIsLimited(e))?'links':'');
-}
-
-// ── Graduates: the summaries as a card at the top of "כלים" ──
-async function renderToolsLessons(){
-  const el=document.getElementById('links-lessons');if(!el)return;
-  if(!lessonsEnabled()){el.innerHTML='';return;}
-  const e=await lsnLoadEnt();
-  const admin=lsnIsAdmin();
-  if(!admin&&(lsnIsLimited(e)||e.maxLesson<1)){el.innerHTML='';return;}
-  const max=admin?6:e.maxLesson;
-  const cards=LESSONS.filter(l=>l.n<=max).map(l=>`<div class="lsn-card" onclick="lsnOpen(${l.n},'links')">
-      <div class="no">מפגש ${String(l.n).padStart(2,'0')}</div>
-      <div class="tt">${l.title}</div>
-      <div class="ds">${l.ds}</div>
-    </div>`).join('');
-  el.innerHTML=`<div class="card card-teal">
-      <div class="ch-title">סיכומי המפגשים — הדרך לעושר</div>
-      <div class="ch-hint">כל החומר מהתוכנית במקום אחד. אפשר לחזור לכל סיכום בכל זמן.</div>
-      <div class="lsn-list">${cards}</div>
-    </div>`;
 }
 // "Before lesson 6": still in the course AND fewer than 6 summaries open. Reaching meeting 6 (or being marked
 // Done in Notion) opens the whole app — so a client never stays stuck after finishing.
@@ -119,42 +76,66 @@ function lsnSetOnly(on){
   _lsnGoalsOk=_lsnOnly&&!!_lsnEnt&&_lsnEnt.maxLesson>=1;
   document.body.classList.toggle('lsn-goals',_lsnGoalsOk);
 }
-// Tabs a client in the course may open: the summaries, and "מטרות" once meeting 1 is behind them.
-function lsnAllowedTab(id){return id==='lessons'||(id==='goals'&&_lsnGoalsOk);}
-// What the list shows as unlocked. The admin can preview the list as a graduate with N lessons.
+// Tabs a client in the course may open: "כלים", the summary view inside it, and "מטרות" after meeting 1.
+function lsnAllowedTab(id){return id==='links'||id==='lessons'||(id==='goals'&&_lsnGoalsOk);}
+// What is shown as unlocked. The admin can preview as a client with N lessons.
 function lsnVisibleMax(max){return lsnIsAdmin()&&_lsnPreview!==null?_lsnPreview:max;}
 
-async function renderLessons(){
-  const el=document.getElementById('lsn-root');if(!el)return;
+// Open one summary (from the "כלים" card or a direct link). The view stays under "כלים" in the menu.
+function lsnOpen(n){
+  _lsnFrom='links';_lsnOpen=n;
+  goTo('lessons',document.getElementById('nav-links'));
+}
+// Called by core.js right after sign-in: the ?lesson=N link from WhatsApp.
+async function lsnDeepOpen(){
+  if(!_lsnDeep||!lessonsEnabled())return;
+  const n=_lsnDeep;
+  try{history.replaceState(null,'',location.pathname);}catch(e){} // a refresh shouldn't reopen it
+  await lsnLoadEnt();
+  lsnOpen(n);
+}
+
+// ── The summaries card at the top of "כלים" (everyone in the course, graduates, the admin) ──
+async function renderToolsLessons(){
+  const el=document.getElementById('links-lessons');if(!el)return;
   if(!lessonsEnabled()){el.innerHTML='';return;}
-  if(_lsnOpen)return lsnShow(_lsnOpen);
-  el.innerHTML='<div class="card"><div class="ch-title">סיכומי מפגשים — הדרך לעושר</div><div class="ch-hint">טוען…</div></div>';
-  const max=await lsnLoadMax();
-  const vis=lsnVisibleMax(max);
-  const hint=vis>=6?'כל ששת הסיכומים פתוחים. אפשר לחזור אליהם בכל זמן.'
+  const e=await lsnLoadEnt();
+  const admin=lsnIsAdmin();
+  const inCourse=admin||e.graduate!==null; // has an entitlements doc = took part in the course
+  if(!inCourse){el.innerHTML='';return;}
+  const vis=lsnVisibleMax(e.maxLesson);
+  const hint=vis>=6?'כל החומר מהתוכנית במקום אחד. אפשר לחזור לכל סיכום בכל זמן.'
     :vis>0?`פתוחים ${vis===1?'הסיכום של המפגש הראשון':'הסיכומים של '+vis+' המפגשים הראשונים'}. כל סיכום נפתח אחרי שהמפגש שלו מתקיים.`
     :'הסיכומים נפתחים אחד־אחד, אחרי כל מפגש בקורס. כבר היית במפגש והסיכום לא נפתח? אפשר לכתוב לתום.';
   const cards=LESSONS.map(l=>{
     const open=l.n<=vis;
-    return `<div class="lsn-card${open?'':' locked'}"${open?` onclick="lsnShow(${l.n})"`:''}>
+    return `<div class="lsn-card${open?'':' locked'}"${open?` onclick="lsnOpen(${l.n})"`:''}>
       ${open?'':`<span class="lock">🔒 ייפתח אחרי מפגש ${l.n}</span>`}
       <div class="no">מפגש ${String(l.n).padStart(2,'0')}</div>
       <div class="tt">${l.title}</div>
       <div class="ds">${l.ds}</div>
     </div>`;}).join('');
   const onlyNote=_lsnOnly?`<div class="card card-teal" style="padding:16px 20px">
-      ${lsnIsAdmin()?`<div style="font-size:12.5px;color:var(--purple);margin-bottom:6px">👁 תצוגה כמשתמש בתהליך — כך הוא רואה את המערכת.
+      ${admin?`<div style="font-size:12.5px;color:var(--purple);margin-bottom:6px">👁 תצוגה כמשתמש בתהליך — כך הוא רואה את המערכת.
         <a href="#" onclick="lsnPreviewOnly(false);return false" style="color:var(--teal)">יציאה מהתצוגה</a></div>`:''}
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">ברוכים הבאים לתוכנית ״הדרך לעושר״ 👋</div>
-      <div style="font-size:13.5px;color:var(--t2);line-height:1.7">כאן מחכים לכם הסיכומים של המפגשים — כל סיכום נפתח אחרי שהמפגש שלו מתקיים.
+      <div style="font-size:13.5px;color:var(--t2);line-height:1.7">כאן מחכים לכם הסיכומים של המפגשים — כל סיכום נפתח אחרי שהמפגש שלו מתקיים — והמחשבונים מהתוכנית.
         ${_lsnGoalsOk?'בטאב <b>״מטרות״</b> ממלאים את המטרות הפיננסיות שלכם (המשימה מהמפגש הראשון). ':''}בסיום התוכנית תיפתח לכם כל המערכת הפיננסית: תקציב, פנסיה, תיק השקעות ושווי נטו.</div>
     </div>`:'';
-  el.innerHTML=`${onlyNote}<div class="card">
-      <div class="ch-title">סיכומי מפגשים — הדרך לעושר</div>
+  el.innerHTML=`${onlyNote}<div class="card card-teal">
+      <div class="ch-title">סיכומי המפגשים — הדרך לעושר</div>
       <div class="ch-hint">${hint}</div>
       <div class="lsn-list">${cards}</div>
-    </div>${lsnIsAdmin()?lsnAdminCard():''}`;
-  if(lsnIsAdmin())lsnAdminStatus();
+    </div>${admin?lsnAdminCard():''}`;
+  if(admin)lsnAdminStatus();
+}
+
+// The summary view (panel p-lessons). Without an open summary there is nothing to show → back to "כלים".
+async function renderLessons(){
+  const el=document.getElementById('lsn-root');if(!el)return;
+  if(!lessonsEnabled()){el.innerHTML='';return;}
+  if(_lsnOpen)return lsnShow(_lsnOpen);
+  goTo('links',document.getElementById('nav-links'));
 }
 
 async function lsnShow(n){
@@ -166,7 +147,7 @@ async function lsnShow(n){
   if(!d){
     try{
       const s=await db.collection('lessons').doc(String(n)).get();
-      if(!s.exists){lsnMsg(n,lsnIsAdmin()?'הסיכום עוד לא הועלה. אפשר להעלות אותו בכרטיס הניהול שבעמוד הסיכומים.':'הסיכום של המפגש הזה עוד לא זמין. נסו שוב בקרוב.');return;}
+      if(!s.exists){lsnMsg(n,lsnIsAdmin()?'הסיכום עוד לא הועלה. אפשר להעלות אותו בכרטיס הניהול שבטאב כלים.':'הסיכום של המפגש הזה עוד לא זמין. נסו שוב בקרוב.');return;}
       d=s.data();_lsnCache[n]=d;
     }catch(e){lsnMsg(n,'🔒 הסיכום הזה עוד לא נפתח עבורך. הוא ייפתח אחרי מפגש '+n+'.');return;}
   }
@@ -175,7 +156,7 @@ async function lsnShow(n){
   const prev=n>1?`<button class="btnout" onclick="lsnShow(${n-1})">→ מפגש ${n-1}</button>`:'<span></span>';
   const next=n<6&&n+1<=max?`<button class="btnsave" onclick="lsnShow(${n+1})">מפגש ${n+1} ←</button>`:'<span></span>';
   el.innerHTML=`<div class="lsn-bar">
-      <button class="btnout" onclick="lsnBack()">${_lsnFrom==='links'?'→ חזרה לכלים':'→ כל המפגשים'}</button>
+      <button class="btnout" onclick="lsnBack()">→ חזרה לכלים</button>
       <span style="font-size:13px;color:var(--t3)">מפגש ${n} מתוך 6 · ${d.title||meta.title}</span>
     </div>
     <article class="lsn">${d.html||''}</article>
@@ -186,13 +167,12 @@ async function lsnShow(n){
 }
 function lsnMsg(n,txt){
   const el=document.getElementById('lsn-root');if(!el)return;
-  el.innerHTML=`<div class="lsn-bar"><button class="btnout" onclick="lsnBack()">→ כל המפגשים</button></div>
+  el.innerHTML=`<div class="lsn-bar"><button class="btnout" onclick="lsnBack()">→ חזרה לכלים</button></div>
     <div class="card"><div class="ch-title">מפגש ${n}</div><div class="ch-hint" style="margin:0">${txt}</div></div>`;
 }
 function lsnBack(){
-  _lsnOpen=0;
-  if(_lsnFrom==='links'){_lsnFrom='';goTo('links',document.getElementById('nav-links'));return;}
-  renderLessons();
+  _lsnOpen=0;_lsnFrom='';
+  goTo('links',document.getElementById('nav-links'));
 }
 
 // Tom's logo at the top of every summary (the same embedded logo as the app's top bar — LOGO_B64 in core.js),
@@ -284,7 +264,7 @@ function lsnAdminCard(){
       <label style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px">תצוגה:
         <select onchange="lsnSetPreview(this.value)" style="background:var(--s2);color:var(--white);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-family:inherit">${opts}</select></label>
       <label style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px;cursor:pointer">
-        <input type="checkbox" ${_lsnOnly?'checked':''} onchange="lsnPreviewOnly(this.checked)"> כמשתמש בתהליך (רק סיכומים)</label>
+        <input type="checkbox" ${_lsnOnly?'checked':''} onchange="lsnPreviewOnly(this.checked)"> כמשתמש בתהליך (רק כלים ומטרות)</label>
     </div>
     <div id="lsn-up-log" style="font-size:13px;margin-top:10px;line-height:1.7"></div>
     <div id="lsn-up-status" style="font-size:12.5px;color:var(--t3);margin-top:8px"></div>
@@ -304,13 +284,13 @@ function lsnCopyLink(n,btn){
   try{navigator.clipboard.writeText(lsnLink(n)).then(done,()=>prompt('העתיקו את הקישור:',lsnLink(n)));}
   catch(e){prompt('העתיקו את הקישור:',lsnLink(n));}
 }
-function lsnSetPreview(v){_lsnPreview=v===''?null:parseInt(v,10);renderLessons();}
-// Admin only: see the app the way a client in the course sees it (only this tab), and back.
+function lsnSetPreview(v){_lsnPreview=v===''?null:parseInt(v,10);renderToolsLessons();}
+// Admin only: see the app the way a client in the course sees it ("כלים" + "מטרות"), and back.
 function lsnPreviewOnly(on){
   if(!lsnIsAdmin())return;
   if(on&&_lsnPreview===null)_lsnPreview=2; // a typical mid-course client
   lsnSetOnly(on);
-  _lsnOpen=0;renderLessons();
+  _lsnOpen=0;goTo('links',document.getElementById('nav-links'));
 }
 async function lsnAdminStatus(){
   const el=document.getElementById('lsn-up-status');if(!el)return;
