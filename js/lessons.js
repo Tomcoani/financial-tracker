@@ -292,8 +292,9 @@ function lsnCopyLink(n,btn){
 }
 function lsnSetPreview(v){_lsnPreview=v===''?null:parseInt(v,10);renderToolsLessons();}
 // Admin only: see the app the way a client in the course sees it ("כלים" + "מטרות"), and back.
-function lsnPreviewOnly(on){
+async function lsnPreviewOnly(on){
   if(!lsnIsAdmin())return;
+  await lsnLoadEnt(); // so the "מטרות" tab shows in the preview right after a reload
   if(on&&_lsnPreview===null)_lsnPreview=2; // a typical mid-course client
   lsnSetOnly(on);
   _lsnOpen=0;goTo('links',document.getElementById('nav-links'));
