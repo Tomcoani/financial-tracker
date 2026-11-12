@@ -120,6 +120,7 @@ async function lsnShow(n){
     </div>
     <article class="lsn">${d.html||''}</article>
     <div class="lsn-nav">${prev}${next}</div>`;
+  lsnLogo(el);
   lsnWire(el);
   const p=document.getElementById('p-lessons');if(p)p.scrollIntoView({block:'start'});
 }
@@ -129,6 +130,16 @@ function lsnMsg(n,txt){
     <div class="card"><div class="ch-title">מפגש ${n}</div><div class="ch-hint" style="margin:0">${txt}</div></div>`;
 }
 function lsnBack(){_lsnOpen=0;renderLessons();}
+
+// Tom's logo at the top of every summary (the same embedded logo as the app's top bar — LOGO_B64 in core.js),
+// added here so the lesson content in Firestore doesn't have to carry it.
+function lsnLogo(el){
+  const hero=el.querySelector('.lsn .hero');
+  if(!hero||hero.querySelector('.lsn-logo')||typeof LOGO_B64==='undefined')return;
+  const img=document.createElement('img');
+  img.className='lsn-logo';img.alt='Tom Ani';img.src='data:image/jpeg;base64,'+LOGO_B64;
+  hero.appendChild(img);
+}
 
 // In-page table of contents (anchors would otherwise touch the page URL) + vertical reveal on scroll.
 function lsnWire(el){

@@ -190,14 +190,60 @@
 /* numbers like "−13%" or "+0.6%" keep their sign on the correct side inside RTL text */
 .lsn .tile .n,.lsn .hb .v,.lsn td,.lsn .node .val{unicode-bidi:plaintext}
 
-/* vertical-only reveal on scroll (added by js/lessons.js; RTL-safe, no sideways movement) */
+/* Tom's logo in the hero (inserted by js/lessons.js) */
+.lsn .hero .lsn-logo{position:absolute; top:22px; left:24px; height:30px; width:auto; border-radius:6px; opacity:.95}
+
+/* ── Animations ──
+   The hero fades up on open; each section rises into view on scroll (.rv → .in, added by js/lessons.js);
+   inside a section that just appeared, charts grow and cards rise one after another.
+   Only vertical motion / growth from the chart's own baseline — nothing slides sideways (RTL-safe). */
+@keyframes lsnUp{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+.lsn .hero{animation:lsnUp .6s ease both}
+.lsn .toc{animation:lsnUp .6s .12s ease both}
+
 .lsn .rv{opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease}
 .lsn .rv.in{opacity:1; transform:none}
-@media (prefers-reduced-motion:reduce){.lsn .rv{opacity:1; transform:none; transition:none}}
+
+/* charts grow */
+.lsn .rv .hb .fill,.lsn .rv .stack .row,.lsn .rv .split{transform:scaleX(0); transform-origin:right center;
+  transition:transform .9s cubic-bezier(.2,.7,.2,1) .2s}
+.lsn .rv .ci .bar,.lsn .rv .pairs .bb span{transform:scaleY(0); transform-origin:center bottom;
+  transition:transform .8s cubic-bezier(.2,.7,.2,1) .2s}
+.lsn .rv.in .hb .fill,.lsn .rv.in .stack .row,.lsn .rv.in .split,
+.lsn .rv.in .ci .bar,.lsn .rv.in .pairs .bb span{transform:none}
+.lsn .rv.in .ci .col:nth-child(2) .bar,.lsn .rv.in .pairs .grp:nth-child(2) span{transition-delay:.32s}
+.lsn .rv.in .ci .col:nth-child(3) .bar,.lsn .rv.in .pairs .grp:nth-child(3) span{transition-delay:.44s}
+.lsn .rv.in .pairs .grp:nth-child(4) span{transition-delay:.56s}
+.lsn .rv.in .pairs .grp:nth-child(5) span{transition-delay:.68s}
+
+/* cards, steps and key points rise one after another */
+.lsn .rv .tile,.lsn .rv .duo .side,.lsn .rv .node,.lsn .rv ol.steps li,.lsn .recap.rv li{
+  opacity:0; transform:translateY(10px); transition:opacity .45s ease, transform .45s ease}
+.lsn .rv.in .tile,.lsn .rv.in .duo .side,.lsn .rv.in .node,.lsn .rv.in ol.steps li,.lsn .recap.rv.in li{opacity:1; transform:none}
+.lsn .rv.in :is(.tile,.side,.node,li):nth-child(2){transition-delay:.08s}
+.lsn .rv.in :is(.tile,.side,.node,li):nth-child(3){transition-delay:.16s}
+.lsn .rv.in :is(.tile,.side,.node,li):nth-child(4){transition-delay:.24s}
+.lsn .rv.in :is(.tile,.side,.node,li):nth-child(5){transition-delay:.32s}
+.lsn .rv.in :is(.tile,.side,.node,li):nth-child(n+6){transition-delay:.4s}
+
+/* a little life on hover */
+.lsn .tile:hover,.lsn .term:hover,.lsn .duo .side:hover{border-color:var(--l-teal-b)}
+.lsn .tile,.lsn .term,.lsn .duo .side{transition:border-color .2s ease}
+.lsn .sec-num{transition:transform .25s ease}
+.lsn section:hover .sec-num{transform:rotate(-6deg) scale(1.06)}
+
+@media (prefers-reduced-motion:reduce){
+  .lsn .hero,.lsn .toc{animation:none}
+  .lsn .rv,.lsn .rv *{transition:none !important}
+  .lsn .rv,.lsn .rv .hb .fill,.lsn .rv .stack .row,.lsn .rv .split,.lsn .rv .ci .bar,.lsn .rv .pairs .bb span,
+  .lsn .rv .tile,.lsn .rv .duo .side,.lsn .rv .node,.lsn .rv ol.steps li,.lsn .recap.rv li{opacity:1; transform:none}
+  .lsn section:hover .sec-num{transform:none}
+}
 
 @media(max-width:640px){
   .lsn{font-size:15.5px}
   .lsn .hero{padding:24px 20px 26px; border-radius:18px} .lsn .hero h1{font-size:25px}
+  .lsn .hero .lsn-logo{height:24px; top:18px; left:16px}
   .lsn .sec-head h2{font-size:20px}
   .lsn .ci{gap:12px} .lsn .ci .col{width:68px} .lsn .ci .bar{width:54px}
   .lsn .cycle,.lsn .duo,.lsn .tri{grid-template-columns:1fr}
