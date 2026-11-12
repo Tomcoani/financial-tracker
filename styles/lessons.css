@@ -189,8 +189,9 @@
   font-size:12px; line-height:1.7; color:var(--l-faint)}
 .lsn .disc b{color:var(--l-mut); display:block; margin-bottom:8px; font-size:12.5px}
 
-/* numbers like "−13%" or "+0.6%" keep their sign on the correct side inside RTL text */
-.lsn .tile .n,.lsn .hb .v,.lsn td,.lsn .node .val{unicode-bidi:plaintext}
+/* Everything is right-to-left. Only elements that hold a bare number ("−13%", "+0.6%") take their
+   direction from the number, so the sign stays on its side; text cells/labels stay RTL. */
+.lsn .tile .n,.lsn .hb .v{unicode-bidi:plaintext}
 
 /* Tom's logo in the hero (inserted by js/lessons.js) */
 .lsn .hero .lsn-logo{position:absolute; top:22px; left:24px; height:30px; width:auto; border-radius:6px; opacity:.95}
