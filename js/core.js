@@ -457,7 +457,7 @@ function collectAll(){
 let _lastTab='';
 function goTo(id,btn){
   // A client still in the course sees only the lesson summaries (js/lessons.js) — every other tab leads there.
-  if(typeof _lsnOnly!=='undefined'&&_lsnOnly&&id!=='lessons'){id='lessons';btn=document.getElementById('nav-lessons')||btn;}
+  if(typeof _lsnOnly!=='undefined'&&_lsnOnly&&!(typeof lsnAllowedTab==='function'&&lsnAllowedTab(id))){id='lessons';btn=document.getElementById('nav-lessons')||btn;}
   const _leaving=_lastTab;
   if(_lastTab&&_lastTab!==id)flushSave(); // persist edits from the tab we're leaving
   if(_leaving==='nw'&&id!=='nw'&&typeof maybeShowNWComplete==='function')maybeShowNWComplete(); // nudge if NW rows left empty

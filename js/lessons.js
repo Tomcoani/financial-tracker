@@ -14,7 +14,9 @@ const LESSONS=[
   {n:5,title:'תיק השקעות עצמאי מא׳ עד ת׳',ds:'מדדים, בית השקעות, קרן מחקה, מט״ח ואזרחות אמריקאית'},
   {n:6,title:'פנסיה וקרן השתלמות',ds:'כלל ה־4%, סוגי פנסיה, מסלולים, דמי ניהול וקרן השתלמות'}
 ];
-let _lsnEnt=null,_lsnCache={},_lsnOpen=0,_lsnPreview=null,_lsnObs=null,_lsnOnly=false,_lsnFrom='';
+// Released to every client on 2026-11-12 (Tom). false = back to beta-only (isBeta in core.js).
+const LESSONS_FOR_ALL=true;
+let _lsnEnt=null,_lsnCache={},_lsnOpen=0,_lsnPreview=null,_lsnObs=null,_lsnOnly=false,_lsnFrom='',_lsnGoalsOk=false;
 
 // Direct link to one summary, for the WhatsApp message after each meeting:
 //   https://tomcoani.github.io/financial-tracker/?lesson=3
@@ -24,7 +26,10 @@ const _lsnDeep=(()=>{
 })();
 function lsnLink(n){return 'https://tomcoani.github.io/financial-tracker/?lesson='+n;}
 
-function lessonsEnabled(){return typeof isBeta==='function'&&isBeta();}
+function lessonsEnabled(){
+  if(LESSONS_FOR_ALL&&typeof auth!=='undefined'&&auth.currentUser)return true;
+  return typeof isBeta==='function'&&isBeta();
+}
 function lsnIsAdmin(){return !!(auth.currentUser&&String(auth.currentUser.email||'').toLowerCase()===ADMIN_EMAIL);}
 
 // Called on every sign-in (core.js): show/hide the tab and forget the previous account's state.
@@ -110,7 +115,12 @@ function lsnIsLimited(e){return !!e&&e.graduate===false&&e.maxLesson<6;}
 function lsnSetOnly(on){
   _lsnOnly=!!on;
   document.body.classList.toggle('lsn-only',_lsnOnly);
+  // After meeting 1 the "מטרות" tab opens too, for the goals homework (Tom, 2026-11-12).
+  _lsnGoalsOk=_lsnOnly&&!!_lsnEnt&&_lsnEnt.maxLesson>=1;
+  document.body.classList.toggle('lsn-goals',_lsnGoalsOk);
 }
+// Tabs a client in the course may open: the summaries, and "מטרות" once meeting 1 is behind them.
+function lsnAllowedTab(id){return id==='lessons'||(id==='goals'&&_lsnGoalsOk);}
 // What the list shows as unlocked. The admin can preview the list as a graduate with N lessons.
 function lsnVisibleMax(max){return lsnIsAdmin()&&_lsnPreview!==null?_lsnPreview:max;}
 
@@ -137,7 +147,7 @@ async function renderLessons(){
         <a href="#" onclick="lsnPreviewOnly(false);return false" style="color:var(--teal)">יציאה מהתצוגה</a></div>`:''}
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">ברוכים הבאים לתוכנית ״הדרך לעושר״ 👋</div>
       <div style="font-size:13.5px;color:var(--t2);line-height:1.7">כאן מחכים לכם הסיכומים של המפגשים — כל סיכום נפתח אחרי שהמפגש שלו מתקיים.
-        בסיום התוכנית תיפתח לכם כל המערכת הפיננסית: תקציב, מטרות, פנסיה, תיק השקעות ושווי נטו.</div>
+        ${_lsnGoalsOk?'בטאב <b>״מטרות״</b> ממלאים את המטרות הפיננסיות שלכם (המשימה מהמפגש הראשון). ':''}בסיום התוכנית תיפתח לכם כל המערכת הפיננסית: תקציב, פנסיה, תיק השקעות ושווי נטו.</div>
     </div>`:'';
   el.innerHTML=`${onlyNote}<div class="card">
       <div class="ch-title">סיכומי מפגשים — הדרך לעושר</div>
