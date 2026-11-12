@@ -81,7 +81,9 @@
 .lsn .ci{display:flex; align-items:flex-end; justify-content:center; gap:26px; height:220px; padding-top:10px}
 .lsn .ci .col{display:flex; flex-direction:column; align-items:center; gap:8px; width:92px}
 .lsn .ci .bar{width:72px; border-radius:10px 10px 0 0; position:relative; background:linear-gradient(var(--l-teal),rgba(66,235,214,.3))}
-.lsn .ci .bar .add{position:absolute; top:-24px; left:0; right:0; text-align:center; font-size:13px; font-weight:800; color:var(--l-gold); white-space:nowrap}
+/* "+10 ₪" sits inside the top of the bar (above it, it collided with the amount); plaintext keeps the + on the left */
+.lsn .ci .bar .add{position:absolute; top:9px; left:0; right:0; text-align:center; font-size:13px; font-weight:800;
+  color:#062a26; white-space:nowrap; unicode-bidi:plaintext}
 .lsn .ci .amt{font-weight:800; font-size:17px}
 .lsn .ci .yr{font-size:13px; color:var(--l-mut); text-align:center}
 
