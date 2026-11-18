@@ -373,7 +373,13 @@ function budgetCopyPrevAmounts(){
       if(!nm)return;
       const pRow=(prev[sec]||[]).find(r=>(r.name||'').trim()===nm);
       const v=pRow?parseFloat(String(pRow.amount||0).replace(/,/g,''))||0:0;
-      if(v){row.amount=String(v);filled++;}
+      if(!v)return;
+      const fc=bRowCur(pRow);
+      if(fc){ // same amount in its own currency ($20 stays $20), at today's rate
+        const rate=(D.exchangeRates||{})[fc]||pRow.fxRate;
+        row.cur=fc;row.fxRate=rate;row.amount=String(Math.round(bRowFxVal(pRow)*rate*100)/100);
+      }else{delete row.cur;delete row.fxRate;row.amount=String(v);}
+      filled++;
     });
   });
   if(!filled){showToast('אין מה להעתיק — כל השדות כבר מלאים');return;}
@@ -501,6 +507,7 @@ function renderBudgetSection(sec){
     // Rows filled from a statement keep their transactions — a button opens them under the row
     const txs=budgetRowTx(sec,row.name),open=txs.length&&_budgetOpenRow===sec+'|'+(row.name||'').trim();
     const off=!!row.skip; // "לא לספור": visible, but left out of the figures
+    const fc=bRowCur(row); // the row is in a foreign currency (the box shows that currency, row.amount stays ₪)
     html+=`<div id="brow-${sec}-${i}" style="display:flex;gap:8px;align-items:center;margin-bottom:6px${off?';opacity:.55':''}">
       <input type="text" value="${esc(row.name||'')}" placeholder="${meta.ph}" dir="rtl"
         oninput="updateBudgetRow('${sec}',${i},'name',this.value)"
@@ -512,13 +519,15 @@ function renderBudgetSection(sec){
         title="גבוה מהרגיל" style="display:${flagAvg!=null?'inline':'none'};cursor:pointer;font-size:14px;flex-shrink:0">👀</span>
       ${_bNum(row.amount)&&(row.name||'').trim()?`<button onclick="budgetRepeatOpen('${sec}',${i},true)" title="להחיל את הסכום גם על חודשים אחרים (הוצאה קבועה)"
         style="flex-shrink:0;background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0 1px">🔁</button>`:''}
-      <input type="number" value="${row.amount||''}" placeholder="0" data-no-fmt
+      ${budgetCurOn()||fc?`<select onchange="budgetRowCur('${sec}',${i},this)" title="מטבע ההוצאה" aria-label="מטבע"
+        style="flex-shrink:0;width:46px;background:var(--s2);border:1px solid ${fc?'var(--teal-border)':'var(--border)'};border-radius:8px;color:${fc?'var(--teal)':'var(--t2)'};font-family:var(--font);font-size:13px;font-weight:700;padding:7px 2px;cursor:pointer">${budgetCurOptions(fc||'ILS')}</select>`:''}
+      <input type="number" value="${fc?(bRowFxVal(row)||''):(row.amount||'')}" placeholder="0" data-no-fmt
         oninput="updateBudgetRow('${sec}',${i},'amount',this.value)" onchange="budgetRepeatOffer('${sec}',${i})"
         style="width:110px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:${meta.color};font-family:var(--font);font-size:14px;font-weight:700;padding:8px 10px;text-align:center${off?';text-decoration:line-through':''}"/>
       ${off?`<button onclick="budgetRowSkip('${sec}',${i})" title="להחזיר לחישוב"
         style="flex-shrink:0;background:none;border:none;color:var(--amber);cursor:pointer;font-size:14px;padding:0 1px">↩</button>`:''}
       <button onclick="removeBudgetRow('${sec}',${i})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 2px;line-height:1;flex-shrink:0">×</button>
-    </div>${open?budgetRowTxPanel(sec,row.name,txs):''}${budgetRepeatPanel(sec,i,row)}`;
+    </div>${fc?`<div id="brow-fx-${sec}-${i}" style="font-size:11px;color:var(--t3);margin:-3px 0 7px;text-align:left">${budgetFxLine(row,sec,i)}</div>`:''}${open?budgetRowTxPanel(sec,row.name,txs):''}${budgetRepeatPanel(sec,i,row)}`;
   });
   const total=budgetTotal(sec);
   // the total next to the (collapsible) table's title, so it's seen while the table is closed
@@ -546,7 +555,10 @@ function updateBudgetRow(sec,i,field,val){
     b.tx.forEach(t=>{if(t.k===from)t.k=to;});
     if(_budgetOpenRow===from)_budgetOpenRow=to;
   }
-  b[sec][i][field]=val;
+  // a row in a foreign currency: the box holds that currency, row.amount keeps the ₪ value
+  const fc=field==='amount'?bRowCur(b[sec][i]):'';
+  b[sec][i][field]=fc?(String(val).trim()===''?'':String(Math.round((parseFloat(val)||0)*b[sec][i].fxRate*100)/100)):val;
+  if(fc){const fx=document.getElementById('brow-fx-'+sec+'-'+i);if(fx)fx.innerHTML=budgetFxLine(b[sec][i],sec,i);}
   if(field==='amount'){
     const totEl=document.getElementById('budget-total-'+sec);
     if(totEl)totEl.textContent=fmt(budgetTotal(sec));
@@ -584,6 +596,61 @@ function removeBudgetRow(sec,i){
   renderBudgetSection(sec);
   renderBudgetSummary();
   if(sec==='business'||sec==='bizIncome'||sec==='bizInvest')renderBizNet();
+}
+// ── An expense (or income) row in a foreign currency — beta (isBeta in core.js) ──
+// row.amount is ALWAYS ₪: every total, the bank check, the statement import and the trend read it as ₪.
+// A row in another currency also keeps row.cur + row.fxRate (₪ per 1 unit), fixed when the amount was
+// typed, so a past month doesn't move with today's rate. The box shows amount ÷ fxRate.
+function budgetCurOn(){return typeof isBeta==='function'&&isBeta();}
+function bRowCur(row){return row&&row.cur&&row.cur!=='ILS'&&row.fxRate>0?row.cur:'';}
+function bRowFxVal(row){return Math.round(_bNum(row.amount)/row.fxRate*100)/100;}
+function budgetCurOptions(sel){
+  return getAllCurrencies().map(c=>`<option value="${c}"${c===sel?' selected':''}>${getCurrSymbol(c)}</option>`).join('')
+    +'<option value="__add__">+ אחר</option>';
+}
+function budgetFxLine(row,sec,i){
+  const c=bRowCur(row);if(!c)return '';
+  const r=Math.round(row.fxRate*1000)/1000;
+  return `${iln('≈ '+fmt(_bNum(row.amount)))} · לפי ${iln('1'+getCurrSymbol(c)+' = ₪'+r)}
+    <button onclick="budgetRowRate('${sec}',${i})" style="background:none;border:none;color:var(--teal);font-family:var(--font);font-size:11px;cursor:pointer;padding:0;text-decoration:underline">שינוי שער</button>`;
+}
+// Today's rate: live if possible (also updates D.exchangeRates), else the last known one, else ask
+async function budgetRateFor(cur){
+  let live=null;try{live=await fetchLiveRate(cur);}catch(e){}
+  if(live>0){if(!D.exchangeRates)D.exchangeRates={};D.exchangeRates[cur]=live;if(!CURR_SYMBOLS[cur])CURR_SYMBOLS[cur]=cur;return live;}
+  if((D.exchangeRates||{})[cur]>0)return D.exchangeRates[cur];
+  return promptRate(cur)?D.exchangeRates[cur]:0;
+}
+// The number in the box stays as typed — only its currency changes (typed 100, picked $ → $100)
+async function budgetRowCur(sec,i,el){
+  const row=(curBudget()[sec]||[])[i];if(!row)return;
+  let cur=el.value;
+  if(cur==='__add__'){
+    const code=prompt('קוד מטבע (לדוגמה: CHF, JPY, CAD):','');
+    if(!code||!code.trim()){renderBudgetSection(sec);return;}
+    cur=code.trim().toUpperCase();
+  }
+  const old=bRowCur(row),val=old?bRowFxVal(row):_bNum(row.amount);
+  if(cur==='ILS'){delete row.cur;delete row.fxRate;row.amount=val?String(val):'';}
+  else{
+    const rate=await budgetRateFor(cur);
+    if(!(rate>0)){renderBudgetSection(sec);return;}
+    row.cur=cur;row.fxRate=rate;row.amount=val?String(Math.round(val*rate*100)/100):'';
+  }
+  touchSection('budget');markDirty();renderBudget();
+  if(cur!=='ILS')showToast(`"${row.name||'השורה'}" ב${getCurrSymbol(cur)} — נספר בתקציב כ־${fmt(_bNum(row.amount))} ✓`);
+}
+// The rate of this one expense (e.g. the rate the card company actually charged). The amount in the
+// foreign currency stays; the ₪ value follows.
+function budgetRowRate(sec,i){
+  const row=(curBudget()[sec]||[])[i],c=bRowCur(row);if(!c)return;
+  const val=bRowFxVal(row);
+  const input=prompt(`כמה ₪ שווה 1 ${c} בהוצאה הזו?\n(למשל השער שחברת האשראי חייבה. עכשיו: ${Math.round(row.fxRate*1000)/1000})`,String(row.fxRate));
+  if(input===null)return;
+  const rate=parseFloat(String(input).replace(/,/g,''));
+  if(!(rate>0)){alert('שער לא תקין');return;}
+  row.fxRate=rate;row.amount=val?String(Math.round(val*rate*100)/100):'';
+  touchSection('budget');markDirty();renderBudget();
 }
 // ── Employment profile card (top of the page) ──
 function renderBudgetProfile(){

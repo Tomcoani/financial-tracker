@@ -93,6 +93,10 @@ function currenciesInUse(){
   (D.portfolios||[]).forEach(p=>(p.items||[]).forEach(it=>add(it&&it.currency)));
   (D.goals||[]).forEach(g=>{add(g&&g.savedCurrency);add(g&&g.neededCurrency);});
   (D.locations||[]).forEach(l=>add(l&&l.currency));
+  // budget rows in a foreign currency (budget.js) — only the current months' rates matter, but cheap
+  const bm=[D.budgetMonths||{},...Object.values(D.budgetAccData||{}).map(a=>(a&&a.months)||{})];
+  bm.forEach(ms=>Object.values(ms).forEach(m=>Object.values(m||{}).forEach(rows=>{
+    if(Array.isArray(rows))rows.forEach(r=>add(r&&r.cur));})));
   ['assets','investments','savings','debts'].forEach(sec=>{
     ((D.nwData&&D.nwData[sec]&&D.nwData[sec].rows)||[]).forEach(row=>{
       add(row.currency);

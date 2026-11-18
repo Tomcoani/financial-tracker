@@ -494,6 +494,8 @@ function budgetRepeatApply(){
     let row=m[sec].find(x=>(x.name||'').trim()===name);
     if(!row){row={name,amount:''};m[sec].push(row);}
     row.amount=amt;
+    // a row in a foreign currency repeats in that currency (same rate)
+    if(typeof bRowCur==='function'&&bRowCur(src)){row.cur=src.cur;row.fxRate=src.fxRate;}else{delete row.cur;delete row.fxRate;}
   });
   _budgetRepeat=null;
   touchSection('budget');markDirty();renderBudget();
