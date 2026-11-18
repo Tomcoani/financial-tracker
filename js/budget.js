@@ -601,7 +601,7 @@ function removeBudgetRow(sec,i){
 // row.amount is ALWAYS ₪: every total, the bank check, the statement import and the trend read it as ₪.
 // A row in another currency also keeps row.cur + row.fxRate (₪ per 1 unit), fixed when the amount was
 // typed, so a past month doesn't move with today's rate. The box shows amount ÷ fxRate.
-function budgetCurOn(){return typeof isBeta==='function'&&isBeta();}
+function budgetCurOn(){return true;} // released to everyone (Tom, 2026-11-18, v=157)
 function bRowCur(row){return row&&row.cur&&row.cur!=='ILS'&&row.fxRate>0?row.cur:'';}
 function bRowFxVal(row){return Math.round(_bNum(row.amount)/row.fxRate*100)/100;}
 function budgetCurOptions(sel){
