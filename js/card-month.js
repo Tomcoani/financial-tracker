@@ -85,7 +85,7 @@ function cardMonthSet(mode){
 // The choice, under the budget's upload buttons
 function renderCardMonthPick(){
   const el=document.getElementById('budget-card-month');if(!el)return;
-  if(typeof isBeta!=='function'||!isBeta()||D.budgetView==='all'){el.innerHTML='';return;}
+  if(D.budgetView==='all'){el.innerHTML='';return;} // released to everyone (Tom, 2026-11-18, v=158)
   const buy=cardMonthMode()==='buy';
   el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--t2)">
       💳 הוצאות באשראי נרשמות לפי
