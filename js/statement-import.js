@@ -8,7 +8,8 @@
 (function(){
 const LIBS={
   xlsx:'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+  pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  ocr:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js' // images (screenshots)
 };
 const _lib={};
 function loadLib(k){
@@ -220,8 +221,10 @@ function detectSource(text){
 
 // ── Reading files ──
 async function readFile(f){
-  const file={id:++SI.seq,name:f.name,kind:/\.pdf$/i.test(f.name)?'pdf':'sheet',tables:[],totals:[],source:'',error:''};
+  const img=IMG_RE.test(f.name)||/^image\//.test(f.type||'');
+  const file={id:++SI.seq,name:f.name,kind:img?'image':/\.pdf$/i.test(f.name)?'pdf':'sheet',tables:[],totals:[],source:'',error:''};
   try{
+    if(img){await readImage(file,f);return file;}
     file.raw=await f.arrayBuffer();
     if(file.kind==='pdf'){await loadLib('pdf');await readPdf(file);}
     else{await loadLib('xlsx');readSheet(file);}
@@ -385,6 +388,168 @@ async function readPdf(file,password){
   const fwd=KW.reduce((n,k)=>n+(all.split(k).length-1),0),bwd=KW.reduce((n,k)=>n+(all.split(revHeb(k)).length-1),0);
   if(file.pdfReverse===undefined)file.pdfReverse=bwd>fwd;
   pdfToTables(file);
+}
+
+// ── Images: a screenshot (or photo) of the statement, e.g. from the card company's app ──
+// Read with Tesseract.js (OCR, Hebrew + English), loaded only when an image is added. Like everything here
+// it runs in the browser: the image never leaves the device. The first time, the browser also downloads
+// the reading data (a few MB, kept in its cache). The words become "lines" in the same shape pdf.js gives,
+// so the PDF reader (pdfToTables) handles screenshots of a statement table; app-style lists ("merchant ₪
+// amount" over "date · category", or one date heading per group) are read by ocrRecords.
+const IMG_RE=/\.(png|jpe?g|webp|gif|bmp|heic|heif)$/i;
+// Two readers: Hebrew+English for the names, English alone for the numbers — the Hebrew model misreads
+// amounts and dates ("₪245.90" → "₪10"), the English one reads them well (it sees "₪" as "w", cleaned below).
+const _ocr={};
+function ocrWorker(langs,step){
+  const key=langs.join('+');
+  if(!_ocr[key])_ocr[key]=loadLib('ocr').then(()=>Tesseract.createWorker(langs,1,{logger:m=>{
+      if(!m||!SI.busy)return;
+      const el=document.getElementById('si-busy-msg');if(!el)return;
+      el.textContent=m.status==='recognizing text'?`קורא את התמונה (${step}/2)... ${Math.round((m.progress||0)*100)}%`
+        :'מכין את קורא התמונות (בפעם הראשונה זה לוקח כחצי דקה)...';
+    }})).catch(e=>{delete _ocr[key];throw e;});
+  return _ocr[key];
+}
+// A number token from the English pass → "245.90" / "-245.90" / "12/11" / "12.11.26", or '' if it isn't one
+function ocrNum(raw){
+  const s=String(raw||'').trim();
+  const core=s.replace(/^[^\d\-]+/,'').replace(/[^\d\-]+$/,'').replace(/(\d),(\d{2})$/,'$1.$2');
+  if(/^-?\d{1,3}(,\d{3})*\.\d{2}-?$|^-?\d+\.\d{2}-?$/.test(core))return core;
+  if(/^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(core)||/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(core))return core;
+  if(/^[wW₪¥®©]-?\d[\d,]*$/.test(s))return core.replace(/,/g,'')+'.00'; // "w180" = "₪180"
+  return '';
+}
+// Upscaled (small text reads badly), grey, and dark mode (light text on dark) turned to dark-on-light
+async function imgCanvas(blob){
+  let src;
+  try{src=await createImageBitmap(blob);}
+  catch(e){
+    src=await new Promise((res,rej)=>{const u=URL.createObjectURL(blob),i=new Image();
+      i.onload=()=>{URL.revokeObjectURL(u);res(i);};
+      i.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('לא הצלחנו לפתוח את התמונה. אם זו תמונה מהאייפון (HEIC), צלמו צילום מסך או שמרו כ-JPG'));};
+      i.src=u;});
+  }
+  const W=src.width||src.naturalWidth,H=src.height||src.naturalHeight;
+  let sc=W<900?1100/W:1;sc=Math.min(sc,Math.sqrt(12e6/(W*H))); // (upscaling a phone screenshot reads worse)
+  const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(W*sc));cv.height=Math.max(1,Math.round(H*sc));
+  const g=cv.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(src,0,0,cv.width,cv.height);
+  const im=g.getImageData(0,0,cv.width,cv.height),p=im.data;let sum=0;
+  for(let i=0;i<p.length;i+=4){const y=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];p[i]=p[i+1]=p[i+2]=y;sum+=y;}
+  if(sum/(p.length/4)<110)for(let i=0;i<p.length;i+=4){p[i]=p[i+1]=p[i+2]=255-p[i];}
+  g.putImageData(im,0,0);
+  return cv;
+}
+// The year of a date shown without one ("12/11", "12 בנובמבר"): the one closest to the budget month
+function ocrYear(d,m){
+  const ref=/^\d{4}-\d{2}$/.test(SI.month||'')?new Date(+SI.month.slice(0,4),+SI.month.slice(5,7)-1,15):new Date();
+  let y=ref.getFullYear();const t=new Date(y,m-1,d);
+  if(t-ref>120*864e5)y--;else if(ref-t>240*864e5)y++;
+  return y;
+}
+const OCR_MON=/^ב?-?(ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר|ינו|פבר|אפר|יונ|יול|אוג|ספט|אוק|נוב|דצמ)['׳,.]?$/;
+const OCR_MON_SHORT={ינו:1,פבר:2,אפר:4,יונ:6,יול:7,אוג:8,ספט:9,אוק:10,נוב:11,דצמ:12};
+// Clean one OCR line (items right-to-left): "245,90" → "245.90", "₪245" / "245 ₪" → "245.00",
+// "12/11" → "12/11/2026", "12 בנובמבר 2026" → "12/11/2026"
+function ocrFix(items){
+  let out=[];
+  items.forEach(it=>{
+    let s=String(it.s).replace(/[|“”„‚‘’`©®]+/g,'').replace(/[−–—]/g,'-').replace(/[,:;]+$/,'').trim();
+    if(!s)return;
+    s=s.replace(/^(-?₪?-?)(\d+),(\d{2})(\s*₪?-?)$/,'$1$2.$3$4');
+    if(/₪/.test(s)&&/^-?₪?\s*-?[\d,]*\d\s*₪?-?$/.test(s))s=s.replace(/(\d[\d,]*)/,'$1.00');
+    out.push({...it,s});
+  });
+  // a lone "₪" marks the number next to it as the amount
+  out.forEach((it,i)=>{if(it.s!=='₪')return;
+    [out[i-1],out[i+1]].forEach(n=>{if(n&&/^-?\d[\d,]*(\.\d{1,2})?$/.test(n.s))n.s='₪'+(/\./.test(n.s)?n.s:n.s+'.00');});});
+  out=out.filter(it=>it.s!=='₪');
+  // "12/11" is a date. "12.11" may be a date or an amount: a date only when the line has another amount
+  const dm=it=>{const m=it.s.match(/^(\d{1,2})([\/.])(\d{1,2})$/);return m&&+m[1]>=1&&+m[1]<=31&&+m[3]>=1&&+m[3]<=12?m:null;};
+  const toDate=(it,m)=>{it.s=+m[1]+'/'+(+m[3])+'/'+ocrYear(+m[1],+m[3]);};
+  const dots=out.filter(it=>{const m=dm(it);return m&&m[2]==='.';});
+  const others=out.filter(it=>isAmtStr(it.s)&&!dots.includes(it));
+  out.forEach(it=>{const m=dm(it);if(m&&m[2]==='/')toDate(it,m);});
+  if(others.length)dots.forEach(it=>toDate(it,dm(it)));
+  else if(dots.length>1)toDate(dots[0],dm(dots[0])); // two "dd.dd" and nothing else: the first is the date
+  for(let i=0;i<out.length;i++){
+    if(!/^\d{1,2}$/.test(out[i].s)||+out[i].s<1||+out[i].s>31)continue;
+    const j=[i+1,i-1].find(k=>out[k]&&OCR_MON.test(out[k].s));if(j===undefined)continue;
+    const name=out[j].s.replace(/^ב?-?/,'').replace(/['׳,.]$/,'');
+    const mo=HEB_MONTH_IDX[name]||OCR_MON_SHORT[name];if(!mo)continue;
+    const yi=[j+1,j-1,i+1,i-1].find(k=>k!==i&&k!==j&&out[k]&&/^20\d{2}$/.test(out[k].s));
+    const d=+out[i].s,y=yi!==undefined?+out[yi].s:ocrYear(d,mo);
+    out[i]={...out[i],s:d+'/'+mo+'/'+y};
+    out=out.filter((_,k)=>k!==j&&k!==yi);
+  }
+  return out;
+}
+async function readImage(file,blob){
+  const cv=await imgCanvas(blob);
+  const wHe=await ocrWorker(['heb','eng'],1);
+  const he=(await wHe.recognize(cv)).data.words||[];
+  const wEn=await ocrWorker(['eng'],2);
+  await wEn.setParameters({tessedit_pageseg_mode:'11'}); // sparse text: every number on its own
+  const en=(await wEn.recognize(cv)).data.words||[];
+  const box=wd=>({x0:wd.bbox.x0,x1:wd.bbox.x1,y0:wd.bbox.y0,y1:wd.bbox.y1});
+  const nums=en.map(wd=>({s:ocrNum(wd.text),b:box(wd)})).filter(n=>n.s);
+  const over=(a,b)=>{const ix=Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0),h=Math.min(a.y1-a.y0,b.y1-b.y0);
+    return ix>0.4*Math.min(a.x1-a.x0,b.x1-b.x0)&&Math.abs((a.y0+a.y1)/2-(b.y0+b.y1)/2)<h*0.7;};
+  const words=[];
+  // fs ≈ the font size: an OCR box is only as tall as the letters (≈0.7 of it), a PDF's is the font size
+  const add=(s,b)=>words.push({s,x:b.x0,y:-(b.y0+b.y1)/2,w:b.x1-b.x0,fs:Math.max(6,(b.y1-b.y0)*1.4)});
+  // names from the Hebrew pass, except where the English pass found a number in the same spot
+  he.forEach(wd=>{const s=String(wd.text||'').trim();if(!s||wd.confidence<20)return;
+    const b=box(wd);if(nums.some(n=>over(n.b,b)))return;add(s,b);});
+  nums.forEach(n=>add(n.s,n.b));
+  // one line = words whose vertical centres sit within about half a letter of each other
+  words.sort((a,b)=>b.y-a.y);
+  const lines=[];let cur=null;
+  for(const it of words){
+    if(!cur||Math.abs(cur.y-it.y)>Math.min(cur.fs,it.fs)*0.55){cur={page:1,y:it.y,fs:it.fs,items:[]};lines.push(cur);}
+    cur.items.push(it);
+  }
+  lines.forEach(l=>{l.items.sort((a,b)=>(b.x+b.w)-(a.x+a.w));l.items=ocrFix(l.items);});
+  file.pdfPages=1;file.pdfLines=lines.filter(l=>l.items.length);file.pdfReverse=false;
+  pdfToTables(file); // a screenshot of a statement TABLE (with its header row) reads like a PDF
+  const viaTables=extract(file).length;
+  const t=ocrRecords(file);
+  if(t.rows.length&&viaTables<t.rows.length*0.8){file.tables=[t];file.segTotals={};}
+  if(!file.source)file.source='צילום מסך';
+}
+// App-style lists. A row = a line with an amount and a name. Its date: on the same line, else on the line
+// right under it (with the category), else the last date heading above it ("היום", "יום ג׳, 12 בנובמבר").
+const OCR_SKIP=/יתרה|מסגרת|ניצול|זמין|נקודות|הטבה|חיוב הבא|לחיוב ב|סה"?כ|סך הכל|total/i;
+const OCR_DAYWORD=/^(יום|ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת|היום|אתמול)['׳,]?$/;
+function ocrRecords(file){
+  const t={where:'צילום מסך',headers:['תאריך','בית עסק','סכום חיוב','סכום עסקה','הערות'],map:{date:0,merchant:1,charge:2,amount:3,notes:4},rows:[],rowSeg:[],guess:true};
+  const today=new Date(),fmt=d=>d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+  const L=file.pdfLines.map(l=>{
+    const cells=mergeCells(l.items,s=>s);
+    const o={dates:[],amts:[],texts:[],notes:[],txt:cells.map(c=>c.s).join(' ')};
+    cells.forEach(c=>{const s=c.s;
+      if(isDateStr(s))o.dates.push(s);else if(isAmtStr(s))o.amts.push({s,x:c.x});
+      else if(/\d+\s*(מתוך|מ\s*-)\s*\d+/.test(s))o.notes.push(s);
+      else if(/[a-z֐-׿]{2,}/i.test(s)&&!OCR_DAYWORD.test(s))o.texts.push(s);});
+    if(!o.dates.length&&!o.amts.length){
+      if(/^\s*היום\b/.test(o.txt))o.dates.push(fmt(today));
+      else if(/^\s*אתמול\b/.test(o.txt))o.dates.push(fmt(new Date(today.getFullYear(),today.getMonth(),today.getDate()-1)));
+    }
+    return o;
+  });
+  const anyDate=L.some(l=>l.dates.length);
+  const fallback=/^\d{4}-\d{2}$/.test(SI.month||'')?'1/'+(+SI.month.slice(5))+'/'+SI.month.slice(0,4):fmt(today);
+  let last=null;
+  L.forEach((l,i)=>{
+    if(l.dates.length&&!l.amts.length){last=l.dates[0];return;} // a date heading, or a row's second line
+    if(!l.amts.length||!l.texts.length||OCR_SKIP.test(l.txt))return;
+    const nx=L[i+1];
+    const date=l.dates[0]||(nx&&nx.dates.length&&!nx.amts.length&&nx.texts.length?nx.dates[0]:null)||last||(anyDate?null:fallback);
+    if(!date)return;
+    const amts=l.amts.slice().sort((a,b)=>a.x-b.x);
+    t.rows.push([date,l.texts.slice().sort((a,b)=>b.length-a.length)[0],amts[0].s,amts.length>1?amts[amts.length-1].s:'',l.notes.join(' ')]);
+    t.rowSeg.push(0);
+  });
+  return t;
 }
 // Many PDFs store every WORD as a separate fragment ("שם" "בית" "העסק"). Glue fragments
 // that sit close together on the line into one cell, so a header like "שם בית העסק" is one
@@ -718,8 +883,16 @@ function rebuild(){
   const rows=monthRows();
   SI.txns=[];
   const seen=new Set(); // fingerprints already counted in this upload
+  const imgSeen=new Set(); // screenshots of one long list overlap: a row seen in an earlier image is dropped
   SI.files.forEach(f=>{
     f.txns=f.error||f.needPassword?[]:extract(f);
+    if(f.kind==='image'){
+      // date + amount (not the name: OCR may read the same name a bit differently in each screenshot)
+      const k=t=>ymd(t.date)+'|'+r2(t.val),mine=new Set();
+      f.overlap=0;
+      f.txns=f.txns.filter(t=>{if(imgSeen.has(k(t))){f.overlap++;return false;}mine.add(k(t));return true;});
+      mine.forEach(x=>imgSeen.add(x));
+    }
     // a card remembered before its issuer was recognised ("כרטיס|1234") keeps its business mark
     f.txns.forEach(t=>{const old='כרטיס|'+t.card;if(t.card&&t.cardKey!==old&&SI.bizCards[t.cardKey]===undefined&&SI.bizCards[old]!==undefined)SI.bizCards[t.cardKey]=SI.bizCards[old];});
     f.sum=f.txns.reduce((a,t)=>a+t.val,0);
@@ -891,7 +1064,7 @@ const BTN='font-family:var(--font);cursor:pointer;border-radius:9px;';
 const LINK='background:none;border:none;color:var(--teal);font-family:var(--font);font-size:12.5px;cursor:pointer;padding:0;text-decoration:underline';
 function render(){
   const body=document.getElementById('si-body');if(!body)return;
-  if(SI.busy){body.innerHTML=`<h2>📄 קורא את הקובץ...</h2><p style="margin:0">רגע אחד — הקובץ נקרא כאן במכשיר שלך.</p>`;return;}
+  if(SI.busy){body.innerHTML=`<h2>📄 קורא את הקובץ...</h2><p style="margin:0" id="si-busy-msg">רגע אחד — הקובץ נקרא כאן במכשיר שלך.</p>`;return;}
   if(!SI.files.length){body.innerHTML=uploadView();wireDrop();return;}
   body.innerHTML=reviewView();wireDrop();
 }
@@ -901,6 +1074,7 @@ function uploadView(){
   ${dropZone(false)}
   <div style="font-size:12px;color:var(--t2);line-height:1.8;margin-top:12px">
     <div>📗 <b>אקסל עדיף</b> — באתר חברת האשראי: פירוט חיובים ← ייצוא לאקסל. גם PDF עובד.</div>
+    <div>📸 <b>אין קובץ?</b> אפשר גם צילומי מסך מהאפליקציה של חברת האשראי או הבנק. מצלמים את רשימת העסקאות (אפשר כמה צילומים, עסקה שמופיעה בשניים תיספר פעם אחת). קובץ מדויק יותר מתמונה, אז כשיש קובץ עדיף אותו.</div>
     <div>💳 יש כמה כרטיסים? אפשר לבחור כמה קבצים ביחד.</div>
     <div>🧠 <b>בפעם הראשונה</b> נבקש לשייך כמה בתי עסק שלא הכרנו — <b>אנחנו זוכרים</b>, ומהחודש הבא הם יזוהו לבד. כל חודש זה הולך ומתקצר.</div>
     <div>🔒 הקובץ נקרא רק במכשיר שלך ולא נשלח לשום מקום. נשמרים רק הסכומים לכל קטגוריה.</div>
@@ -909,7 +1083,7 @@ function uploadView(){
 }
 function dropZone(small){
   return `<label id="si-drop" style="display:block;border:2px dashed var(--teal-border);border-radius:14px;padding:${small?'10px':'26px 14px'};text-align:center;cursor:pointer;background:rgba(66,235,214,.04)">
-    <input type="file" multiple accept=".xlsx,.xls,.csv,.pdf,.html,.htm" style="display:none" onchange="SIX.add(this.files);this.value=''">
+    <input type="file" multiple accept=".xlsx,.xls,.csv,.pdf,.html,.htm,image/*,.png,.jpg,.jpeg,.webp,.heic" style="display:none" onchange="SIX.add(this.files);this.value=''">
     ${small?'<span style="font-size:12.5px;color:var(--teal);font-weight:700">+ הוספת קובץ נוסף (כרטיס אחר)</span>'
       :'<div style="font-size:28px">📤</div><div style="font-size:14.5px;font-weight:800;color:var(--teal)">בחירת קובץ</div><div style="font-size:11.5px;color:var(--t3);margin-top:2px">או גרירה לכאן</div>'}
   </label>`;
@@ -996,7 +1170,9 @@ function reviewView(){
     const noText=f.pdfLines&&!f.pdfLines.some(l=>l.items.length);
     if(f.error){st='לא הצלחנו לפתוח את הקובץ';col='#fca5a5';}
     else if(f.needPassword)st='';
-    else if(noText){st='ה־PDF הזה הוא תמונה (סרוק) — אין בו טקסט שאפשר לקרוא';col='#fca5a5';}
+    else if(noText){st=f.kind==='image'?'לא הצלחנו לקרוא טקסט מהתמונה. נסו צילום מסך חד, בלי להקטין':'ה־PDF הזה הוא תמונה (סרוק) — אין בו טקסט שאפשר לקרוא';col='#fca5a5';}
+    else if(f.kind==='image'&&!f.txns.length&&f.overlap){st='כל העסקאות בצילום הזה כבר הופיעו בצילום קודם — לא נספרו פעמיים';col='var(--teal)';}
+    else if(f.kind==='image'&&!f.txns.length){st='לא מצאנו בתמונה שורות עסקה (שם בית עסק + סכום). כדאי לצלם את רשימת העסקאות עצמה, חדה ובלי חיתוך של הסכומים';col='#fca5a5';}
     else if(!f.txns.length&&f.tables.length){st='הקובץ נפתח, אבל לא הצלחנו לזהות בו את טבלת העסקאות';col='#fca5a5';}
     else if(!f.txns.length){st=f.kind==='pdf'?'הקובץ נפתח, אבל לא מצאנו בו שורות עסקה (תאריך + בית עסק + סכום)':'לא מצאנו בקובץ טבלת עסקאות';col='#fca5a5';}
     else if(f.dupNow){st='אותו פירוט כבר נבחר כאן (אולי באקסל ובפורמט PDF) — לא ייספר פעמיים';col='var(--amber)';}
@@ -1006,6 +1182,7 @@ function reviewView(){
     else if(f.dup){st='✓ הפירוט הזה כבר נטען — לא ייספר שוב. אם בקטגוריות חסר פירוט עסקאות (📋), נשלים אותו מהקובץ';col='var(--teal)';}
     else{
       st=`${f.txns.length} עסקאות · ${f.source==='דף בנק'?'יצא מהחשבון ':''}${money(f.spent)}${f.check==='ok'?' · <span style="color:var(--green)">✓ תואם לסה"כ בקובץ</span>':f.check==='diff'?' · <span style="color:var(--amber)">⚠ לא תואם לסה"כ בקובץ — כדאי להציץ</span>':f.check==='partial'?' · <span style="color:var(--t3)">(הסה"כ בקובץ לא כולל עסקאות במט"ח ובקליטה, אז אין מול מה לבדוק)</span>':''}${f.pending&&f.pending.length?`<br><span style="color:var(--t3)">⏳ ${f.pending.length} עסקאות בקליטה (${money(f.pending.reduce((a,v)=>a+v,0))}) עוד לא חויבו — לא נספרו עכשיו. הן ייכנסו כשתעלה את הקובץ הבא, לחודש שבו יחויבו.</span>`:''}`;
+      if(f.kind==='image')st+=`<br><span style="color:var(--amber)">📸 נקרא מתמונה: כדאי לוודא שהסכום הכולל תואם למה שרואים באפליקציה. אם משהו לא נקרא נכון, אפשר לתקן בתקציב אחרי השמירה.</span>${f.overlap?` <span style="color:var(--t3)">(${f.overlap} עסקאות שהופיעו גם בצילום קודם נספרו פעם אחת)</span>`:''}`;
       // Which month(s) this file goes to — detected automatically, the client can override
       const ms=f.months||[];
       const buy=_siByBuy()&&f.source!=='דף בנק';
@@ -1020,7 +1197,7 @@ function reviewView(){
     const help=(f.error||(!f.needPassword&&!f.txns.length))?`<div style="font-size:11.5px;color:var(--t3);margin-top:3px">נסו להוריד את הפירוט בפורמט <b>אקסל</b>, או לחצו למטה על "משהו לא נראה נכון?" ושלחו ליועץ את שלד המבנה.${f.error?`<div style="direction:ltr;text-align:left;font-size:10.5px;opacity:.8">${h(f.error)}</div>`:''}</div>`:'';
     const again=false&&f.dup?` <button style="${LINK}" onclick="SIX.useDup(${f.id})">טען בכל זאת</button>`:'';
     return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
-      <div style="font-size:18px">${f.kind==='pdf'?'📕':'📗'}</div>
+      <div style="font-size:18px">${f.kind==='image'?'📸':f.kind==='pdf'?'📕':'📗'}</div>
       <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(f.source?f.source+' · ':'')}${h(f.name)}</div>
         <div style="font-size:11.5px;color:${col}">${st}${again}</div>${pw}${help}</div>
       <button onclick="SIX.remove(${f.id})" title="הסר" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">×</button>
@@ -1227,6 +1404,7 @@ function cardSegs(){
 }
 // ── Public handlers ──
 window.SIX={
+  _si:()=>SI, // for debugging in the console
   // the merchant key used to remember merchants — also used by the budget page (budget-detail.js)
   mk:merchantKey,
   // a bank description that's a transfer to / from investments (broker, "ני"ע", money-market fund)

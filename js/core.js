@@ -60,6 +60,14 @@ function isBeta(){
   const e=String(u.email||'').toLowerCase();
   return e===ADMIN_EMAIL||BETA_USERS.includes(e);
 }
+// The "מה באת לעשות היום?" board (today.js) + its monthly track: released to every client on
+// 2026-11-18 (Tom). It replaces the separate home-page cards of the half-yearly update and the
+// monthly close. false = back to beta-only.
+const TODAY_FOR_ALL=true;
+function todayBoardOn(){
+  const u=typeof auth!=='undefined'&&auth.currentUser;if(!u)return false;
+  return TODAY_FOR_ALL||isBeta();
+}
 const HZ=['12 חודשים','1-5 שנים','5-10 שנים','10+ שנים'];
 const HC=['h0','h1','h2','h3'];
 const COLS=['#42ebd6','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#38bdf8','#f472b6'];

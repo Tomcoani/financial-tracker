@@ -57,7 +57,7 @@ function hyIsDue(){
 function renderHalfYearBanner(){
   if(typeof renderTodayBoard==='function')renderTodayBoard(); // beta: the "מה באת לעשות היום?" board (today.js) takes this card's place
   const el=document.getElementById('hy-banner-dash');if(!el)return;
-  el.innerHTML=hyIsDue()&&!(typeof isBeta==='function'&&isBeta())?`<div onclick="openHalfYear()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(66,235,214,.16),rgba(66,235,214,.03));border:1.5px solid var(--teal-border);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+  el.innerHTML=hyIsDue()&&!(typeof todayBoardOn==='function'&&todayBoardOn())?`<div onclick="openHalfYear()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(66,235,214,.16),rgba(66,235,214,.03));border:1.5px solid var(--teal-border);border-radius:14px;padding:14px 16px;margin-bottom:14px">
       <div style="min-width:0"><div style="font-size:15px;font-weight:800;color:var(--teal)">🧭 הגיע הזמן לעדכון החצי־שנתי</div>
         <div style="font-size:12px;color:var(--t2);margin-top:3px">מסלול קצר, שלב אחר שלב: מה ממלאים ומה נכנס לבד, כדי ששום דבר לא יתפספס.</div></div>
       <span style="background:var(--teal);color:#06121a;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:800;white-space:nowrap">להתחיל ←</span></div>`:'';

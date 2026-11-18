@@ -9,7 +9,7 @@ let _tbOpen=false,_mtStep=0;
 
 function renderTodayBoard(){
   const el=document.getElementById('today-board');if(!el)return;
-  if(typeof isBeta!=='function'||!isBeta()){el.innerHTML='';return;}
+  if(typeof todayBoardOn!=='function'||!todayBoardOn()){el.innerHTML='';return;}
   const k=mcDueMonth(),closed=mcIsClosed(k),hyDue=typeof hyIsDue==='function'&&hyIsDue();
   const hyLast=D.halfYear&&D.halfYear.lastDone;
   const waiting=(closed?0:1)+(hyDue?1:0);
@@ -112,7 +112,7 @@ function _mtMapHtml(s){
 function _mtFilesHtml(s){
   const can=typeof canImportStatements==='function'&&canImportStatements();
   return `<div style="font-size:15px;font-weight:800;margin-bottom:8px">📥 מעלים את הקבצים של ${esc(mcShortName(s.k))}</div>
-    ${_hyHand('קובץ עו"ש מאתר הבנק, ופירוט של כל כרטיס אשראי מאתר חברת האשראי (אקסל, PDF או CSV). אפשר להעלות כמה קבצים יחד.')}
+    ${_hyHand('קובץ עו"ש מאתר הבנק, ופירוט של כל כרטיס אשראי מאתר חברת האשראי (אקסל, PDF או CSV). אפשר להעלות כמה קבצים יחד. אין קובץ? אפשר גם צילומי מסך מהאפליקציה.')}
     ${_hyAuto('כל עסקה נכנסת לקטגוריה שלה ולחודש הנכון, גם אם בקובץ יש כמה חודשים. קובץ שכבר הועלה לא נספר פעמיים.')}
     ${_mtBox(_mtPer(s,a=>!a.has?_mtWarn('עוד אין נתונים לחודש'):(a.bank?_mtOk('עו"ש'):_mtWarn('עו"ש לא הועלה'))+' · '+(a.cards?_mtOk(a.cards+' פירוטי אשראי'):_mtWarn('פירוט אשראי לא הועלה'))))}
     <div style="font-size:12px;color:var(--t3);line-height:1.7;margin-bottom:10px">${_mtCardNote(s.k)} את זה אפשר לשנות בטאב התנהלות חודשית.</div>

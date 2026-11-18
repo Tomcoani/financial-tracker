@@ -52,9 +52,12 @@ async function lsnLoadEnt(){
   try{
     const s=await db.collection('entitlements').doc(String(u.email||'').toLowerCase()).get();
     const d=s.exists?s.data():null;
+    // No doc = not a client in the course in Notion (an older graduate, or someone who joined the system
+    // another way) → all 6 summaries + the full app (Tom, 2026-11-18). Only clients in the course before
+    // meeting 6 are limited. Firestore rules allow reading lessons/{n} when there's no entitlements doc.
     _lsnEnt=d?{maxLesson:Math.max(0,Math.min(6,parseInt(d.maxLesson,10)||0)),graduate:d.graduate!==false}
-             :{maxLesson:0,graduate:null};
-  }catch(e){_lsnEnt={maxLesson:0,graduate:null};} // no doc → nothing unlocked, full app as before
+             :{maxLesson:6,graduate:null};
+  }catch(e){_lsnEnt={maxLesson:0,graduate:null,err:true};} // couldn't read → no summaries card, full app as before
   return _lsnEnt;
 }
 async function lsnLoadMax(){return (await lsnLoadEnt()).maxLesson;}
@@ -105,8 +108,9 @@ async function renderToolsLessons(){
   if(!lessonsEnabled()){el.innerHTML='';return;}
   const e=await lsnLoadEnt();
   const admin=lsnIsAdmin();
-  const inCourse=admin||e.graduate!==null; // has an entitlements doc = took part in the course
-  if(!inCourse){el.innerHTML='';return;}
+  // everyone sees the card (2026-11-18), unless the entitlement couldn't be read at all
+  if(e.err&&!admin){el.innerHTML='';return;}
+
   const vis=lsnVisibleMax(e.maxLesson);
   const hint=vis>=6?'כל החומר מהתוכנית במקום אחד. אפשר לחזור לכל סיכום בכל זמן.'
     :vis>0?`פתוחים ${vis===1?'הסיכום של המפגש הראשון':'הסיכומים של '+vis+' המפגשים הראשונים'}. כל סיכום נפתח אחרי שהמפגש שלו מתקיים.`
