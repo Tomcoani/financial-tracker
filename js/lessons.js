@@ -64,7 +64,7 @@ async function lsnLoadMax(){return (await lsnLoadEnt()).maxLesson;}
 
 // ── Clients still in the course ──
 // (Notion "Active customer" → entitlements.graduate=false, before meeting 6) see only "כלים" (summaries +
-// calculators) and, after meeting 1, "מטרות". Users without an entitlements doc and graduates get the full app.
+// calculators) and, after meeting 1, "מטרות" + "התנהלות חודשית". Users without an entitlements doc and graduates get the full app.
 // Called from core.js on sign-in; true = open the app straight into "כלים".
 async function lsnApplyMode(){
   lsnSetOnly(false);
@@ -83,8 +83,9 @@ function lsnSetOnly(on){
   _lsnGoalsOk=_lsnOnly&&!!_lsnEnt&&_lsnEnt.maxLesson>=1;
   document.body.classList.toggle('lsn-goals',_lsnGoalsOk);
 }
-// Tabs a client in the course may open: "כלים", the summary view inside it, and "מטרות" after meeting 1.
-function lsnAllowedTab(id){return id==='links'||id==='lessons'||(id==='goals'&&_lsnGoalsOk);}
+// Tabs a client in the course may open: "כלים", the summary view inside it, and after meeting 1 also
+// "מטרות" and "התנהלות חודשית" (Tom, 2026-11-18).
+function lsnAllowedTab(id){return id==='links'||id==='lessons'||((id==='goals'||id==='budget')&&_lsnGoalsOk);}
 // What is shown as unlocked. The admin can preview as a client with N lessons.
 function lsnVisibleMax(max){return lsnIsAdmin()&&_lsnPreview!==null?_lsnPreview:max;}
 
@@ -128,7 +129,7 @@ async function renderToolsLessons(){
         <a href="#" onclick="lsnPreviewOnly(false);return false" style="color:var(--teal)">יציאה מהתצוגה</a></div>`:''}
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">ברוכים הבאים לתוכנית ״הדרך לעושר״ 👋</div>
       <div style="font-size:13.5px;color:var(--t2);line-height:1.7">כאן מחכים לכם הסיכומים של המפגשים — כל סיכום נפתח אחרי שהמפגש שלו מתקיים — והמחשבונים מהתוכנית.
-        ${_lsnGoalsOk?'בטאב <b>״מטרות״</b> ממלאים את המטרות הפיננסיות שלכם (המשימה מהמפגש הראשון). ':''}בסיום התוכנית תיפתח לכם כל המערכת הפיננסית: תקציב, פנסיה, תיק השקעות ושווי נטו.</div>
+        ${_lsnGoalsOk?'בטאב <b>״מטרות״</b> ממלאים את המטרות הפיננסיות שלכם (המשימה מהמפגש הראשון), ובטאב <b>״התנהלות חודשית״</b> עוקבים אחרי ההכנסות וההוצאות של כל חודש. ':''}בסיום התוכנית תיפתח לכם כל המערכת הפיננסית: פנסיה, תיק השקעות ושווי נטו.</div>
     </div>`:'';
   el.innerHTML=`${onlyNote}<div class="card card-teal">
       <div class="ch-title">סיכומי המפגשים — הדרך לעושר</div>
@@ -274,7 +275,7 @@ function lsnAdminCard(){
       <label style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px">תצוגה:
         <select onchange="lsnSetPreview(this.value)" style="background:var(--s2);color:var(--white);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-family:inherit">${opts}</select></label>
       <label style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px;cursor:pointer">
-        <input type="checkbox" ${_lsnOnly?'checked':''} onchange="lsnPreviewOnly(this.checked)"> כמשתמש בתהליך (רק כלים ומטרות)</label>
+        <input type="checkbox" ${_lsnOnly?'checked':''} onchange="lsnPreviewOnly(this.checked)"> כמשתמש בתהליך (כלים, מטרות והתנהלות חודשית)</label>
     </div>
     <div id="lsn-up-log" style="font-size:13px;margin-top:10px;line-height:1.7"></div>
     <div id="lsn-up-status" style="font-size:12.5px;color:var(--t3);margin-top:8px"></div>

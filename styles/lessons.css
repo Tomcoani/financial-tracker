@@ -266,8 +266,9 @@ body.lsn-only #mobile-more-menu,
 body.lsn-only #save-bar,
 body.lsn-only .page-help-btn{display:none !important}
 body.lsn-only .content{padding-bottom:24px}
-/* after meeting 1: "מטרות" opens too */
-body.lsn-only.lsn-goals #nav-goals{display:flex !important}
+/* after meeting 1: "מטרות" and "התנהלות חודשית" open too */
+body.lsn-only.lsn-goals #nav-goals,
+body.lsn-only.lsn-goals #nav-budget{display:flex !important}
 /* on phones the bottom nav is hidden in this mode — keep the (now short) top tab bar instead */
 @media(max-width:640px){body.lsn-only .nav{display:flex !important}}
 
