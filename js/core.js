@@ -264,6 +264,7 @@ auth.onAuthStateChanged(async user=>{
     document.getElementById('init-loader').style.display='none';
     document.getElementById('app').style.display='none';
     document.getElementById('auth').style.display='flex';
+    if(typeof hcRenderButton==='function')hcRenderButton(); // hide the help center after sign-out
     injectLogos();
   }
 });
@@ -494,6 +495,7 @@ function goTo(id,btn){
   if(id==='links'&&typeof renderToolsLessons==='function')renderToolsLessons(); // graduates' summaries
   if(typeof maybeShowPageUpdate==='function')maybeShowPageUpdate(id); // one-time "what changed on this page"
   if(typeof trackPageView==='function')trackPageView(id); // usage analytics
+  if(typeof hcOnTab==='function')hcOnTab(id); // help center: "for this page" follows the tab
 }
 
 // ══ RENDER ALL ══
@@ -525,6 +527,7 @@ function renderAll(){
   if(typeof renderCfAccBar==='function')renderCfAccBar(); // account picker (admin, several accounts)
   if(typeof renderMonthCloseBanners==='function')renderMonthCloseBanners(); // 'סגירת חודש' card (month-close.js)
   if(typeof renderHelpBotButton==='function')renderHelpBotButton(); // beta: "💬 שאלה על המערכת" (help-bot.js)
+  if(typeof hcRenderButton==='function')hcRenderButton(); // beta: the "? עזרה" help center (help-center.js)
   // Only render what's immediately needed
   renderSettings();
   renderDash();

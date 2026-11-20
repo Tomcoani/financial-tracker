@@ -1,5 +1,5 @@
 // ══ ADMIN ══
-const ADMIN_PAGE_LABELS={dash:'בית',budget:'התנהלות חודשית',goals:'מטרות',pension:'פנסיה',portfolio:'תיק השקעות',nw:'שווי נטו',notes:'הערות',links:'כלים',settings:'הגדרות',history:'היסטוריה (מוסתר)'};
+const ADMIN_PAGE_LABELS={dash:'בית',budget:'התנהלות חודשית',goals:'מטרות',pension:'פנסיה',portfolio:'תיק השקעות',nw:'שווי נטו',notes:'הערות',links:'כלים',settings:'הגדרות',history:'היסטוריה (מוסתר)',help:'מרכז העזרה (? עזרה)'};
 function lastActiveText(iso){
   const d=daysSince(iso);
   if(d===null)return 'טרם';
