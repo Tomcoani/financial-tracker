@@ -329,6 +329,8 @@ function ensurePageHelpBtn(id){
   panel.insertBefore(btn,panel.firstChild);
 }
 function showPageHelp(id){
+  // with the help center on (help-center.js): the page guide opens there, with the page's articles
+  if(typeof hcOn==='function'&&hcOn()){hcOpen('page');return;}
   const help=PAGE_HELP[id]||PAGE_HELP[_lastTab];
   if(!help)return;
   document.getElementById('page-help-title').innerHTML=help.title;

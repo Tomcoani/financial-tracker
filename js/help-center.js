@@ -13,7 +13,8 @@ const HC_TABS={general:'כללי',dash:'בית',budget:'התנהלות חודש�
   nw:'שווי נטו',history:'היסטוריה',notes:'הערות',links:'כלים',settings:'הגדרות'};
 const HC_CATS=[
   ['start','🚀','צעדים ראשונים'],['budget','💵','התנהלות חודשית'],['import','📄','העלאת קבצים'],
-  ['goals','🎯','מטרות'],['pension','🏦','פנסיה והשקעות'],['nw','📊','שווי נטו'],['account','⚙️','חשבון והגדרות']];
+  ['goals','🎯','מטרות'],['pension','🏦','פנסיה והשקעות'],['nw','📊','שווי נטו'],['concepts','📚','מושגים בכסף'],
+  ['account','⚙️','חשבון והגדרות']];
 const HC_POPULAR=['import-file','import-image','budget-basics','budget-currency','nw-low','forgot-password'];
 
 // tab = where it belongs ("for this page"), go = the tab the "open" button leads to
@@ -86,6 +87,23 @@ const HC_ARTICLES=[
   {id:'budget-self',cat:'budget',tab:'budget',go:'budget',t:'עצמאים: עסק ובית',k:'עצמאי עסק עוסק מעמ ביטוח לאומי מס הכנסה',b:`
     <p>מסמנים <b>"עצמאי"</b> למעלה ובוחרים סוג עוסק. מופיע חלק <b>"עסק"</b> לתשלומי מע"מ, ביטוח לאומי ומס הכנסה.</p>
     <p>אפשר לנהל את העסק יחד עם הבית או בתזרים נפרד, ולראות רק את העסק, רק את האישי, או את שניהם.</p>`},
+  {id:'card-no-detail',cat:'budget',tab:'budget',go:'budget',t:'חיוב אשראי בעו"ש בלי פירוט (⚠️)',k:'חיוב אשראי בלי פירוט אזהרה חסר כרטיס סכום אחד',b:`
+    <p>בקובץ העו"ש חיוב של כרטיס אשראי מופיע כשורה אחת, למשל "כאל 3,200". המערכת לא סופרת את הסכום הזה כהוצאה אחת גדולה. היא מחכה ל<b>פירוט של הכרטיס</b>, כדי לדעת על מה הכסף יצא.</p>
+    <p>כשהפירוט חסר, מופיע ⚠️ "חיובי אשראי בעו"ש בלי פירוט", והחודש ייראה כאילו הוצאתם פחות.</p>
+    <p><b>מה עושים:</b> מורידים מאתר חברת האשראי את הפירוט של אותו כרטיס ואותו חודש, ומעלים. ההוצאות נכנסות לקטגוריות, והאזהרה נעלמת.</p>`},
+  {id:'cash',cat:'budget',tab:'budget',go:'budget',t:'הוצאות במזומן או מחשבון אחר',k:'מזומן כסף מזומן חשבון אחר ביט פייבוקס ידני הקלדה',b:`
+    <p>הוצאה ששילמתם במזומן, או מחשבון שלא העליתם ממנו קובץ, לא תופיע בקבצים. מוסיפים אותה <b>ידנית</b>: מקלידים את הסכום בקטגוריה המתאימה (או מוסיפים שורה חדשה).</p>
+    <p>בבדיקה מול העו"ש הוצאות כאלה מופיעות בנפרד, כ"הוצאות שהוקלדו ידנית", כי הן לא עברו בחשבון. זה תקין.</p>
+    <p>טיפ: משכתם מזומן מהכספומט? כדאי לרשום לאן הוא הלך, ולא להשאיר את כל המשיכה ב"שונות".</p>`},
+  {id:'joint-transfer',cat:'budget',tab:'budget',go:'budget',t:'העברה לחשבון המשותף',k:'משותף העברה בין חשבונות זוג הכנסה כפול',b:`
+    <p>כשאחד מבני הזוג מעביר כסף לחשבון המשותף, בחשבון המשותף ההעברה נרשמת <b>כהכנסה</b>: זה הכסף שממנו החשבון המשותף משלם הוצאות.</p>
+    <p>בתצוגת <b>"סה"כ חשבונות"</b> אותו כסף עלול להיראות פעמיים, גם כהוצאה וגם כהכנסה. לכן העברות בין החשבונות שלכם כדאי לסמן <b>"לא לספור"</b> (ב־📋 של הקטגוריה).</p>`},
+  {id:'reset-account',cat:'budget',tab:'budget',go:'budget',t:'איפוס חשבון והעלאה מחדש',k:'איפוס מחיקה להתחיל מחדש טעות בלאגן',b:`
+    <p>אם הנתונים התבלגנו ורוצים להתחיל מחדש: <b>"🧹 איפוס"</b> בשורת החשבונות למעלה.</p>
+    <ul><li>נמחקים כל החודשים של החשבון הזה: סכומים, עסקאות, נתוני עו"ש וקבצים שהועלו. חשבונות אחרים לא נפגעים.</li>
+    <li>כדי לאשר כותבים את המילה <b>איפוס</b>.</li>
+    <li><b>אי אפשר לשחזר</b>, אז כדאי לוודא שיש לכם את הקבצים כדי להעלות אותם שוב.</li></ul>
+    <p>לפני איפוס, שווה לנסות לתקן: העלאה חוזרת של קובץ לא משכפלת, ואפשר להסיר עסקאות ב־📋.</p>`},
   {id:'month-close',cat:'budget',tab:'budget',go:'budget',t:'סגירת חודש',k:'סגירה סגרתי רצף עדכון חודשי',b:`
     <p>פעם בחודש מופיע כרטיס <b>"סגירת חודש"</b>: מעלים קבצים, בודקים שהכל במקום (מה נכנס ל"שונות", חיובי אשראי בלי פירוט, מזומן), ורואים כמה נחסך ולאן להעביר אותו.</p>
     <p>חודשים שנסגרים ברצף בונים <b>רצף 🔥</b>.</p>`},
@@ -136,12 +154,21 @@ const HC_ARTICLES=[
     <li>עדכנו גם את <b>התאריך</b>: לפיו היתרה עוברת לעמודה הנכונה בשווי נטו.</li></ul>`},
   {id:'pension-fees',cat:'pension',tab:'pension',go:'pension',t:'למה דמי הניהול מסומנים בצבע',k:'דמי ניהול גבוה צבע אדום',b:`
     <p>המערכת <b>צובעת</b> דמי ניהול שגבוהים מהיעד. זה סימן שכדאי לבדוק אותם, ואפשר להעלות את זה בפגישה עם תום.</p>`},
+  {id:'pension-where',cat:'pension',tab:'pension',go:'pension',t:'איפה מוצאים את נתוני הפנסיה',k:'איפה יתרה דוח שנתי רבעוני אזור אישי מסלקה פנסיה קרן',b:`
+    <ul><li><b>באזור האישי</b> באתר של כל קרן או בית השקעות: יתרה, מסלול ההשקעה ודמי הניהול.</li>
+    <li><b>בדוח השנתי או הרבעוני</b> שנשלח אליכם בדואר או במייל. בדוח מופיעים גם דמי הניהול.</li>
+    <li><b>במסלקה הפנסיונית</b> רואים את כל המוצרים יחד, כולל כאלה ששכחתם.</li></ul>
+    <p>אחרי שמעדכנים את היתרה, עדכנו גם את <b>תאריך הבדיקה</b>. לפיו היתרה עוברת לעמודה הנכונה בשווי נטו.</p>`},
   {id:'portfolio-basics',cat:'pension',tab:'portfolio',go:'portfolio',t:'תיק השקעות: ניירות ואחוזי יעד',k:'תיק נייר מניות אגח יעד אחוז פיזור',b:`
     <p>לכל נייר: שם, קטגוריה, שווי נוכחי (₪ או $) ו<b>"% יעד"</b>. סך אחוזי היעד צריך להיות 100%.</p>
     <p>"חלק מהתיק" מחושב לבד. אפשר לנהל כמה תיקים.</p>`},
   {id:'portfolio-invest',cat:'pension',tab:'portfolio',go:'portfolio',t:'"כמה להשקיע ואיפה"',k:'איזון הפקדה כמה להשקיע חלוקה',b:`
     <p>בתוך כל תיק כותבים סכום פנוי להשקעה, והוא מתחלק בין הניירות כך שהתיק יתקרב לאחוזי היעד, <b>רק בהפקדות ובלי למכור</b>.</p>
     <p>בלי סכום רואים כמה צריך בסך הכל לאיזון מלא.</p>`},
+
+  {id:'portfolio-nw',cat:'pension',tab:'portfolio',go:'nw',t:'למה שווי התיק לא עובר לבד לשווי נטו',k:'תיק שווי נטו שוק ההון לא עובר העברה',b:`
+    <p>שווי התיק משתנה כל יום, ושווי נטו הוא צילום של נקודת זמן. לכן התיק <b>לא</b> עובר לבד.</p>
+    <p>מעדכנים בשווי נטו את שורת <b>"שוק ההון"</b>, בעמודה של התקופה. בעדכון החצי־שנתי יש כפתור שמעביר את שווי התיק בלחיצה.</p>`},
 
   // ── שווי נטו ──
   {id:'nw-basics',cat:'nw',tab:'nw',go:'nw',t:'איך עובדת טבלת שווי נטו',k:'שווי נטו טבלה עמודה תקופה נכסים חובות',b:`
@@ -151,12 +178,48 @@ const HC_ARTICLES=[
   {id:'nw-low',cat:'nw',tab:'nw',go:'nw',t:'למה שווי הנטו נראה נמוך מדי',k:'נמוך ירד חסר ריק שווי נטו',b:`
     <p>כל עמודה נספרת <b>רק לפי מה שמולא בה</b>. שורה שנשארה ריקה בעמודה החדשה לא נספרת, והשווי ייראה נמוך מהאמת.</p>
     <p>מלאו את כל השורות בעמודה, גם אם הסכום לא השתנה.</p>`},
+  {id:'nw-periods',cat:'nw',tab:'nw',go:'nw',t:'הוספה והסרה של תקופות',k:'תקופה עמודה הוספה הסרה מוקדמת מאוחרת הסתר השינוי צילום',b:`
+    <ul><li>מתחת לטבלה: <b>"+ הוסף תקופה מאוחרת יותר"</b> (אחרי האחרונה) או <b>"מוקדמת יותר"</b> (לפני הראשונה), ו"− הסר תקופה".</li>
+    <li>אפשר להסתיר עמודה שלא צריך לראות כרגע, ולהציג אותה שוב.</li>
+    <li><b>"📸 הצג את השינוי בשווי נטו"</b> למעלה מראה כמה השווי השתנה, בתצוגה נוחה לצילום מסך.</li></ul>`},
+  {id:'nw-currency',cat:'nw',tab:'nw',go:'nw',t:'נכס בדולר או במטבע אחר',k:'מטבע דולר יורו חול נכס שווי נטו המרה',b:`
+    <p>לכל תא בטבלה אפשר לבחור <b>מטבע</b>, למשל חשבון בדולרים או דירה בחו"ל. מקלידים את הסכום במטבע שלו, ולידו מופיע כמה זה בשקלים.</p>
+    <p>השווי הכולל מחושב בשקלים לפי שער ההמרה. השערים מתעדכנים לבד.</p>`},
   {id:'half-year',cat:'nw',tab:'nw',go:'dash',t:'העדכון החצי־שנתי',k:'חצי שנתי מסלול עדכון 🧭',b:`
     <p>פעם בחצי שנה, מסלול צעד אחר צעד: <b>פנסיה → תיק השקעות → מטרות → שווי נטו → סיום</b>.</p>
     <p>בשווי נטו מופיעים ליד כל שורה הסכום הקודם, "ללא שינוי" ו"אין לי". בסוף רואים מה חסר והשוואה לעדכון הקודם.</p>
     <p>פותחים אותו מ"מה באת לעשות היום?" בעמוד הבית.</p>`},
 
+  // ── מושגים בכסף (general explanations; no advice) ──
+  {id:'c-networth',cat:'concepts',tab:'nw',go:'nw',t:'מה זה שווי נטו',k:'שווי נטו הון עצמי נכסים פחות חובות מושג',b:`
+    <p><b>שווי נטו</b> = כל מה שיש לכם, פחות כל מה שאתם חייבים.</p>
+    <p>למשל: דירה ב־2,000,000, חיסכון ופנסיה ב־400,000, ומשכנתא של 1,200,000. השווי נטו הוא 1,200,000.</p>
+    <p>זה המספר שהכי טוב מראה התקדמות לאורך שנים. משכורת גבוהה לא מבטיחה שווי נטו גבוה; מה שקובע הוא כמה נשאר ואיך הוא גדל.</p>`},
+  {id:'c-saverate',cat:'concepts',tab:'budget',go:'budget',t:'מה זה שיעור חיסכון',k:'שיעור חיסכון אחוז חסכתי מושג',b:`
+    <p><b>שיעור חיסכון</b> = כמה נשאר בחודש, חלקי ההכנסות.</p>
+    <p>למשל: הכנסות של 20,000 והוצאות של 16,000. נשארו 4,000, כלומר שיעור חיסכון של 20%.</p>
+    <p>במערכת, כסף שהועבר להשקעות נספר כחיסכון. האחוז הזה עוזר להשוות חודשים גם כשההכנסה משתנה.</p>`},
+  {id:'c-invest-saving',cat:'concepts',tab:'budget',go:'budget',t:'חיסכון או הוצאה? העברה להשקעות',k:'העברה להשקעות חיסכון הוצאה הפקדה קרן פנסיה',b:`
+    <p>כסף שעובר לתיק השקעות, לקופת גמל להשקעה או לקרן השתלמות <b>לא נעלם</b>: הוא עדיין שלכם, רק במקום אחר.</p>
+    <p>לכן ב<b>"📈 העברה להשקעות"</b> הוא נספר כחיסכון, ולא כהוצאה. ככה רואים את התמונה האמיתית: כמה הוצאתם, וכמה שמתם בצד.</p>`},
+  {id:'c-fees',cat:'concepts',tab:'pension',go:'pension',t:'דמי ניהול מהפקדה ומצבירה',k:'דמי ניהול הפקדה צבירה אחוז עמלה פנסיה מושג',b:`
+    <p>בפנסיה ובקרנות יש שני סוגים של דמי ניהול:</p>
+    <ul><li><b>מהפקדה</b>: אחוז מכל הפקדה חודשית שנכנסת.</li>
+    <li><b>מצבירה</b>: אחוז בשנה מכל הכסף שכבר נצבר בקרן.</li></ul>
+    <p>לאורך שנים, כשהסכום שנצבר גדל, דמי הניהול מהצבירה יכולים להגיע לסכום גדול. בגלל זה המערכת מסמנת בצבע כשהם גבוהים. על מה כדאי לעשות במקרה שלכם, מדברים עם תום.</p>`},
+  {id:'c-hishtalmut',cat:'concepts',tab:'pension',go:'pension',t:'מה זו קרן השתלמות',k:'קרן השתלמות נזילה 6 שנים מס מושג',b:`
+    <p><b>קרן השתלמות</b> היא חיסכון לטווח בינוני. בדרך כלל גם אתם וגם המעסיק (או אתם, כעצמאים) מפקידים אליה כל חודש.</p>
+    <ul><li>בדרך כלל היא <b>נזילה אחרי 6 שנים</b> מהפתיחה.</li>
+    <li>עד תקרת ההפקדה, הרווחים בה פטורים ממס רווחי הון.</li></ul>
+    <p>במערכת מעדכנים אותה בטאב הפנסיה, והיתרה עוברת לשווי נטו.</p>`},
+  {id:'c-emergency',cat:'concepts',tab:'goals',go:'goals',t:'מה זו קרן חירום',k:'קרן חירום ביטחון בלתי צפוי מושג מטרה',b:`
+    <p><b>קרן חירום</b> היא כסף שזמין מיד להוצאה לא צפויה: תיקון ברכב, תקופה בלי עבודה, הוצאה רפואית.</p>
+    <p>היא נשמרת במקום נזיל ובטוח, לא בהשקעה שיכולה לרדת בדיוק כשצריך אותה. בגלל זה היא המטרה הראשונה ברשימת המטרות. את הגודל שמתאים לכם קובעים בתוכנית עם תום.</p>`},
+
   // ── חשבון והגדרות ──
+  {id:'notes',cat:'account',tab:'notes',go:'notes',t:'טאב ההערות',k:'הערות פתקים רשימה כתיבה',b:`
+    <p>מקום חופשי לכתוב כל מה שחשוב לכם: דברים מהפגישה עם תום, תזכורות, משימות.</p>
+    <p>אפשר לעצב רשימות (• או 1.). בתוך רשימה, <b>Tab</b> יוצר תת־נקודה, ו־<b>Shift+Tab</b> חוזר רמה אחת. הכל נשמר לבד.</p>`},
   {id:'forgot-password',cat:'account',tab:'settings',t:'שכחתי סיסמה / רוצה לשנות סיסמה',k:'סיסמה שכחתי שינוי כניסה מייל',b:`
     <ul><li><b>שכחתם?</b> במסך הכניסה לוחצים "שכחתי סיסמה", ומגיע מייל לאיפוס.</li>
     <li><b>רוצים לשנות?</b> בהגדרות, תחת "אבטחת חשבון".</li></ul>`},
@@ -221,7 +284,7 @@ function hcSearch(q){
 
 // ── the button ──
 function hcRenderButton(){
-  _hcStyle();
+  _hcStyle();hcDecorateStatic();
   let b=document.getElementById('hc-btn');
   if(!hcOn()){if(b)b.style.display='none';if(_hc.open)hcClose();return;}
   if(!b){b=document.createElement('button');b.id='hc-btn';b.type='button';b.onclick=()=>hcOpen();
@@ -273,6 +336,23 @@ function _hcStyle(){
 #hc-panel .hc-foot{border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--t3)}
 #hc-panel .hc-foot button{background:var(--s2);border:1px solid var(--border);color:var(--white);border-radius:9px;padding:7px 12px;font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer}
 #hc-panel .hc-foot button:hover{border-color:var(--teal-border)}
+#hc-panel .hc-steps{background:linear-gradient(135deg,rgba(66,235,214,.10),rgba(66,235,214,.02));border:1px solid var(--teal-border);border-radius:12px;padding:12px;margin-bottom:6px}
+#hc-panel .hc-steps-h{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:800;color:var(--white)}
+#hc-panel .hc-steps-h span{font-size:12px;color:var(--teal)}
+#hc-panel .hc-bar{height:6px;border-radius:4px;background:var(--s2);margin:8px 0 10px;overflow:hidden}
+#hc-panel .hc-bar div{height:100%;background:var(--teal);border-radius:4px}
+#hc-panel .hc-step{display:flex;align-items:center;gap:9px;width:100%;text-align:right;background:none;border:none;border-top:1px solid var(--border);color:var(--white);font-family:var(--font);font-size:13.5px;padding:8px 2px;cursor:pointer}
+#hc-panel .hc-step:first-of-type{border-top:none}
+#hc-panel .hc-step .hc-ck{flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--t3);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
+#hc-panel .hc-step.done{color:var(--t3);text-decoration:line-through}
+#hc-panel .hc-step.done .hc-ck{background:var(--teal);border-color:var(--teal);color:#06121a}
+#hc-panel .hc-step i{font-style:normal;margin-right:auto;color:var(--teal)}
+#hc-panel .hc-page{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--t2);line-height:1.85}
+#hc-panel .hc-page ul{margin:6px 0!important;padding:0!important}
+#hc-panel .hc-page li{margin-bottom:5px}
+#hc-panel .hc-page strong{color:var(--white)}
+.hc-tip{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin:0 5px;border-radius:50%;border:1px solid var(--teal-border);background:rgba(66,235,214,.08);color:var(--teal);font-family:var(--font);font-size:11px;font-weight:900;line-height:1;cursor:pointer;vertical-align:middle;padding:0}
+.hc-tip:hover{background:rgba(66,235,214,.2)}
 #hc-panel .hc-empty{font-size:13.5px;color:var(--t2);line-height:1.8;text-align:center;padding:16px 4px}
 @media(max-width:640px){#hc-btn{bottom:84px;left:12px;padding:8px 13px 8px 10px;font-size:13px}#hc-panel{border-right:none;right:0;width:auto}}
 body.lsn-only #hc-btn{bottom:22px}`;
@@ -302,7 +382,7 @@ function hcOpen(view,id){
   if(!hcOn())return;
   const p=_hcPanel();
   _hc.open=true;_hc.back=[];
-  if(view==='art'&&id){_hc.view='art';_hc.id=id;}else if(!_hc.q)_hc.view='home';
+  if(view){_hc.view=view;_hc.id=id||'';}else if(!_hc.q)_hc.view='home';
   document.getElementById('hc-back').style.display='block';
   void p.offsetWidth; // a reflow first, so the slide-in animates (no rAF: it can be throttled)
   p.classList.add('on');
@@ -311,13 +391,74 @@ function hcOpen(view,id){
   setTimeout(()=>{const i=document.getElementById('hc-q');if(i&&_hc.view!=='art'&&window.innerWidth>640)i.focus();},60);
 }
 function hcClose(){
-  _hc.open=false;
+  _hcMissFlush();
+  _hc.open=false;_hc.q='';_hc.view='home'; // reopening starts fresh
+  const qi=document.getElementById('hc-q');if(qi)qi.value='';
   const p=document.getElementById('hc-panel');if(p)p.classList.remove('on');
   const bk=document.getElementById('hc-back');if(bk)bk.style.display='none';
   hcRenderButton();
 }
 function hcOnTab(id){if(_hc.open&&_hc.view==='home')hcRender();}
-function hcQuery(v){_hc.q=v;_hc.view=v.trim()?'search':'home';_hc.back=[];hcRender();}
+function hcQuery(v){
+  _hc.q=v;_hc.view=v.trim()?'search':'home';_hc.back=[];hcRender();
+  // a search with no answer is kept for Tom (after the client stops typing), so he knows what to write next
+  clearTimeout(_hcMissT);_hcMissQ=v.trim()&&!hcSearch(v).length?v.trim():'';
+  if(_hcMissQ)_hcMissT=setTimeout(_hcMissFlush,2500);
+}
+let _hcMissT=null,_hcMissQ='',_hcMissLast='';
+function _hcMissFlush(){
+  clearTimeout(_hcMissT);const q=_hcMissQ;_hcMissQ='';
+  if(!q||q.length<2||q===_hcMissLast||typeof D!=='object'||!D||typeof CU==='undefined'||!CU)return;
+  _hcMissLast=q;
+  D.helpMisses=(Array.isArray(D.helpMisses)?D.helpMisses:[]).concat({q:q.slice(0,80),d:new Date().toISOString()}).slice(-30);
+  if(typeof markDirty==='function')markDirty();
+}
+
+// ── "הצעדים הראשונים שלכם": a setup checklist, ticked from the client's own data ──
+const _hcNum=v=>parseFloat(String(v==null?'':v).replace(/,/g,''))||0;
+function hcSteps(){
+  if(typeof D!=='object'||!D)return [];
+  const maps=typeof budgetMonthsMaps==='function'?budgetMonthsMaps():[D.budgetMonths||{}];
+  const months=[].concat(...maps.map(m=>Object.values(m||{}))).filter(Boolean);
+  const sum=rows=>(rows||[]).reduce((s,r)=>s+(typeof budgetRowAmt==='function'?budgetRowAmt(r):_hcNum(r.amount)),0);
+  const nwAny=Object.values(D.nwData||{}).some(s=>(s.rows||[]).some(r=>(r.vals||[]).some(v=>_hcNum(v))));
+  return [
+    {id:'goals',ic:'🎯',t:'למלא מטרה ראשונה',tab:'goals',art:'goals-basics',
+      done:(D.goals||[]).some(g=>(g.name||'').trim()&&_hcNum(g.needed)>0)},
+    {id:'file',ic:'📄',t:'להעלות קובץ אשראי או עו"ש',tab:'budget',art:'import-file',
+      done:months.some(m=>(m.tx||[]).length)},
+    {id:'month',ic:'💵',t:'למלא חודש שלם: הכנסות והוצאות',tab:'budget',art:'budget-basics',
+      done:months.some(m=>sum(m.income)>0&&sum(m.needs)+sum(m.wants)>0)},
+    {id:'close',ic:'✅',t:'לסגור חודש ראשון',tab:'budget',art:'month-close',
+      done:Object.keys(D.monthClose||{}).length>0},
+    {id:'pension',ic:'🏦',t:'לעדכן פנסיה וקרן השתלמות',tab:'pension',art:'pension-update',
+      done:(D.pension||[]).some(p=>_hcNum(p.amount)>0)},
+    {id:'nw',ic:'📊',t:'למלא שווי נטו',tab:'nw',art:'nw-basics',done:nwAny}
+  ].filter(s=>{const a=_hcGet(s.art);return a&&hcArticleOk(a);});
+}
+function _hcStepsHtml(){
+  const st=hcSteps();if(!st.length)return '';
+  const n=st.filter(s=>s.done).length;
+  if(n===st.length)return `<div class="hc-steps" style="padding:10px 12px;font-size:13px;color:var(--t2)">🎉 <b style="color:var(--white)">השלמתם את כל הצעדים הראשונים.</b> מעכשיו: עדכון פעם בחודש.</div>`;
+  return `<div class="hc-steps"><div class="hc-steps-h">🚀 הצעדים הראשונים שלכם <span>${n} מתוך ${st.length}</span></div>
+    <div class="hc-bar"><div style="width:${Math.round(n/st.length*100)}%"></div></div>
+    ${st.map(s=>`<button class="hc-step${s.done?' done':''}" onclick="_hcNav('art','${s.art}')"><span class="hc-ck">${s.done?'✓':''}</span>${s.ic} ${s.t}${s.done?'':'<i>‹</i>'}</button>`).join('')}</div>`;
+}
+
+// A small "?" next to a field, opening its article — hcTip('budget-bank'). Empty when the help center is off.
+function hcTip(id,label){
+  if(!hcOn()||!_hcGet(id))return '';
+  const l=esc(label||'הסבר');
+  return `<button type="button" class="hc-tip" onclick="event.stopPropagation();event.preventDefault();hcOpen('art','${id}')" title="${l}" aria-label="${l}">?</button>`;
+}
+// "?" on titles that are written in index.html (not re-rendered), added once after sign-in
+const HC_STATIC_TIPS=[['#budget-trend-card .ch-hint','budget-charts','על הגרף'],['.g-section--cf .g-section-title','goals-saved','איך זה מחושב']];
+function hcDecorateStatic(){
+  HC_STATIC_TIPS.forEach(([sel,id,l])=>{const el=document.querySelector(sel);if(!el)return;
+    const old=el.querySelector(':scope > .hc-tip');
+    if(!hcOn()){if(old)old.remove();return;}
+    if(!old)el.insertAdjacentHTML('beforeend',hcTip(id,l));});
+}
 function _hcNav(view,arg){
   _hc.back.push({view:_hc.view,id:_hc.id,cat:_hc.cat});
   _hc.view=view;if(view==='art')_hc.id=arg;if(view==='cat')_hc.cat=arg;
@@ -366,11 +507,17 @@ function hcRender(){
       <div style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:8px">שאלה, תקלה או רעיון? ההודעה מגיעה ישירות לתום, ורק הוא רואה אותה.</div>
       <textarea id="hc-msg" maxlength="2000" placeholder="כתבו כאן...">${_hc.q.trim()?esc(_hc.q.trim()):''}</textarea>
       <button class="hc-send" onclick="hcSend()">שליחה ←</button><span id="hc-sent" style="font-size:13px;color:var(--teal);font-weight:700;margin-right:10px"></span>`;
+  }else if(_hc.view==='page'){
+    // "💡 הסבר עמוד" lands here: the page's own short guide + its articles
+    const ph=typeof PAGE_HELP!=='undefined'&&PAGE_HELP[tabKey];
+    const here=list.filter(a=>a.tab===tabKey);
+    h=`${backBtn}${ph?`<div class="hc-sec" style="font-size:15px;color:var(--white)">${ph.title}</div><div class="hc-page">${ph.html}</div>`:''}
+      ${here.length?`<div class="hc-sec">מאמרים על העמוד הזה</div>${here.map(_hcItem).join('')}`:''}`;
   }else{
     const here=list.filter(a=>a.tab===tabKey).slice(0,5);
     const pop=HC_POPULAR.map(_hcGet).filter(a=>a&&hcArticleOk(a)&&!here.includes(a)).slice(0,4);
     const cats=HC_CATS.map(c=>[c,list.filter(a=>a.cat===c[0]).length]).filter(x=>x[1]);
-    h=`${here.length?`<div class="hc-sec">מומלץ לעמוד הזה · ${HC_TABS[tabKey]||''}</div>${here.map(_hcItem).join('')}`:''}
+    h=`${_hcStepsHtml()}${here.length?`<div class="hc-sec">מומלץ לעמוד הזה · ${HC_TABS[tabKey]||''}</div>${here.map(_hcItem).join('')}`:''}
       ${pop.length?`<div class="hc-sec">הכי נשאלים</div>${pop.map(_hcItem).join('')}`:''}
       <div class="hc-sec">כל הנושאים</div>
       <div class="hc-cats">${cats.map(([c,n])=>`<button class="hc-cat" onclick="_hcNav('cat','${c[0]}')">${c[1]} ${c[2]}<small>${n} מאמרים</small></button>`).join('')}</div>`;
@@ -415,4 +562,25 @@ async function hcSend(){
   await _hcFeedback(`[מרכז העזרה${page?' · מעמוד '+page:''}] ${txt}`);
   el.value='';
   const s=document.getElementById('hc-sent');if(s)s.textContent='תודה! ההודעה נשלחה לתום ✓';
+}
+
+// ── Admin: searches with no answer (all clients) + articles marked 👍 ──
+function renderAdminHelp(users){
+  const el=document.getElementById('admin-help');if(!el)return;
+  const miss={},votes={};
+  (users||[]).forEach(u=>{
+    (u.helpMisses||[]).forEach(m=>{const k=_hcNorm(m.q);if(!k)return;
+      const x=miss[k]=miss[k]||{q:m.q,n:0,who:new Set(),last:''};x.n++;x.who.add(u.name||u.email||u.uid);if((m.d||'')>x.last)x.last=m.d||'';});
+    Object.entries(u.helpVotes||{}).forEach(([id,n])=>{votes[id]=(votes[id]||0)+(+n||0);});
+  });
+  const rows=Object.values(miss).sort((a,b)=>b.n-a.n||(b.last>a.last?1:-1)).slice(0,40);
+  const vRows=Object.entries(votes).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const td='padding:6px 8px;text-align:right';
+  el.innerHTML=(rows.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="color:var(--t3);border-bottom:1px solid var(--border)"><th style="${td}">חיפשו</th><th style="${td}">פעמים</th><th style="${td}">מי</th><th style="${td}">אחרון</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--border)"><td style="${td};font-weight:700">${esc(r.q)}</td><td style="${td}">${r.n}</td>
+        <td style="${td};color:var(--t2)">${esc([...r.who].slice(0,3).join(', '))}${r.who.size>3?' +'+(r.who.size-3):''}</td>
+        <td style="${td};color:var(--t3);white-space:nowrap">${r.last?new Date(r.last).toLocaleDateString('he-IL'):''}</td></tr>`).join('')}</tbody></table></div>`
+    :'<p style="color:var(--t3);font-size:13px;text-align:right">עדיין אין חיפושים בלי תשובה.</p>')
+    +(vRows.length?`<div style="font-size:12.5px;color:var(--t2);margin-top:12px">👍 ${vRows.map(([id,n])=>{const a=_hcGet(id);return esc(a?a.t:id)+' ('+n+')';}).join(' · ')}</div>`:'');
 }

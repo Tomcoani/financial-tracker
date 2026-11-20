@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="פיננסי">
-<link rel="stylesheet" href="styles/main.css?v=160">
-<link rel="stylesheet" href="styles/lessons.css?v=160">
+<link rel="stylesheet" href="styles/main.css?v=161">
+<link rel="stylesheet" href="styles/lessons.css?v=161">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -660,6 +660,12 @@
         <div class="ch-hint">כמה לקוחות פתחו כל עמוד וכמה פעמים בסך הכל. הנתונים נצברים מ-1.10.2026 ואילך.</div>
         <div id="admin-usage"><p style="color:var(--t3);font-size:13px;text-align:right">טוען...</p></div>
       </div>
+      <!-- Help center: what clients searched for and didn't find, and which articles helped (js/help-center.js) -->
+      <div class="card">
+        <div class="ch-title">❓ מרכז העזרה: מה חיפשו ולא מצאו</div>
+        <div class="ch-hint">חיפושים בלי אף תוצאה, מכל הלקוחות. כל שורה כאן היא רעיון למאמר הבא. למטה: המאמרים שסומנו 👍.</div>
+        <div id="admin-help"><p style="color:var(--t3);font-size:13px;text-align:right">טוען...</p></div>
+      </div>
       <div class="card" style="border-color:rgba(139,92,246,.3)">
         <div class="ch-title"><i data-lucide="lock" style="width:15px;height:15px;vertical-align:middle;margin-left:4px"></i> מודל אבטחה</div>
         <div style="font-size:13px;color:var(--t2);line-height:1.8;text-align:right">
@@ -885,27 +891,27 @@
 
 <!-- Load order matters: plain scripts sharing globals, split from the old app.js.
      Bump ?v= on every JS change so browsers never pair fresh HTML with cached JS. -->
-<script defer src="js/core.js?v=160"></script>
-<script defer src="js/cashflow-goals.js?v=160"></script>
-<script defer src="js/pension.js?v=160"></script>
-<script defer src="js/networth.js?v=160"></script>
-<script defer src="js/portfolio.js?v=160"></script>
-<script defer src="js/dashboard.js?v=160"></script>
-<script defer src="js/settings.js?v=160"></script>
-<script defer src="js/admin.js?v=160"></script>
-<script defer src="js/misc.js?v=160"></script>
-<script defer src="js/budget.js?v=160"></script>
-<script defer src="js/budget-detail.js?v=160"></script>
-<script defer src="js/budget-accounts.js?v=160"></script>
-<script defer src="js/budget-period.js?v=160"></script>
-<script defer src="js/month-close.js?v=160"></script>
-<script defer src="js/half-year.js?v=160"></script>
-<script defer src="js/today.js?v=160"></script>
-<script defer src="js/card-month.js?v=160"></script>
-<script defer src="js/help-bot.js?v=160"></script>
-<script defer src="js/help-center.js?v=160"></script>
-<script defer src="js/statement-import.js?v=160"></script>
-<script defer src="js/lessons.js?v=160"></script>
-<script defer src="js/course-tools.js?v=160"></script>
+<script defer src="js/core.js?v=161"></script>
+<script defer src="js/cashflow-goals.js?v=161"></script>
+<script defer src="js/pension.js?v=161"></script>
+<script defer src="js/networth.js?v=161"></script>
+<script defer src="js/portfolio.js?v=161"></script>
+<script defer src="js/dashboard.js?v=161"></script>
+<script defer src="js/settings.js?v=161"></script>
+<script defer src="js/admin.js?v=161"></script>
+<script defer src="js/misc.js?v=161"></script>
+<script defer src="js/budget.js?v=161"></script>
+<script defer src="js/budget-detail.js?v=161"></script>
+<script defer src="js/budget-accounts.js?v=161"></script>
+<script defer src="js/budget-period.js?v=161"></script>
+<script defer src="js/month-close.js?v=161"></script>
+<script defer src="js/half-year.js?v=161"></script>
+<script defer src="js/today.js?v=161"></script>
+<script defer src="js/card-month.js?v=161"></script>
+<script defer src="js/help-bot.js?v=161"></script>
+<script defer src="js/help-center.js?v=161"></script>
+<script defer src="js/statement-import.js?v=161"></script>
+<script defer src="js/lessons.js?v=161"></script>
+<script defer src="js/course-tools.js?v=161"></script>
 </body>
 </html>

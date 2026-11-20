@@ -122,7 +122,7 @@ function _mtCheckHtml(s){
   return `<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔍 בודקים שהכל במקום</div>
     ${_hyHand('לשייך לקטגוריה את מה שנכנס ל"שונות", ולהוסיף הוצאות שלא עברו בבנק או באשראי, כמו מזומן.')}
     ${_hyAuto('המערכת זוכרת כל שיוך לפעם הבאה, מסמנת חיובי אשראי שאין להם פירוט ובודקת שהתקציב מתיישב עם העו"ש.')}
-    ${_mtBox(_mtPer(s,a=>!a.has?'עוד אין נתונים':[a.missing?_mtWarn(a.missing+' חיובי אשראי בעו"ש בלי פירוט'):(a.bank?_mtOk('כל חיובי האשראי עם פירוט'):''),
+    ${_mtBox(_mtPer(s,a=>!a.has?'עוד אין נתונים':[a.missing?_mtWarn(a.missing+' חיובי אשראי בעו"ש בלי פירוט')+(typeof hcTip==='function'?hcTip('card-no-detail'):''):(a.bank?_mtOk('כל חיובי האשראי עם פירוט'):''),
       a.misc>=1?_mtWarn(`${fmt(a.misc)} ב"שונות", כדאי לשייך`):_mtOk('אין הוצאות לא משויכות')].filter(Boolean).join(' · ')))}
     ${_mtMainBtn('לפתוח את '+esc(mcShortName(s.k)),'mtOpenMonth()')}`;
 }

@@ -886,7 +886,7 @@ function renderBudgetBank(){
   if(hasBal){
     if(Math.abs(diff)<=thr)verdict=box('rgba(16,185,129,.08)','rgba(16,185,129,.35)',`<span style="color:var(--green)">✓ התקציב מתיישב עם העו"ש${Math.abs(diff)>=1?' (הפרש של '+iln(fmt(Math.abs(diff)))+')':''}</span>`);
     else if(diff<0)verdict=box('rgba(239,68,68,.08)','rgba(239,68,68,.35)',
-      `⚠️ <b>ירדו מהחשבון ${iln(fmt(-diff))} יותר ממה שרשום בתקציב</b> — כנראה <b>חסרות הוצאות</b>${missing.length?` (למשל ${missing.length} חיובי כרטיס בלי פירוט, ${iln(fmt(missSum))})`:''}.`);
+      `⚠️ <b>ירדו מהחשבון ${iln(fmt(-diff))} יותר ממה שרשום בתקציב</b> — כנראה <b>חסרות הוצאות</b>${missing.length?` (למשל ${missing.length} חיובי כרטיס בלי פירוט, ${iln(fmt(missSum))})${typeof hcTip==='function'?hcTip('card-no-detail','מה עושים עם חיוב בלי פירוט'):''}`:''}.`);
     else verdict=box('rgba(245,158,11,.08)','rgba(245,158,11,.35)',
       `⚠️ <b>נשארו בחשבון ${iln(fmt(diff))} יותר ממה שהתקציב מראה</b> — אולי <b>הוצאה נרשמה פעמיים</b>, או שחסרה הכנסה.`);
     if(Math.abs(diff)>thr)verdict=budgetGapAckHtml(bk,diff,verdict,box);
@@ -905,7 +905,7 @@ function renderBudgetBank(){
   const inv=(bk.invest||0)-invInRows; // only what isn't in the "📈 העברה להשקעות" rows
   const tile=(lbl,val,color)=>`<div style="flex:1;min-width:110px;background:var(--s2);border-radius:10px;padding:8px;text-align:center"><div style="font-size:11px;color:var(--t3)">${lbl}</div><div style="font-size:16px;font-weight:800${color?';color:'+color:''}">${val}</div></div>`;
   el.innerHTML=`
-    <div class="ch-title">🏦 חשבון עו"ש${bk.src?' · '+esc(bk.src):''}</div>
+    <div class="ch-title">🏦 חשבון עו"ש${bk.src?' · '+esc(bk.src):''}${typeof hcTip==='function'?hcTip('budget-bank','מה הבדיקה מול העו"ש'):''}</div>
     ${hasBal?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       ${tile('יתרה בתחילת החודש',iln(fmt(bk.opening)))}${tile('יתרה בסוף החודש',iln(fmt(bk.closing)))}${tile('שינוי',signed(actual),actual>=0?'var(--teal)':'var(--red)')}
     </div>`:''}

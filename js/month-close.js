@@ -86,7 +86,7 @@ function renderMonthClose(){
     +'<div style="font-size:11.5px;color:var(--t3)">קובץ עו"ש + פירוט של כל כרטיס אשראי. אפשר להעלות כמה קבצים יחד — הכל נכנס לחודש הנכון לבד.</div>'
     +(typeof canImportStatements==='function'&&canImportStatements()?btn('📥 העלאת קבצים',`mcGoBudget('${k}',true)`,true):''));
   const step2=box(2,'בודקים שהכל במקום',
-    per(a=>!a.has?'—':[a.missing?warn(a.missing+' חיובי אשראי בעו"ש בלי פירוט'):(a.bank?ok('כל חיובי האשראי עם פירוט'):''),
+    per(a=>!a.has?'—':[a.missing?warn(a.missing+' חיובי אשראי בעו"ש בלי פירוט')+(typeof hcTip==='function'?hcTip('card-no-detail'):''):(a.bank?ok('כל חיובי האשראי עם פירוט'):''),
       a.misc>=1?warn(`${fmt(a.misc)} ב"שונות" — כדאי לשייך לקטגוריות`):ok('אין הוצאות לא משויכות')].filter(Boolean).join(' · '))
     +'<br>'+btn('לפתוח את '+_mcShort(k),`mcGoBudget('${k}',false)`));
   const step3=box(3,'כמה חסכתם',

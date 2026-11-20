@@ -92,7 +92,7 @@ function renderCardMonthPick(){
       <select onchange="cardMonthSet(this.value)" aria-label="לפי איזה חודש לרשום הוצאות אשראי" style="background:var(--s1);border:1px solid var(--teal-border);border-radius:7px;color:var(--teal);font-family:var(--font);font-size:12px;font-weight:700;padding:3px 6px">
         <option value="bill"${buy?'':' selected'}>חודש החיוב (מתי שהכסף ירד מהחשבון)</option>
         <option value="buy"${buy?' selected':''}>חודש העסקה (מתי שקניתם)</option>
-      </select></div>
+      </select>${typeof hcTip==='function'?hcTip('import-month','מה ההבדל'):''}</div>
     <div style="font-size:10.5px;color:var(--t3);margin-top:3px">${buy
       ?'למשל: קנייה באוקטובר שחויבה בנובמבר נרשמת באוקטובר. תשלומים מתפרסים חודש אחרי חודש. הבדיקה מול העו"ש ממשיכה לעבוד לפי מועד החיוב.'
       :'למשל: קנייה באוקטובר שחויבה בנובמבר נרשמת בנובמבר, החודש שבו הכסף ירד מהחשבון.'}</div>`;

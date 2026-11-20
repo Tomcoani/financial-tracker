@@ -31,7 +31,7 @@ function renderBudgetPeriod(elId,entries){
   el.style.display='';
   // Always shown (Tom, 2026-11-20): with fewer than 2 filled months, a note on what will appear here
   if(all.length<2){
-    el.innerHTML=`<div class="ch-title" style="margin:0">📅 סיכום לתקופה${entries.length>1?' — כל החשבונות':''}</div>
+    el.innerHTML=`<div class="ch-title" style="margin:0">📅 סיכום לתקופה${entries.length>1?' — כל החשבונות':''}${typeof hcTip==='function'?hcTip('budget-charts','על הסיכום לתקופה'):''}</div>
       <div class="ch-hint" style="margin-top:6px">${all.length
         ?`יש כאן חודש אחד עם נתונים (${fmtBudgetMonth(all[0])}). מלאו עוד חודש, ותוכלו לבחור תקופה ולראות כמה נכנס, כמה יצא, ומה הממוצע החודשי של כל קטגוריה.`
         :'אחרי שתמלאו חודשיים לפחות, תוכלו לבחור כאן תקופה (3 חודשים, חצי שנה, שנה או כל טווח אחר) ולראות כמה נכנס, כמה יצא, ומה הממוצע החודשי של כל קטגוריה.'}</div>`;
@@ -83,7 +83,7 @@ function renderBudgetPeriod(elId,entries){
   }).join('');
   el.innerHTML=`<details${_bPer.open?' open':''} ontoggle="_bPer.open=this.open;this.querySelector('.bper-tg').textContent=this.open?'▲ סגירה':'▼ פתיחה'">
     <summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <span class="ch-title" style="margin:0">📅 סיכום לתקופה${entries.length>1?' — כל החשבונות':''}</span>
+      <span class="ch-title" style="margin:0">📅 סיכום לתקופה${entries.length>1?' — כל החשבונות':''}${typeof hcTip==='function'?hcTip('budget-charts','על הסיכום לתקופה'):''}</span>
       <span class="bper-tg" style="font-size:12px;color:var(--teal);white-space:nowrap">${_bPer.open?'▲ סגירה':'▼ פתיחה'}</span>
     </summary>
     <div class="ch-hint" style="margin-top:6px">בחרו תקופה — ותראו כמה נכנס, כמה יצא, ומה הממוצע החודשי של כל קטגוריה.</div>

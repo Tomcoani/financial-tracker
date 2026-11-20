@@ -83,12 +83,13 @@ async function renderAdmin(){
           closeDue:_adminDueMonth(parseInt(parentData.closeDay,10)||11),lastClosed:parentData.lastClosedMonth||'',
           // automatic reminders (Make): what's out of date now, and whether the admin turned them off
           remindersOff:!!parentData.remindersOff,remindNow:_adminRemindNow(parentData),hasReminderData:!!parentData.closeDay,
-          nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,pageStats:d.pageStats||{},
+          nw:lastSnap?lastSnap.netWorth:null,lastSaved:d.lastSaved||null,pageStats:d.pageStats||{},helpMisses:d.helpMisses||[],helpVotes:d.helpVotes||{},
           snapshots:(d.snapshots||[]).map(s=>({label:s.label,date:s.date,netWorth:s.netWorth||0,penTotal:s.penTotal||0,goalsSaved:s.goalsSaved||0}))});
       }catch(e){}
     }
     renderAdminFeedback(allFeedback);
     renderAdminUsage(users);
+    if(typeof renderAdminHelp==='function')renderAdminHelp(users); // help center: searches with no answer (help-center.js)
     const totalUsers=users.length,needUpdate=users.filter(u=>u.alerts.length>0).length;
     if(statsEl)statsEl.innerHTML=`
       <div class="stat"><label>סה"כ לקוחות</label><div class="val vt">${totalUsers}</div></div>
