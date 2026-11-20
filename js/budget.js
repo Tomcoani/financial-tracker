@@ -760,12 +760,21 @@ function renderBudgetTrend(){
   }).filter(p=>p.has);
   const tt=document.querySelector('#budget-trend-card .ch-title');
   if(tt)tt.textContent=view==='business'?'📈 העסק — כמה נשאר, חודש אחרי חודש':view==='personal'?'📈 אישי — כמה חסכתם, חודש אחרי חודש':'📈 כמה חסכתם, חודש אחרי חודש';
+  // Always shown (Tom, 2026-11-20): with fewer than 2 filled months, a note on what will appear here
+  let empty=document.getElementById('budget-trend-empty');
+  if(!empty){empty=document.createElement('div');empty.id='budget-trend-empty';
+    empty.style.cssText='font-size:12.5px;color:var(--t3);text-align:center;padding:14px 6px;line-height:1.7';
+    canvas.parentElement.insertAdjacentElement('beforebegin',empty);}
+  wrap.style.display='block';
   if(pts.length<2||typeof Chart==='undefined'){
-    wrap.style.display='none';
     if(chBudget){chBudget.destroy();chBudget=null;}
+    canvas.parentElement.style.display='none';empty.style.display='block';
+    empty.innerHTML=typeof Chart==='undefined'?'הגרף לא נטען. נסו לרענן את הדף.'
+      :pts.length===1?`יש כאן חודש אחד עם נתונים (${fmtBudgetMonth(pts[0].k)}). מלאו עוד חודש, והגרף יתחיל להשוות ביניהם.`
+      :'מלאו הכנסות והוצאות של חודשיים לפחות, וכאן יופיע גרף של כמה חסכתם בכל חודש.';
     return;
   }
-  wrap.style.display='block';
+  canvas.parentElement.style.display='';empty.style.display='none';
   const labels=pts.map(p=>{const q=p.k.split('-');return (HEB_MONTHS[+q[1]-1]||q[1])+' '+q[0].slice(2);});
   const data=pts.map(p=>p.saved);
   if(chBudget)chBudget.destroy();

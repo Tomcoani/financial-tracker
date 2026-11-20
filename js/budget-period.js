@@ -28,8 +28,15 @@ function renderBudgetPeriod(elId,entries){
     if(k>now||!m)return;const s=budgetSavedOf(m,e.profile,e.months);
     if(s.inc||s.exp||sum(m.business)||sum(m.bizIncome))has[k]=true;}));
   const all=Object.keys(has).sort();
-  if(all.length<2){el.style.display='none';el.innerHTML='';return;}
   el.style.display='';
+  // Always shown (Tom, 2026-11-20): with fewer than 2 filled months, a note on what will appear here
+  if(all.length<2){
+    el.innerHTML=`<div class="ch-title" style="margin:0">📅 סיכום לתקופה${entries.length>1?' — כל החשבונות':''}</div>
+      <div class="ch-hint" style="margin-top:6px">${all.length
+        ?`יש כאן חודש אחד עם נתונים (${fmtBudgetMonth(all[0])}). מלאו עוד חודש, ותוכלו לבחור תקופה ולראות כמה נכנס, כמה יצא, ומה הממוצע החודשי של כל קטגוריה.`
+        :'אחרי שתמלאו חודשיים לפחות, תוכלו לבחור כאן תקופה (3 חודשים, חצי שנה, שנה או כל טווח אחר) ולראות כמה נכנס, כמה יצא, ומה הממוצע החודשי של כל קטגוריה.'}</div>`;
+    return;
+  }
   // the chosen period
   let from,to=all[all.length-1];
   const p=_bPer.preset;
