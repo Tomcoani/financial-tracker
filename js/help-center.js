@@ -16,6 +16,12 @@ const HC_CATS=[
   ['goals','🎯','מטרות'],['pension','🏦','פנסיה והשקעות'],['nw','📊','שווי נטו'],['concepts','📚','מושגים בכסף'],
   ['account','⚙️','חשבון והגדרות']];
 const HC_POPULAR=['import-file','import-where','import-image','budget-basics','budget-currency','nw-low','forgot-password'];
+// Clips from Tom's system webinar (6.10.2026), in videos/<id>.mp4 — article id → length.
+// Only parts that are still true of the system; the design in them is a bit older.
+const HC_VIDEOS={'dash-tiles':'1:47','budget-basics':'2:20','budget-copy':'0:35','budget-charts':'0:44',
+  'goals-saved':'4:17','goals-basics':'3:43','c-emergency':'2:01','portfolio-basics':'3:22','portfolio-invest':'3:03',
+  'pension-update':'3:13','pension-fees':'0:54','c-hishtalmut':'1:25','nw-basics':'3:00','nw-periods':'1:01'};
+const HC_VIDEO_V=1;
 
 // tab = where it belongs ("for this page"), go = the tab the "open" button leads to
 const HC_ARTICLES=[
@@ -335,6 +341,9 @@ function _hcStyle(){
 #hc-panel .hc-art .hc-txt li{margin-bottom:5px}
 #hc-panel .hc-art .hc-txt p{margin:0 0 8px}
 #hc-panel .hc-go{margin:6px 0 4px;background:rgba(66,235,214,.12);border:1px solid var(--teal-border);color:var(--teal);border-radius:9px;padding:8px 14px;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer}
+#hc-panel .hc-vid{margin:10px 0 8px}
+#hc-panel .hc-vid video{width:100%;display:block;border-radius:10px;border:1px solid var(--border);background:#000;aspect-ratio:1280/634}
+#hc-panel .hc-vid-cap{font-size:11.5px;color:var(--t3);margin-top:5px}
 #hc-panel .hc-vote{margin-top:16px;padding:12px;background:var(--s2);border-radius:10px;font-size:13px;color:var(--t2);text-align:center}
 #hc-panel .hc-vote button{background:var(--s1);border:1px solid var(--border);border-radius:8px;font-size:16px;padding:4px 14px;margin:6px 4px 0;cursor:pointer}
 #hc-panel textarea{width:100%;box-sizing:border-box;min-height:90px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:var(--font);font-size:13.5px;line-height:1.6;padding:10px;resize:vertical;outline:none;direction:rtl}
@@ -399,6 +408,7 @@ function hcOpen(view,id){
 }
 function hcClose(){
   _hcMissFlush();
+  document.querySelectorAll('#hc-panel video').forEach(v=>v.pause());
   _hc.open=false;_hc.q='';_hc.view='home'; // reopening starts fresh
   const qi=document.getElementById('hc-q');if(qi)qi.value='';
   const p=document.getElementById('hc-panel');if(p)p.classList.remove('on');
@@ -481,7 +491,9 @@ function hcGoTab(tab){
   goTo(tab,btn);
   if(window.innerWidth<=640)hcClose();
 }
-const _hcItem=a=>`<button class="hc-item" onclick="_hcNav('art','${a.id}')"><span>${a.t}</span><i>‹</i></button>`;
+const _hcItem=a=>`<button class="hc-item" onclick="_hcNav('art','${a.id}')"><span>${a.t}${HC_VIDEOS[a.id]?' <small title="יש סרטון" style="opacity:.75">🎥</small>':''}</span><i>‹</i></button>`;
+const _hcVideo=id=>HC_VIDEOS[id]?`<div class="hc-vid"><video controls playsinline preload="metadata" src="videos/${id}.mp4?v=${HC_VIDEO_V}"></video>
+  <div class="hc-vid-cap">🎥 תום מסביר · ${HC_VIDEOS[id]} דק' · מתוך הדרכת המערכת (העיצוב בסרטון קצת ישן יותר)</div></div>`:'';
 function hcRender(){
   const body=document.getElementById('hc-body'),foot=document.getElementById('hc-foot');if(!body)return;
   const list=_hcList(),tab=(typeof _lastTab!=='undefined'&&_lastTab)||'dash';
@@ -496,7 +508,7 @@ function hcRender(){
     const v=_hc.voted[a.id];
     const goOk=a.go&&document.getElementById('nav-'+a.go)&&(typeof _lsnOnly==='undefined'||!_lsnOnly||typeof lsnAllowedTab!=='function'||lsnAllowedTab(a.go));
     h=`${backBtn}<div class="hc-art"><div class="hc-tag">${cat?cat[1]+' '+cat[2]:''}</div><h3>${a.t}</h3>
-      <div class="hc-txt">${a.b}</div>
+      <div class="hc-txt">${a.b}</div>${_hcVideo(a.id)}
       ${goOk&&a.go!==tab?`<button class="hc-go" onclick="hcGoTab('${a.go}')">לפתיחת ${HC_TABS[a.go]||''} ←</button>`:''}
       <div class="hc-vote" id="hc-vote">${v==='up'?'תודה! 🙂':v==='sent'?'תודה! ההערה נשלחה לתום ✓':v==='down'?_hcDownForm(a):`האם זה עזר לכם?<br>
         <button onclick="hcVote('${a.id}','up')" aria-label="כן, עזר">👍</button><button onclick="hcVote('${a.id}','down')" aria-label="לא עזר">👎</button>`}</div>
