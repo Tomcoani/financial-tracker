@@ -256,7 +256,9 @@ function renderUpdateAlerts(){
       <button class="btn-update-now" onclick="goToTab('${s.tab}')">עדכן עכשיו →</button>
     </div>`;
   });
-  if(typeof hyLinkHtml==='function')html+=hyLinkHtml(); // the half-yearly update track (half-year.js)
+  // the half-yearly update track (half-year.js). Beta: left out, the "מה באת לעשות היום?" board opens the same track (Tom, 2026-11-20)
+  const hyOnBoard=typeof isBeta==='function'&&isBeta()&&typeof todayBoardOn==='function'&&todayBoardOn();
+  if(typeof hyLinkHtml==='function'&&!hyOnBoard)html+=hyLinkHtml();
   el.innerHTML=html;
   if(typeof renderHalfYearBanner==='function')renderHalfYearBanner();
 }
