@@ -1,4 +1,4 @@
-// ══ HELP CENTER ("? עזרה") — beta (isBeta in core.js) ══
+// ══ HELP CENTER ("? עזרה") — every signed-in client (released by Tom 2026-11-22, v=166) ══
 // A help button in the corner that opens a side panel, like the help widget in Wix:
 //  • a search box over short help articles (no AI, works offline; the text lives here, in HC_ARTICLES)
 //  • "for this page": the articles of the tab the client is on (follows the tab while open)
@@ -6,7 +6,7 @@
 //  • "didn't find it?" → a message to Tom (lands in the admin feedback inbox, D.feedback),
 //    and the help bot when it's on (help-bot.js)
 // Keep in step with docs/help-bot-knowledge.md when something in the system changes.
-const HC_FOR_ALL=false; // true = every signed-in client (Tom decides)
+const HC_FOR_ALL=true;  // true = every signed-in client (Tom decides)
 let _hc={open:false,view:'home',id:'',cat:'',q:'',back:[],voted:{}};
 
 const HC_TABS={general:'כללי',dash:'בית',budget:'התנהלות חודשית',goals:'מטרות',pension:'פנסיה',portfolio:'תיק השקעות',
