@@ -3,8 +3,8 @@
 function renderPension(){
   const el=document.getElementById('pension-list');el.innerHTML='';
   const list=(D.pension||[]).map((p,i)=>[p,i]);
-  // Beta: always the same order, whatever order they were filled in — pension, managers' insurance,
-  // gemel, study fund, anything else, a product not named yet last. Display only: D.pension keeps its
+  // Beta: always the same order, whatever order they were filled in — pension, gemel, study fund,
+  // anything else, a product not named yet last (Tom: no own slot for ביטוח מנהלים). Display only: D.pension keeps its
   // order, every card keeps its own index (i). Within a kind, by name (בן זוג א before ב, קרן 1 before 2).
   if(typeof isBeta==='function'&&isBeta())list.sort((a,b)=>penRank(a[0])-penRank(b[0])
     ||(a[0].name||'').trim().localeCompare((b[0].name||'').trim(),'he',{numeric:true})||a[1]-b[1]);
@@ -13,12 +13,11 @@ function renderPension(){
 }
 function penRank(p){
   const n=(p.name||'').trim();
-  if(!n)return 5;
+  if(!n)return 4;
   if(n.includes('פנסי'))return 0;
-  if(n.includes('ביטוח מנהלים'))return 1;
-  if(n.includes('גמל'))return 2;
-  if(n.includes('השתלמות'))return 3;
-  return 4;
+  if(n.includes('גמל'))return 1;
+  if(n.includes('השתלמות'))return 2;
+  return 3;
 }
 function mkPen(p,i){
   const isKeren=(p.name||'').includes('השתלמות');
