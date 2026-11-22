@@ -3,10 +3,10 @@
 function renderPension(){
   const el=document.getElementById('pension-list');el.innerHTML='';
   const list=(D.pension||[]).map((p,i)=>[p,i]);
-  // Beta: always the same order, whatever order they were filled in — pension, gemel, study fund,
+  // Always the same order (released to everyone, Tom, 2026-11-22, v=170), whatever order they were filled in — pension, gemel, study fund,
   // anything else, a product not named yet last (Tom: no own slot for ביטוח מנהלים). Display only: D.pension keeps its
   // order, every card keeps its own index (i). Within a kind, by name (בן זוג א before ב, קרן 1 before 2).
-  if(typeof isBeta==='function'&&isBeta())list.sort((a,b)=>penRank(a[0])-penRank(b[0])
+  list.sort((a,b)=>penRank(a[0])-penRank(b[0])
     ||(a[0].name||'').trim().localeCompare((b[0].name||'').trim(),'he',{numeric:true})||a[1]-b[1]);
   list.forEach(([p,i])=>el.appendChild(mkPen(p,i)));
   renderPenSum();

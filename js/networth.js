@@ -15,9 +15,9 @@ function syncNWFromPension(){
   const nwColMY=c=>{const pd=parsePeriodDate(D.nwPeriods[c]);return pd?{m:pd.m,y:pd.y}:null;};
   const dateMY=iso=>{if(!iso)return null;const d=new Date(iso);return isNaN(d.getTime())?null:{m:d.getMonth()+1,y:d.getFullYear()};};
   const colForMY=my=>{if(my){for(let c=cnt-1;c>=0;c--){const p=nwColMY(c);if(p&&p.m===my.m&&p.y===my.y)return c;}}
-    // Beta: no column of that exact month and none of this month → the closest dated, non-future column
+    // (released to everyone, Tom, 2026-11-22, v=170) No column of that exact month and none of this month → the closest dated, non-future column
     // within 3 months of the pension's date (pension checked in 9/2026, periods 4/2026 · 10/2026 → 10/2026)
-    if(my&&syncCol<0&&typeof isBeta==='function'&&isBeta()){
+    if(my&&syncCol<0){
       let best=-1,bestGap=4;
       for(let c=0;c<cnt;c++){const p=nwColMY(c);if(!p||isFuturePeriod(D.nwPeriods[c]))continue;
         const gap=Math.abs((p.y*12+p.m)-(my.y*12+my.m));if(gap<bestGap||(gap===bestGap&&c>best)){bestGap=gap;best=c;}}
@@ -476,7 +476,7 @@ function addNWPeriodBefore(){
       if(row.cellCurrencies)row.cellCurrencies=shiftKeys(row.cellCurrencies);
     });
   });
-  if(typeof isBeta==='function'&&isBeta())syncNWFromPension(); // the new dated column may match a pension date
+  syncNWFromPension(); // the new dated column may match a pension date
   renderNW();markDirty();
 }
 function removeNWPeriod(){
@@ -628,9 +628,9 @@ function nwPeriodBlur(el){
       }
     }catch(e){}
   }
-  // Beta: the pension values come in as soon as the period dates exist. A new client often fills the
+  // (released to everyone, v=170) The pension values come in as soon as the period dates exist. A new client often fills the
   // pension first and the net-worth dates only later, and the pull used to run only when the tab opened.
-  if(typeof isBeta==='function'&&isBeta())syncNWFromPension();
+  syncNWFromPension();
   renderNW();markDirty();
 }
 
