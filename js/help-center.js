@@ -3,9 +3,8 @@
 //  • a search box over short help articles (no AI, works offline; the text lives here, in HC_ARTICLES)
 //  • "for this page": the articles of the tab the client is on (follows the tab while open)
 //  • topics, article view with "open the tab", related articles and "did this help? 👍 👎"
-//  • "didn't find it?" → a message to Tom (lands in the admin feedback inbox, D.feedback),
-//    and the help bot when it's on (help-bot.js)
-// Keep in step with docs/help-bot-knowledge.md when something in the system changes.
+//  • "didn't find it?" → a message to Tom (lands in the admin feedback inbox, D.feedback)
+// (The AI help bot was dropped by Tom on 2026-11-24, v=171: this help center replaces it.)
 const HC_FOR_ALL=true;  // true = every signed-in client (Tom decides)
 let _hc={open:false,view:'home',id:'',cat:'',q:'',back:[],voted:{}};
 
@@ -542,10 +541,8 @@ function hcRender(){
       <div class="hc-cats">${cats.map(([c,n])=>`<button class="hc-cat" onclick="_hcNav('cat','${c[0]}')">${c[1]} ${c[2]}<small>${n} מאמרים</small></button>`).join('')}</div>`;
   }
   body.innerHTML=h;
-  const bot=typeof HELP_BOT_URL!=='undefined'&&!!HELP_BOT_URL&&typeof helpBotToggle==='function';
   foot.innerHTML=_hc.view==='contact'?'':`<span>לא מצאתם תשובה?</span>
-    <button onclick="_hcNav('contact')">✉️ כתבו לתום</button>
-    ${bot?`<button onclick="hcClose();if(!_hb.open)helpBotToggle()">💬 שאלה לבוט</button>`:''}`;
+    <button onclick="_hcNav('contact')">✉️ כתבו לתום</button>`;
 }
 function _hcDownForm(a){
   return `מה היה חסר? נשמח לשפר.<textarea id="hc-down" maxlength="1000" style="margin-top:8px;min-height:64px" placeholder="לא חובה"></textarea>
