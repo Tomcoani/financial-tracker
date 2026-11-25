@@ -35,6 +35,11 @@ function lessonsEnabled(){
   return typeof isBeta==='function'&&isBeta();
 }
 function lsnIsAdmin(){return !!(auth.currentUser&&String(auth.currentUser.email||'').toLowerCase()===ADMIN_EMAIL);}
+// Tom's practice user, for showing the system without his own data (Tom, 2026-11-25): gets a
+// "view as a client in the course, after meeting N" switch in "כלים". Display only, nothing is saved.
+const LSN_DEMO_USERS=['tomani123456@gmail.com'];
+function lsnIsDemo(){return !!(auth.currentUser&&LSN_DEMO_USERS.includes(String(auth.currentUser.email||'').toLowerCase()));}
+function lsnCanPreview(){return lsnIsAdmin()||lsnIsDemo();}
 
 // Called on every sign-in (core.js): forget the previous account's state.
 // There is no separate summaries tab (Tom, 2026-11-12): everything lives inside "כלים".
@@ -80,14 +85,14 @@ function lsnSetOnly(on){
   _lsnOnly=!!on;
   document.body.classList.toggle('lsn-only',_lsnOnly);
   // After meeting 1 the "מטרות" tab opens too, for the goals homework (Tom, 2026-11-12).
-  _lsnGoalsOk=_lsnOnly&&!!_lsnEnt&&_lsnEnt.maxLesson>=1;
+  _lsnGoalsOk=_lsnOnly&&!!_lsnEnt&&lsnVisibleMax(_lsnEnt.maxLesson)>=1; // in a preview: the previewed meeting
   document.body.classList.toggle('lsn-goals',_lsnGoalsOk);
 }
 // Tabs a client in the course may open: "כלים", the summary view inside it, and after meeting 1 also
 // "מטרות" and "התנהלות חודשית" (Tom, 2026-11-18).
 function lsnAllowedTab(id){return id==='links'||id==='lessons'||((id==='goals'||id==='budget')&&_lsnGoalsOk);}
-// What is shown as unlocked. The admin can preview as a client with N lessons.
-function lsnVisibleMax(max){return lsnIsAdmin()&&_lsnPreview!==null?_lsnPreview:max;}
+// What is shown as unlocked. The admin (and the practice user) can preview as a client with N lessons.
+function lsnVisibleMax(max){return lsnCanPreview()&&_lsnPreview!==null?_lsnPreview:max;}
 
 // Open one summary (from the "כלים" card or a direct link). The view stays under "כלים" in the menu.
 function lsnOpen(n){
@@ -125,7 +130,7 @@ async function renderToolsLessons(){
       <div class="ds">${l.ds}</div>
     </div>`;}).join('');
   const onlyNote=_lsnOnly?`<div class="card card-teal" style="padding:16px 20px">
-      ${admin?`<div style="font-size:12.5px;color:var(--purple);margin-bottom:6px">👁 תצוגה כמשתמש בתהליך — כך הוא רואה את המערכת.
+      ${lsnCanPreview()?`<div style="font-size:12.5px;color:var(--purple);margin-bottom:6px">👁 תצוגה כמשתתף בתהליך${_lsnPreview!==null?` אחרי ${_lsnPreview===0?'0 מפגשים':'מפגש '+_lsnPreview}`:''}. כך הוא רואה את המערכת.
         <a href="#" onclick="lsnPreviewOnly(false);return false" style="color:var(--teal)">יציאה מהתצוגה</a></div>`:''}
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">ברוכים הבאים לתוכנית ״הדרך לעושר״ 👋</div>
       <div style="font-size:13.5px;color:var(--t2);line-height:1.7">כאן מחכים לכם הסיכומים של המפגשים — כל סיכום נפתח אחרי שהמפגש שלו מתקיים — והמחשבונים מהתוכנית.
@@ -135,7 +140,7 @@ async function renderToolsLessons(){
       <div class="ch-title">סיכומי המפגשים — הדרך לעושר</div>
       <div class="ch-hint">${hint}</div>
       <div class="lsn-list">${cards}</div>
-    </div>${typeof ctToolsCard==='function'?ctToolsCard(vis):''}${admin?lsnAdminCard():''}`;
+    </div>${typeof ctToolsCard==='function'?ctToolsCard(vis):''}${admin?lsnAdminCard():lsnIsDemo()?lsnDemoCard():''}`;
   if(admin)lsnAdminStatus();
 }
 
@@ -295,10 +300,30 @@ function lsnCopyLink(n,btn){
   try{navigator.clipboard.writeText(lsnLink(n)).then(done,()=>prompt('העתיקו את הקישור:',lsnLink(n)));}
   catch(e){prompt('העתיקו את הקישור:',lsnLink(n));}
 }
-function lsnSetPreview(v){_lsnPreview=v===''?null:parseInt(v,10);renderToolsLessons();}
-// Admin only: see the app the way a client in the course sees it ("כלים" + "מטרות"), and back.
+function lsnSetPreview(v){_lsnPreview=v===''?null:parseInt(v,10);if(_lsnOnly)lsnSetOnly(true);renderToolsLessons();}
+// The practice user's card: one switch, "full system" or "a client in the course after meeting N" (0–5).
+function lsnDemoCard(){
+  const cur=_lsnOnly&&_lsnPreview!==null?String(_lsnPreview):'';
+  const opts=[['','המערכת המלאה (בוגר/ת)'],['0','משתתף/ת לפני המפגש הראשון']]
+    .concat([1,2,3,4,5].map(k=>[String(k),`משתתף/ת אחרי מפגש ${k}`]))
+    .map(([v,t])=>`<option value="${v}"${v===cur?' selected':''}>${t}</option>`).join('');
+  return `<div class="card" style="border-color:rgba(139,92,246,.35)">
+    <div class="ch-title">👁 תצוגת הדגמה <span style="font-size:12px;color:var(--purple)">· רק במשתמש התרגול</span></div>
+    <div class="ch-hint">בוחרים איך להציג את המערכת: מלאה, או כמו שמשתתף בתוכנית רואה אותה אחרי מפגש מסוים. זו רק תצוגה, שום דבר לא נשמר.</div>
+    <select onchange="lsnDemoView(this.value)" style="background:var(--s2);color:var(--white);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:14px">${opts}</select>
+  </div>`;
+}
+async function lsnDemoView(v){
+  if(!lsnIsDemo())return;
+  await lsnLoadEnt();
+  if(v===''){_lsnPreview=null;lsnSetOnly(false);}
+  else{_lsnPreview=parseInt(v,10);lsnSetOnly(true);}
+  _lsnOpen=0;goTo('links',document.getElementById('nav-links'));
+}
+// Admin / practice user: see the app the way a client in the course sees it ("כלים" + "מטרות"), and back.
 async function lsnPreviewOnly(on){
-  if(!lsnIsAdmin())return;
+  if(!lsnCanPreview())return;
+  if(!on)_lsnPreview=lsnIsAdmin()?_lsnPreview:null;
   await lsnLoadEnt(); // so the "מטרות" tab shows in the preview right after a reload
   if(on&&_lsnPreview===null)_lsnPreview=2; // a typical mid-course client
   lsnSetOnly(on);
